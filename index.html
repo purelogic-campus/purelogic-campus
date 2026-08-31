@@ -109,7 +109,6 @@
       cursor: pointer;
     }
 
-    /* TAB NAVIGATION */
     .nav-tabs {
       display: flex;
       gap: 6px;
@@ -281,7 +280,6 @@
       margin-left: 6px;
     }
 
-    /* CHAT & INBOX STYLES */
     .chat-container {
       display: flex;
       flex-direction: column;
@@ -321,9 +319,7 @@
       gap: 8px;
       flex-shrink: 0;
     }
-    .chat-input-area input {
-      margin: 0;
-    }
+    .chat-input-area input { margin: 0; }
 
     .msg-box {
       font-size: 13px;
@@ -347,7 +343,7 @@
     </div>
   </div>
 
-  <!-- STEP 1: AUTH GATE (LOGIN / SIGNUP) -->
+  <!-- STEP 1: AUTH GATE -->
   <div id="auth-gate" class="tab-content" style="justify-content: center;">
     <h2 style="margin-bottom: 6px;">Willkommen</h2>
     <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 14px;">Melde dich an oder registriere dich:</p>
@@ -369,10 +365,9 @@
     <button class="btn btn-secondary" onclick="handleSignup()">Konto registrieren</button>
   </div>
 
-  <!-- STEP 2: MAIN APP (TABS VIEW) -->
+  <!-- STEP 2: MAIN APP -->
   <div id="main-app" class="hidden tab-content">
     
-    <!-- NAVIGATION TABS -->
     <div class="nav-tabs">
       <button class="tab-btn active" onclick="switchTab('feed')" id="btn-tab-feed">📋 Feed</button>
       <button class="tab-btn" onclick="switchTab('global')" id="btn-tab-global">💬 Campus Chat</button>
@@ -412,7 +407,7 @@
       </div>
     </div>
 
-    <!-- TAB 3: POSTFACH (DMs) -->
+    <!-- TAB 3: POSTFACH -->
     <div id="tab-inbox" class="tab-content hidden">
       <div class="chat-container">
         <label style="font-size: 11px; color: var(--text-muted); flex-shrink:0;">Empfänger (E-Mail):</label>
@@ -656,8 +651,8 @@
   }
 
   async function submitEvent() {
-    const title = document.getElementById('title').value;
-    const location = document.getElementById('location').value;
+    const title = document.getElementById('title').value.trim();
+    const location = document.getElementById('location').value.trim();
     if(!title || !location) return alert('Bitte alle Felder ausfüllen');
 
     const expiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
@@ -669,10 +664,19 @@
 
     if (error) return alert('Fehler: ' + error.message);
     await addPoints(20);
+    
     document.getElementById('title').value = '';
     document.getElementById('location').value = '';
+    
+    // Sofort zurück zum Feed schalten und Filter auf "Alle" (oder die erstellte Kategorie) setzen
+    activeFilter = 'Alle';
+    document.querySelectorAll('#filter-group .cat-pill').forEach((el, idx) => {
+      if (idx === 0) el.classList.add('active');
+      else el.classList.remove('active');
+    });
+
     toggleModal(false);
-    loadEvents();
+    await loadEvents();
   }
 
   async function joinEvent(id, currentJoins) {
@@ -727,7 +731,7 @@
           </div>
           <div style="margin-top: 8px; border-top: 1px dashed var(--border); padding-top: 6px;">
             <div style="max-height: 80px; overflow-y: auto; font-size: 11px; color: var(--text-muted); margin-bottom: 6px;">
-              ${chats.length === '0' || chats.length === 0 ? '<i>Keine Kommentare</i>' : chats.map(c => `<div><b>${c.user}</b>: ${c.text}</div>`).join('')}
+              ${chats.length === 0 ? '<i>Keine Kommentare</i>' : chats.map(c => `<div><b>${c.user}</b>: ${c.text}</div>`).join('')}
             </div>
             <div style="display:flex; gap:4px;">
               <input type="text" id="chat-${e.id}" placeholder="Kommentieren..." style="margin:0; padding:6px; font-size:12px;" onkeydown="if(event.key==='Enter') sendEventChat('${e.id}', ${JSON.stringify(chats).replace(/"/g, '&quot;')})">
@@ -750,7 +754,6 @@
     loadEvents();
   }
 
-  // GLOBAL CHAT FUNCTIONS
   async function loadGlobalChat() {
     const { data } = await _supabase.from('global_chat').select('*').order('created_at', { ascending: true });
     globalChatCache = data || [];
@@ -788,7 +791,6 @@
     }
   }
 
-  // DIRECT MESSAGES (POSTFACH) FUNCTIONS
   async function loadDMs() {
     const { data } = await _supabase.from('direct_messages').select('*').order('created_at', { ascending: true });
     dmCache = data || [];
@@ -847,7 +849,6 @@
     }
   }
 
-  // Reload DMs when recipient input changes
   document.getElementById('dm-recipient').addEventListener('input', () => renderDMs());
 
   function getTimeRemaining(expiresAt) {
