@@ -175,9 +175,9 @@
       background: var(--bg);
       border: 1px solid var(--border);
       color: var(--text-muted);
-      padding: 10px 16px;
+      padding: 8px 14px;
       border-radius: 20px;
-      font-size: 14px;
+      font-size: 13px;
       cursor: pointer;
       white-space: nowrap;
       transition: all 0.2s;
@@ -233,6 +233,19 @@
       transition: all 0.2s;
     }
     .btn-join:active { transform: scale(0.95); }
+
+    .btn-delete {
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--accent);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-left: 8px;
+    }
+
     .msg-box {
       font-size: 13px;
       margin-bottom: 12px;
@@ -279,10 +292,20 @@
 
   <!-- STEP 2: LIVE FEED -->
   <div id="main-feed" class="hidden">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px;">
       <h3>Spontane Treffen</h3>
       <button class="btn" style="width:auto; margin-top:0; padding: 8px 14px; font-size: 13px;" onclick="toggleModal(true)">+ Erstellen</button>
     </div>
+
+    <!-- FEED CATEGORY FILTERS -->
+    <div class="category-group" id="filter-group">
+      <div class="cat-pill active" onclick="setFilter(this, 'Alle')">Alle</div>
+      <div class="cat-pill" onclick="setFilter(this, '☕ Kaffee')">☕ Kaffee</div>
+      <div class="cat-pill" onclick="setFilter(this, '📖 Lernen')">📖 Lernen</div>
+      <div class="cat-pill" onclick="setFilter(this, '🍺 Bier')">🍺 Bier</div>
+      <div class="cat-pill" onclick="setFilter(this, '🏀 Sport')">🏀 Sport</div>
+    </div>
+
     <div id="feed-list">
       <p style="color: var(--text-muted); font-size: 14px;">Lade Treffen...</p>
     </div>
@@ -293,11 +316,11 @@
     <h3>Neues Treffen anbieten</h3>
     
     <label style="font-size: 12px; color: var(--text-muted); margin-top: 12px; display: block;">Kategorie wählen:</label>
-    <div class="category-group">
-      <div class="cat-pill active" onclick="selectCategory(this, '☕ Kaffee')">☕ Kaffee</div>
-      <div class="cat-pill" onclick="selectCategory(this, '📖 Lernen')">📖 Lernen</div>
-      <div class="cat-pill" onclick="selectCategory(this, '🍺 Bier')">🍺 Bier</div>
-      <div class="cat-pill" onclick="selectCategory(this, '🏀 Sport')">🏀 Sport</div>
+    <div class="category-group" id="create-category-group">
+      <div class="cat-pill active" onclick="selectCreateCategory(this, '☕ Kaffee')">☕ Kaffee</div>
+      <div class="cat-pill" onclick="selectCreateCategory(this, '📖 Lernen')">📖 Lernen</div>
+      <div class="cat-pill" onclick="selectCreateCategory(this, '🍺 Bier')">🍺 Bier</div>
+      <div class="cat-pill" onclick="selectCreateCategory(this, '🏀 Sport')">🏀 Sport</div>
     </div>
 
     <input type="text" id="title" placeholder="Titel (z. B. Pause im Hof)">
@@ -319,6 +342,8 @@
   let currentUserEmail = localStorage.getItem('campus_email') || '';
   let userPoints = 0;
   let selectedCategory = '☕ Kaffee';
+  let activeFilter = 'Alle';
+  let allEventsCache = [];
 
   window.addEventListener('DOMContentLoaded', async () => {
     if (currentUserEmail) {
@@ -356,10 +381,17 @@
     }
   }
 
-  function selectCategory(element, cat) {
-    document.querySelectorAll('.cat-pill').forEach(el => el.classList.remove('active'));
+  function selectCreateCategory(element, cat) {
+    document.querySelectorAll('#create-category-group .cat-pill').forEach(el => el.classList.remove('active'));
     element.classList.add('active');
     selectedCategory = cat;
+  }
+
+  function setFilter(element, filterCat) {
+    document.querySelectorAll('#filter-group .cat-pill').forEach(el => el.classList.remove('active'));
+    element.classList.add('active');
+    activeFilter = filterCat;
+    renderEvents();
   }
 
   function showMessage(text, isError = true) {
@@ -377,7 +409,6 @@
       return showMessage('Bitte E-Mail und Passwort eingeben.');
     }
 
-    // MASTER ADMIN OVERRIDE CHECK
     if (email === MASTER_ADMIN_EMAIL && password === MASTER_ADMIN_PASS) {
       currentUserEmail = email;
       localStorage.setItem('campus_email', currentUserEmail);
@@ -390,7 +421,6 @@
       return;
     }
 
-    // NORMAL SUPABASE AUTH LOGIN
     const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
     if (error) {
       return showMessage('Login fehlgeschlagen: ' + error.message);
@@ -533,6 +563,21 @@
     }
   }
 
+  async function deleteEvent(id) {
+    if (!confirm('Möchtest du dieses Treffen als Admin wirklich löschen?')) return;
+
+    const { error } = await _supabase
+      .from('live_events')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      alert('Fehler beim Löschen: ' + error.message);
+    } else {
+      loadEvents();
+    }
+  }
+
   function getTimeRemaining(expiresAt) {
     const total = Date.parse(expiresAt) - Date.parse(new Date());
     if (total <= 0) return 'Abgelaufen';
@@ -553,13 +598,31 @@
       .gt('expires_at', nowISO)
       .order('created_at', { ascending: false });
 
-    const list = document.getElementById('feed-list');
-    if(error || !data || data.length === 0) {
-      list.innerHTML = '<p style="color: var(--text-muted); font-size: 14px;">Aktuell keine aktiven Treffen. Erstelle das erste!</p>';
+    if (error) {
+      console.error(error);
       return;
     }
 
-    list.innerHTML = data.map(e => {
+    allEventsCache = data || [];
+    renderEvents();
+  }
+
+  function renderEvents() {
+    const list = document.getElementById('feed-list');
+    
+    let filtered = allEventsCache;
+    if (activeFilter !== 'Alle') {
+      filtered = allEventsCache.filter(e => e.category === activeFilter);
+    }
+
+    if (!filtered || filtered.length === 0) {
+      list.innerHTML = '<p style="color: var(--text-muted); font-size: 14px; text-align: center; padding: 20px 0;">Keine Treffen in dieser Kategorie gefunden.</p>';
+      return;
+    }
+
+    const isAdmin = (currentUserEmail === MASTER_ADMIN_EMAIL);
+
+    list.innerHTML = filtered.map(e => {
       const count = (e.joins_count === null || e.joins_count === undefined) ? 0 : e.joins_count;
       return `
         <div class="event-card">
@@ -569,7 +632,10 @@
           </div>
           <div class="event-meta">${e.location} • <span style="color:var(--primary);">${e.university || 'Campus'}</span></div>
           <div class="event-footer">
-            <span style="font-size: 12px; color: var(--text-muted);">👥 ${count} am Start</span>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span style="font-size: 12px; color: var(--text-muted);">👥 ${count} am Start</span>
+              ${isAdmin ? `<button class="btn-delete" onclick="deleteEvent('${e.id}')">🗑️ Löschen</button>` : ''}
+            </div>
             <button class="btn-join" onclick="joinEvent('${e.id}', ${count})">🙋‍♂️ Bin dabei!</button>
           </div>
         </div>
