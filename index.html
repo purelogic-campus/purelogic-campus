@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>PURE LOGIC • Campus Feed</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --border: #334155;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --accent: #ef4444;
+      --success: #10b981;
+      --admin: #f59e0b;
+    }
+    * { 
+      box-sizing: border-box; 
+      margin: 0; 
+      padding: 0; 
+      -webkit-tap-highlight-color: transparent; 
+    }
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    .app-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 20px;
+      width: 100%;
+      max-width: 440px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+    }
+
+    @media (max-width: 480px) {
+      body {
+        align-items: flex-start;
+        background-color: var(--card);
+      }
+      .app-card {
+        border: none;
+        border-radius: 0;
+        box-shadow: none;
+        min-height: 100vh;
+        padding: 20px 16px;
+        padding-top: calc(12px + env(safe-area-inset-top));
+      }
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 12px;
+    }
+    .logo { font-weight: 800; font-size: 20px; letter-spacing: 1px; color: var(--primary); }
+    
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .points-badge { 
+      background: rgba(59, 130, 246, 0.1); 
+      color: var(--primary); 
+      padding: 6px 12px; 
+      border-radius: 20px; 
+      font-size: 13px; 
+      font-weight: 600; 
+    }
+    .points-badge.admin-badge { 
+      background: rgba(245, 158, 11, 0.15); 
+      color: var(--admin); 
+      border: 1px solid rgba(245, 158, 11, 0.3); 
+    }
+
+    .btn-logout {
+      background: rgba(239, 68, 68, 0.1);
+      color: var(--accent);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      padding: 6px 10px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-logout:active { transform: scale(0.95); }
+
+    .hidden { display: none !important; }
+    .btn {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 14px;
+      border-radius: 12px;
+      cursor: pointer;
+      width: 100%;
+      font-weight: 600;
+      font-size: 16px;
+      transition: background 0.2s, transform 0.1s;
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn-secondary { background: #475569; margin-top: 8px; }
+    
+    input {
+      width: 100%;
+      padding: 14px;
+      margin: 8px 0 16px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: white;
+      border-radius: 12px;
+      font-size: 16px;
+    }
+    input:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+    
+    .category-group {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      overflow-x: auto;
+      padding-bottom: 6px;
+      -webkit-overflow-scrolling: touch;
+    }
+    .cat-pill {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 10px 16px;
+      border-radius: 20px;
+      font-size: 14px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+    .cat-pill.active {
+      background: rgba(59, 130, 246, 0.2);
+      border-color: var(--primary);
+      color: white;
+      font-weight: 600;
+    }
+    
+    .event-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+    .event-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 6px;
+    }
+    .event-title { font-size: 16px; font-weight: 600; }
+    .event-timer { 
+      font-size: 11px; 
+      background: rgba(239, 68, 68, 0.15); 
+      color: var(--accent); 
+      padding: 4px 8px; 
+      border-radius: 8px; 
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .event-meta { font-size: 13px; color: var(--text-muted); margin-bottom: 12px; }
+    
+    .event-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px solid rgba(255,255,255,0.05);
+      padding-top: 10px;
+    }
+    .btn-join {
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--success);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-join:active { transform: scale(0.95); }
+  </style>
+</head>
+<body>
+
+<div class="app-card">
+  <div class="header">
+    <div class="logo">PURE LOGIC</div>
+    <div class="header-right">
+      <div class="points-badge" id="score">0 Punkte</div>
+      <button class="btn-logout hidden" id="logout-btn" onclick="resetUser()" title="Abmelden">🚪 Logout</button>
+    </div>
+  </div>
+
+  <!-- STEP 1: AUTH GATE -->
+  <div id="auth-gate">
+    <h2 style="margin-bottom: 6px;">Login</h2>
+    <p style="font-size: 14px; color: var(--text-muted);">Gib deine E-Mail ein (Master-E-Mail für Admin-Zugang):</p>
+    <input type="email" id="email" placeholder="admin@purelogic.app oder test@test.com">
+    <button class="btn" onclick="login()">Einloggen</button>
+  </div>
+
+  <!-- STEP 2: REFERRAL LOCK -->
+  <div id="referral-gate" class="hidden">
+    <h2 style="margin-bottom: 6px;">Fast geschafft! 🚀</h2>
+    <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 12px;">Teile deinen persönlichen Link. Für jeden Klick erhältst du <b>+50 Punkte</b>:</p>
+    <input type="text" id="ref-link" readonly value="...">
+    <button class="btn" id="copy-btn" onclick="copyRefLink()">🔗 Link kopieren</button>
+    <button class="btn btn-secondary" onclick="unlockFeed()">Zum Feed</button>
+  </div>
+
+  <!-- STEP 3: LIVE FEED -->
+  <div id="main-feed" class="hidden">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px;">
+      <h3>Spontane Treffen</h3>
+      <button class="btn" style="width:auto; padding: 8px 14px; font-size: 13px;" onclick="toggleModal(true)">+ Erstellen</button>
+    </div>
+    <div id="feed-list">
+      <p style="color: var(--text-muted); font-size: 14px;">Lade Treffen...</p>
+    </div>
+  </div>
+
+  <!-- MODAL: TREFFEN ERSTELLEN -->
+  <div id="create-modal" class="hidden">
+    <h3>Neues Treffen anbieten</h3>
+    
+    <label style="font-size: 12px; color: var(--text-muted); margin-top: 12px; display: block;">Kategorie wählen:</label>
+    <div class="category-group">
+      <div class="cat-pill active" onclick="selectCategory(this, '☕ Kaffee')">☕ Kaffee</div>
+      <div class="cat-pill" onclick="selectCategory(this, '📖 Lernen')">📖 Lernen</div>
+      <div class="cat-pill" onclick="selectCategory(this, '🍺 Bier')">🍺 Bier</div>
+      <div class="cat-pill" onclick="selectCategory(this, '🏀 Sport')">🏀 Sport</div>
+    </div>
+
+    <input type="text" id="title" placeholder="Titel (z. B. Pause im Hof)">
+    <input type="text" id="location" placeholder="Ort (z. B. Votivpark / Bib OG2)">
+    <button class="btn" onclick="submitEvent()">Veröffentlichen</button>
+    <button class="btn btn-secondary" onclick="toggleModal(false)">Abbrechen</button>
+  </div>
+</div>
+
+<script>
+  const SUPABASE_URL = 'https://ykyfdrnkxqfvhasfbehe.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_2bLjUm02NS5XDAJMvVDgTA_rSzQKZAe';
+  const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  // HIER DEINE MASTER-E-MAIL EINTRAGEN:
+  const MASTER_ADMIN_EMAIL = 'admin@purelogic.app';
+
+  let currentUni = 'PureLogic-Network';
+  let currentUserEmail = localStorage.getItem('campus_email') || '';
+  let userPoints = 0;
+  let selectedCategory = '☕ Kaffee';
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const referredBy = urlParams.get('ref');
+
+  window.addEventListener('DOMContentLoaded', async () => {
+    if (currentUserEmail) {
+      document.getElementById('logout-btn').classList.remove('hidden');
+      if (currentUserEmail === MASTER_ADMIN_EMAIL) {
+        userPoints = 9999;
+        setupAdminUI();
+        document.getElementById('auth-gate').classList.add('hidden');
+        document.getElementById('main-feed').classList.remove('hidden');
+        loadEvents();
+      } else {
+        const { data } = await _supabase.from('users').select('*').eq('email', currentUserEmail).maybeSingle();
+        if (data) {
+          userPoints = data.points || 0;
+          updatePointsDisplay();
+          document.getElementById('auth-gate').classList.add('hidden');
+          document.getElementById('main-feed').classList.remove('hidden');
+          loadEvents();
+        } else {
+          resetUser(false);
+        }
+      }
+    }
+  });
+
+  function selectCategory(element, cat) {
+    document.querySelectorAll('.cat-pill').forEach(el => el.classList.remove('active'));
+    element.classList.add('active');
+    selectedCategory = cat;
+  }
+
+  async function login() {
+    const emailInput = document.getElementById('email').value.trim().toLowerCase();
+    if (emailInput && emailInput.includes('@')) {
+      currentUserEmail = emailInput;
+      localStorage.setItem('campus_email', currentUserEmail);
+      document.getElementById('logout-btn').classList.remove('hidden');
+
+      if (currentUserEmail === MASTER_ADMIN_EMAIL) {
+        userPoints = 9999;
+        setupAdminUI();
+        document.getElementById('auth-gate').classList.add('hidden');
+        document.getElementById('main-feed').classList.remove('hidden');
+        loadEvents();
+        return;
+      }
+
+      const myRefLink = `${window.location.origin}${window.location.pathname}?ref=${encodeURIComponent(currentUserEmail)}`;
+      document.getElementById('ref-link').value = myRefLink;
+
+      let { data: existingUser } = await _supabase.from('users').select('*').eq('email', currentUserEmail).maybeSingle();
+
+      if (!existingUser) {
+        await _supabase.from('users').insert([{ email: currentUserEmail, university: 'Test-Campus', points: 10 }]);
+        userPoints = 10;
+        
+        if (referredBy && referredBy !== currentUserEmail) {
+          await rewardReferrer(referredBy);
+        }
+      } else {
+        userPoints = existingUser.points || 0;
+      }
+
+      updatePointsDisplay();
+
+      document.getElementById('auth-gate').classList.add('hidden');
+      document.getElementById('referral-gate').classList.remove('hidden');
+    } else {
+      alert('Bitte gib eine gültige E-Mail-Adresse ein.');
+    }
+  }
+
+  function setupAdminUI() {
+    const badge = document.getElementById('score');
+    badge.innerText = '⭐ Admin';
+    badge.className = 'points-badge admin-badge';
+  }
+
+  async function rewardReferrer(referrerEmail) {
+    if (referrerEmail === MASTER_ADMIN_EMAIL) return;
+    const { data: referrer } = await _supabase.from('users').select('*').eq('email', referrerEmail).maybeSingle();
+    if (referrer) {
+      const newPoints = (referrer.points || 0) + 50;
+      await _supabase.from('users').update({ points: newPoints }).eq('email', referrerEmail);
+    }
+  }
+
+  function copyRefLink() {
+    const input = document.getElementById('ref-link');
+    navigator.clipboard.writeText(input.value);
+    const copyBtn = document.getElementById('copy-btn');
+    copyBtn.innerText = '✅ Kopiert!';
+    setTimeout(() => copyBtn.innerText = '🔗 Link kopieren', 2000);
+  }
+
+  async function fetchUserPoints() {
+    if (!currentUserEmail || currentUserEmail === MASTER_ADMIN_EMAIL) return;
+    const { data } = await _supabase.from('users').select('points').eq('email', currentUserEmail).maybeSingle();
+    if (data && data.points !== undefined) {
+      userPoints = data.points;
+    }
+    updatePointsDisplay();
+  }
+
+  function updatePointsDisplay() {
+    if (currentUserEmail === MASTER_ADMIN_EMAIL) {
+      setupAdminUI();
+      return;
+    }
+    document.getElementById('score').innerText = `${userPoints} P`;
+  }
+
+  function resetUser(ask = true) {
+    if(!ask || confirm('Möchtest du dich abmelden?')) {
+      localStorage.removeItem('campus_email');
+      localStorage.removeItem('campus_points');
+      location.reload();
+    }
+  }
+
+  function unlockFeed() {
+    fetchUserPoints();
+    document.getElementById('referral-gate').classList.add('hidden');
+    document.getElementById('main-feed').classList.remove('hidden');
+    loadEvents();
+  }
+
+  function toggleModal(show) {
+    if(show) {
+      document.getElementById('main-feed').classList.add('hidden');
+      document.getElementById('create-modal').classList.remove('hidden');
+    } else {
+      document.getElementById('create-modal').classList.add('hidden');
+      document.getElementById('main-feed').classList.remove('hidden');
+    }
+  }
+
+  async function submitEvent() {
+    const title = document.getElementById('title').value;
+    const location = document.getElementById('location').value;
+    if(!title || !location) return alert('Bitte alle Felder ausfüllen');
+
+    const expiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
+
+    const { error } = await _supabase.from('live_events').insert([
+      { 
+        title: title, 
+        location: location, 
+        category: selectedCategory, 
+        university: currentUserEmail === MASTER_ADMIN_EMAIL ? 'Master-Admin' : currentUni,
+        expires_at: expiresAt,
+        joins_count: 0
+      }
+    ]);
+
+    if (error) {
+      alert('Fehler beim Erstellen: ' + error.message);
+      return;
+    }
+
+    document.getElementById('title').value = '';
+    document.getElementById('location').value = '';
+    toggleModal(false);
+    loadEvents();
+  }
+
+  async function joinEvent(id, currentJoins) {
+    const safeJoins = (currentJoins === null || currentJoins === undefined || isNaN(currentJoins)) ? 0 : Number(currentJoins);
+    const nextCount = safeJoins + 1;
+
+    const { error } = await _supabase
+      .from('live_events')
+      .update({ joins_count: nextCount })
+      .eq('id', id);
+
+    if (error) {
+      alert('Supabase Fehler: ' + error.message);
+    } else {
+      loadEvents();
+    }
+  }
+
+  function getTimeRemaining(expiresAt) {
+    const total = Date.parse(expiresAt) - Date.parse(new Date());
+    if (total <= 0) return 'Abgelaufen';
+    const minutes = Math.floor((total / 1000 / 60) % 60);
+    const hours = Math.floor((total / (1000 * 60 * 60)) % 24);
+    return `noch ${hours > 0 ? hours + ' Std ' : ''}${minutes} Min`;
+  }
+
+  async function loadEvents() {
+    if (currentUserEmail !== MASTER_ADMIN_EMAIL) {
+      await fetchUserPoints();
+    }
+    const nowISO = new Date().toISOString();
+    
+    const { data, error } = await _supabase
+      .from('live_events')
+      .select('*')
+      .gt('expires_at', nowISO)
+      .order('created_at', { ascending: false });
+
+    const list = document.getElementById('feed-list');
+    if(error || !data || data.length === 0) {
+      list.innerHTML = '<p style="color: var(--text-muted); font-size: 14px;">Aktuell keine aktiven Treffen. Erstelle das erste!</p>';
+      return;
+    }
+
+    list.innerHTML = data.map(e => {
+      const count = (e.joins_count === null || e.joins_count === undefined) ? 0 : e.joins_count;
+      return `
+        <div class="event-card">
+          <div class="event-header">
+            <div class="event-title">${e.category || '📍'} ${e.title}</div>
+            <div class="event-timer">⏱️ ${getTimeRemaining(e.expires_at)}</div>
+          </div>
+          <div class="event-meta">${e.location} • <span style="color:var(--primary);">${e.university || 'Campus'}</span></div>
+          <div class="event-footer">
+            <span style="font-size: 12px; color: var::text-muted;">👥 ${count} am Start</span>
+            <button class="btn-join" onclick="joinEvent('${e.id}', ${count})">🙋‍♂️ Bin dabei!</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+</script>
+
+</body>
+</html>
