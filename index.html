@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#0f172a">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>PURE LOGIC • Campus Feed</title>
+  <title>PURE LOGIC • Campus Feed & Chat</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     :root {
@@ -43,8 +43,12 @@
       border-radius: 20px;
       padding: 20px;
       width: 100%;
-      max-width: 440px;
+      max-width: 460px;
       box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+      display: flex;
+      flex-direction: column;
+      height: 90vh;
+      max-height: 800px;
     }
 
     @media (max-width: 480px) {
@@ -56,8 +60,9 @@
         border: none;
         border-radius: 0;
         box-shadow: none;
-        min-height: 100vh;
-        padding: 20px 16px;
+        height: 100vh;
+        max-height: 100vh;
+        padding: 16px;
         padding-top: calc(12px + env(safe-area-inset-top));
       }
     }
@@ -66,11 +71,12 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 20px;
+      margin-bottom: 16px;
       border-bottom: 1px solid var(--border);
       padding-bottom: 12px;
+      flex-shrink: 0;
     }
-    .logo { font-weight: 800; font-size: 20px; letter-spacing: 1px; color: var(--primary); }
+    .logo { font-weight: 800; font-size: 18px; letter-spacing: 1px; color: var(--primary); }
     
     .header-right {
       display: flex;
@@ -81,9 +87,9 @@
     .points-badge { 
       background: rgba(59, 130, 246, 0.1); 
       color: var(--primary); 
-      padding: 6px 12px; 
+      padding: 5px 10px; 
       border-radius: 20px; 
-      font-size: 13px; 
+      font-size: 12px; 
       font-weight: 600; 
     }
     .points-badge.admin-badge { 
@@ -96,26 +102,61 @@
       background: rgba(239, 68, 68, 0.1);
       color: var(--accent);
       border: 1px solid rgba(239, 68, 68, 0.3);
-      padding: 6px 10px;
+      padding: 5px 8px;
+      border-radius: 10px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    /* TAB NAVIGATION */
+    .nav-tabs {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 16px;
+      flex-shrink: 0;
+      background: var(--bg);
+      padding: 4px;
       border-radius: 12px;
+      border: 1px solid var(--border);
+    }
+    .tab-btn {
+      flex: 1;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      padding: 8px;
       font-size: 13px;
       font-weight: 600;
       cursor: pointer;
+      border-radius: 8px;
       transition: all 0.2s;
+      text-align: center;
     }
-    .btn-logout:active { transform: scale(0.95); }
+    .tab-btn.active {
+      background: var(--primary);
+      color: white;
+    }
+
+    .tab-content {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
 
     .hidden { display: none !important; }
+
     .btn {
       background: var(--primary);
       color: white;
       border: none;
-      padding: 14px;
+      padding: 12px;
       border-radius: 12px;
       cursor: pointer;
       width: 100%;
       font-weight: 600;
-      font-size: 16px;
+      font-size: 15px;
       transition: background 0.2s, transform 0.1s;
       margin-top: 8px;
     }
@@ -124,13 +165,13 @@
     
     input, textarea {
       width: 100%;
-      padding: 14px;
-      margin: 8px 0 16px;
+      padding: 12px;
+      margin: 6px 0 14px;
       background: var(--bg);
       border: 1px solid var(--border);
       color: white;
       border-radius: 12px;
-      font-size: 16px;
+      font-size: 15px;
       font-family: inherit;
     }
     input:focus, textarea:focus {
@@ -138,13 +179,11 @@
       border-color: var(--primary);
     }
 
-    .password-container {
-      position: relative;
-    }
+    .password-container { position: relative; }
     .password-toggle {
       position: absolute;
       right: 14px;
-      top: 18px;
+      top: 16px;
       background: none;
       border: none;
       cursor: pointer;
@@ -158,30 +197,28 @@
       font-size: 13px;
       color: var(--primary);
       text-decoration: none;
-      margin-top: -10px;
-      margin-bottom: 16px;
+      margin-top: -8px;
+      margin-bottom: 14px;
       cursor: pointer;
     }
-    .forgot-password:hover { text-decoration: underline; }
     
     .category-group {
       display: flex;
       gap: 8px;
-      margin-bottom: 16px;
+      margin-bottom: 12px;
       overflow-x: auto;
-      padding-bottom: 6px;
-      -webkit-overflow-scrolling: touch;
+      padding-bottom: 4px;
+      flex-shrink: 0;
     }
     .cat-pill {
       background: var(--bg);
       border: 1px solid var(--border);
       color: var(--text-muted);
-      padding: 8px 14px;
+      padding: 6px 12px;
       border-radius: 20px;
-      font-size: 13px;
+      font-size: 12px;
       cursor: pointer;
       white-space: nowrap;
-      transition: all 0.2s;
     }
     .cat-pill.active {
       background: rgba(59, 130, 246, 0.2);
@@ -194,97 +231,98 @@
       background: rgba(255, 255, 255, 0.03);
       border: 1px solid var(--border);
       border-radius: 14px;
-      padding: 16px;
-      margin-bottom: 12px;
+      padding: 14px;
+      margin-bottom: 10px;
     }
     .event-header {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      margin-bottom: 6px;
+      margin-bottom: 4px;
     }
-    .event-title { font-size: 16px; font-weight: 600; }
+    .event-title { font-size: 15px; font-weight: 600; }
     .event-timer { 
-      font-size: 11px; 
+      font-size: 10px; 
       background: rgba(239, 68, 68, 0.15); 
       color: var(--accent); 
-      padding: 4px 8px; 
-      border-radius: 8px; 
+      padding: 3px 6px; 
+      border-radius: 6px; 
       font-weight: 600;
       white-space: nowrap;
     }
-    .event-meta { font-size: 13px; color: var(--text-muted); margin-bottom: 12px; }
+    .event-meta { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; }
     
     .event-footer {
       display: flex;
       justify-content: space-between;
       align-items: center;
       border-top: 1px solid rgba(255,255,255,0.05);
-      padding-top: 10px;
+      padding-top: 8px;
     }
     .btn-join {
       background: rgba(16, 185, 129, 0.15);
       color: var(--success);
       border: 1px solid rgba(16, 185, 129, 0.3);
-      padding: 6px 12px;
+      padding: 5px 10px;
       border-radius: 8px;
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 600;
       cursor: pointer;
-      transition: all 0.2s;
     }
-    .btn-join:active { transform: scale(0.95); }
-
     .btn-delete {
       background: rgba(239, 68, 68, 0.15);
       color: var(--accent);
       border: 1px solid rgba(239, 68, 68, 0.3);
-      padding: 4px 8px;
+      padding: 3px 6px;
       border-radius: 6px;
-      font-size: 11px;
+      font-size: 10px;
       font-weight: 600;
       cursor: pointer;
-      margin-left: 8px;
+      margin-left: 6px;
     }
 
-    .chat-section {
-      margin-top: 12px;
-      border-top: 1px dashed var(--border);
-      padding-top: 10px;
-    }
-    .chat-messages {
-      max-height: 100px;
-      overflow-y: auto;
-      font-size: 12px;
-      color: var(--text-muted);
-      margin-bottom: 8px;
+    /* CHAT & INBOX STYLES */
+    .chat-container {
       display: flex;
       flex-direction: column;
-      gap: 4px;
+      height: 100%;
     }
-    .chat-msg-item {
-      background: rgba(255,255,255,0.05);
-      padding: 4px 8px;
-      border-radius: 6px;
-    }
-    .chat-input-row {
+    .messages-list {
+      flex: 1;
+      overflow-y: auto;
       display: flex;
-      gap: 6px;
+      flex-direction: column;
+      gap: 8px;
+      padding-right: 4px;
+      margin-bottom: 10px;
     }
-    .chat-input-row input {
-      margin: 0;
-      padding: 8px;
+    .msg-bubble {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      padding: 10px 12px;
+      border-radius: 12px;
       font-size: 13px;
     }
-    .btn-chat-send {
-      background: var(--primary);
-      color: white;
-      border: none;
-      padding: 0 12px;
-      border-radius: 8px;
-      font-size: 12px;
-      cursor: pointer;
-      font-weight: 600;
+    .msg-bubble.mine {
+      background: rgba(59, 130, 246, 0.15);
+      border-color: rgba(59, 130, 246, 0.3);
+      align-self: flex-end;
+      width: 85%;
+    }
+    .msg-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+    .chat-input-area {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    .chat-input-area input {
+      margin: 0;
     }
 
     .msg-box {
@@ -310,9 +348,9 @@
   </div>
 
   <!-- STEP 1: AUTH GATE (LOGIN / SIGNUP) -->
-  <div id="auth-gate">
+  <div id="auth-gate" class="tab-content" style="justify-content: center;">
     <h2 style="margin-bottom: 6px;">Willkommen</h2>
-    <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 14px;">Melde dich an oder registriere dich:</p>
+    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 14px;">Melde dich an oder registriere dich:</p>
     
     <div id="auth-msg" class="msg-box hidden"></div>
 
@@ -331,32 +369,72 @@
     <button class="btn btn-secondary" onclick="handleSignup()">Konto registrieren</button>
   </div>
 
-  <!-- STEP 2: LIVE FEED -->
-  <div id="main-feed" class="hidden">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px;">
-      <h3>Spontane Treffen</h3>
-      <button class="btn" style="width:auto; margin-top:0; padding: 8px 14px; font-size: 13px;" onclick="toggleModal(true)">+ Erstellen</button>
+  <!-- STEP 2: MAIN APP (TABS VIEW) -->
+  <div id="main-app" class="hidden tab-content">
+    
+    <!-- NAVIGATION TABS -->
+    <div class="nav-tabs">
+      <button class="tab-btn active" onclick="switchTab('feed')" id="btn-tab-feed">📋 Feed</button>
+      <button class="tab-btn" onclick="switchTab('global')" id="btn-tab-global">💬 Campus Chat</button>
+      <button class="tab-btn" onclick="switchTab('inbox')" id="btn-tab-inbox">📬 Postfach</button>
     </div>
 
-    <!-- FEED CATEGORY FILTERS -->
-    <div class="category-group" id="filter-group">
-      <div class="cat-pill active" onclick="setFilter(this, 'Alle')">Alle</div>
-      <div class="cat-pill" onclick="setFilter(this, '☕ Kaffee')">☕ Kaffee</div>
-      <div class="cat-pill" onclick="setFilter(this, '📖 Lernen')">📖 Lernen</div>
-      <div class="cat-pill" onclick="setFilter(this, '🍺 Bier')">🍺 Bier</div>
-      <div class="cat-pill" onclick="setFilter(this, '🏀 Sport')">🏀 Sport</div>
+    <!-- TAB 1: FEED -->
+    <div id="tab-feed" class="tab-content">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px; flex-shrink:0;">
+        <h3 style="font-size: 16px;">Spontane Treffen</h3>
+        <button class="btn" style="width:auto; margin-top:0; padding: 6px 12px; font-size: 12px;" onclick="toggleModal(true)">+ Erstellen</button>
+      </div>
+
+      <div class="category-group" id="filter-group">
+        <div class="cat-pill active" onclick="setFilter(this, 'Alle')">Alle</div>
+        <div class="cat-pill" onclick="setFilter(this, '☕ Kaffee')">☕ Kaffee</div>
+        <div class="cat-pill" onclick="setFilter(this, '📖 Lernen')">📖 Lernen</div>
+        <div class="cat-pill" onclick="setFilter(this, '🍺 Bier')">🍺 Bier</div>
+        <div class="cat-pill" onclick="setFilter(this, '🏀 Sport')">🏀 Sport</div>
+      </div>
+
+      <div id="feed-list" style="overflow-y:auto; flex:1;">
+        <p style="color: var(--text-muted); font-size: 13px; text-align:center; padding: 20px;">Lade Treffen...</p>
+      </div>
     </div>
 
-    <div id="feed-list">
-      <p style="color: var(--text-muted); font-size: 14px;">Lade Treffen...</p>
+    <!-- TAB 2: GLOBAL CHAT -->
+    <div id="tab-global" class="tab-content hidden">
+      <div class="chat-container">
+        <div class="messages-list" id="global-chat-list">
+          <p style="color: var(--text-muted); font-size: 13px; text-align:center; padding: 20px;">Lade Campus-Chat...</p>
+        </div>
+        <div class="chat-input-area">
+          <input type="text" id="global-chat-input" placeholder="Nachricht an den Campus..." onkeydown="if(event.key==='Enter') sendGlobalMessage()">
+          <button class="btn" style="width: auto; margin:0; padding: 0 16px;" onclick="sendGlobalMessage()">Senden</button>
+        </div>
+      </div>
     </div>
+
+    <!-- TAB 3: POSTFACH (DMs) -->
+    <div id="tab-inbox" class="tab-content hidden">
+      <div class="chat-container">
+        <label style="font-size: 11px; color: var(--text-muted); flex-shrink:0;">Empfänger (E-Mail):</label>
+        <input type="email" id="dm-recipient" placeholder="kommilitone@uni.at" style="margin-bottom: 8px; flex-shrink:0;">
+        
+        <div class="messages-list" id="dm-chat-list">
+          <p style="color: var(--text-muted); font-size: 13px; text-align:center; padding: 20px;">Gib oben eine E-Mail ein, um Nachrichten zu sehen.</p>
+        </div>
+        <div class="chat-input-area">
+          <input type="text" id="dm-input" placeholder="Direktnachricht schreiben..." onkeydown="if(event.key==='Enter') sendDirectMessage()">
+          <button class="btn" style="width: auto; margin:0; padding: 0 16px;" onclick="sendDirectMessage()">Senden</button>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <!-- MODAL: TREFFEN ERSTELLEN -->
-  <div id="create-modal" class="hidden">
-    <h3>Neues Treffen anbieten</h3>
+  <div id="create-modal" class="hidden tab-content">
+    <h3 style="margin-bottom: 10px;">Neues Treffen anbieten</h3>
     
-    <label style="font-size: 12px; color: var(--text-muted); margin-top: 12px; display: block;">Kategorie wählen:</label>
+    <label style="font-size: 12px; color: var(--text-muted); display: block;">Kategorie:</label>
     <div class="category-group" id="create-category-group">
       <div class="cat-pill active" onclick="selectCreateCategory(this, '☕ Kaffee')">☕ Kaffee</div>
       <div class="cat-pill" onclick="selectCreateCategory(this, '📖 Lernen')">📖 Lernen</div>
@@ -385,6 +463,8 @@
   let selectedCategory = '☕ Kaffee';
   let activeFilter = 'Alle';
   let allEventsCache = [];
+  let globalChatCache = [];
+  let dmCache = [];
 
   window.addEventListener('DOMContentLoaded', async () => {
     if (currentUserEmail) {
@@ -392,19 +472,13 @@
       if (currentUserEmail === MASTER_ADMIN_EMAIL) {
         userPoints = 9999;
         setupAdminUI();
-        document.getElementById('auth-gate').classList.add('hidden');
-        document.getElementById('main-feed').classList.remove('hidden');
-        initAppRealtime();
-        loadEvents();
+        initApp();
       } else {
         const { data } = await _supabase.from('users').select('*').eq('email', currentUserEmail).maybeSingle();
         if (data) {
           userPoints = data.points || 0;
           updatePointsDisplay();
-          document.getElementById('auth-gate').classList.add('hidden');
-          document.getElementById('main-feed').classList.remove('hidden');
-          initAppRealtime();
-          loadEvents();
+          initApp();
         } else {
           resetUser(false);
         }
@@ -412,13 +486,40 @@
     }
   });
 
-  function initAppRealtime() {
-    _supabase
-      .channel('public:live_events')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'live_events' }, payload => {
-        loadEvents();
-      })
+  function initApp() {
+    document.getElementById('auth-gate').classList.add('hidden');
+    document.getElementById('main-app').classList.remove('hidden');
+    
+    loadEvents();
+    loadGlobalChat();
+    loadDMs();
+    initRealtime();
+  }
+
+  function initRealtime() {
+    _supabase.channel('public:all')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'live_events' }, () => loadEvents())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'global_chat' }, () => loadGlobalChat())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'direct_messages' }, () => loadDMs())
       .subscribe();
+  }
+
+  function switchTab(tabName) {
+    document.querySelectorAll('.nav-tabs .tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.getElementById('tab-feed').classList.add('hidden');
+    document.getElementById('tab-global').classList.add('hidden');
+    document.getElementById('tab-inbox').classList.add('hidden');
+
+    if (tabName === 'feed') {
+      document.getElementById('btn-tab-feed').classList.add('active');
+      document.getElementById('tab-feed').classList.remove('hidden');
+    } else if (tabName === 'global') {
+      document.getElementById('btn-tab-global').classList.add('active');
+      document.getElementById('tab-global').classList.remove('hidden');
+    } else if (tabName === 'inbox') {
+      document.getElementById('btn-tab-inbox').classList.add('active');
+      document.getElementById('tab-inbox').classList.remove('hidden');
+    }
   }
 
   function togglePasswordVisibility() {
@@ -457,9 +558,7 @@
     const email = document.getElementById('email').value.trim().toLowerCase();
     const password = document.getElementById('password').value;
 
-    if (!email || !password) {
-      return showMessage('Bitte E-Mail und Passwort eingeben.');
-    }
+    if (!email || !password) return showMessage('Bitte E-Mail und Passwort eingeben.');
 
     if (email === MASTER_ADMIN_EMAIL && password === MASTER_ADMIN_PASS) {
       currentUserEmail = email;
@@ -467,17 +566,12 @@
       userPoints = 9999;
       setupAdminUI();
       document.getElementById('logout-btn').classList.remove('hidden');
-      document.getElementById('auth-gate').classList.add('hidden');
-      document.getElementById('main-feed').classList.remove('hidden');
-      initAppRealtime();
-      loadEvents();
+      initApp();
       return;
     }
 
-    const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
-    if (error) {
-      return showMessage('Login fehlgeschlagen: ' + error.message);
-    }
+    const { error } = await _supabase.auth.signInWithPassword({ email, password });
+    if (error) return showMessage('Login fehlgeschlagen: ' + error.message);
 
     currentUserEmail = email;
     localStorage.setItem('campus_email', currentUserEmail);
@@ -492,43 +586,25 @@
     }
 
     updatePointsDisplay();
-    document.getElementById('auth-gate').classList.add('hidden');
-    document.getElementById('main-feed').classList.remove('hidden');
-    initAppRealtime();
-    loadEvents();
+    initApp();
   }
 
   async function handleSignup() {
     const email = document.getElementById('email').value.trim().toLowerCase();
     const password = document.getElementById('password').value;
+    if (!email || !password) return showMessage('Bitte E-Mail und Passwort eingeben.');
 
-    if (!email || !password) {
-      return showMessage('Bitte E-Mail und Passwort für die Registrierung eingeben.');
-    }
-
-    const { data, error } = await _supabase.auth.signUp({ email, password });
-    if (error) {
-      return showMessage('Registrierung fehlgeschlagen: ' + error.message);
-    }
-
-    showMessage('Registrierung erfolgreich! Bitte überprüfe dein E-Mail-Postfach für den Bestätigungslink.', false);
+    const { error } = await _supabase.auth.signUp({ email, password });
+    if (error) return showMessage('Registrierung fehlgeschlagen: ' + error.message);
+    showMessage('Registrierung erfolgreich! Bitte bestätige deine E-Mail.', false);
   }
 
   async function handleForgotPassword() {
     const email = document.getElementById('email').value.trim().toLowerCase();
-    if (!email) {
-      return showMessage('Bitte gib oben deine E-Mail-Adresse ein, um das Passwort zurückzusetzen.');
-    }
-
-    const { error } = await _supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.href,
-    });
-
-    if (error) {
-      return showMessage('Fehler: ' + error.message);
-    }
-
-    showMessage('Eine E-Mail zum Zurücksetzen des Passworts wurde gesendet!', false);
+    if (!email) return showMessage('Bitte gib deine E-Mail oben ein.');
+    const { error } = await _supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.href });
+    if (error) return showMessage('Fehler: ' + error.message);
+    showMessage('E-Mail zum Zurücksetzen gesendet!', false);
   }
 
   function setupAdminUI() {
@@ -540,9 +616,7 @@
   async function fetchUserPoints() {
     if (!currentUserEmail || currentUserEmail === MASTER_ADMIN_EMAIL) return;
     const { data } = await _supabase.from('users').select('points').eq('email', currentUserEmail).maybeSingle();
-    if (data && data.points !== undefined) {
-      userPoints = data.points;
-    }
+    if (data && data.points !== undefined) userPoints = data.points;
     updatePointsDisplay();
   }
 
@@ -571,11 +645,13 @@
 
   function toggleModal(show) {
     if(show) {
-      document.getElementById('main-feed').classList.add('hidden');
+      document.getElementById('tab-feed').classList.add('hidden');
+      document.querySelector('.nav-tabs').classList.add('hidden');
       document.getElementById('create-modal').classList.remove('hidden');
     } else {
       document.getElementById('create-modal').classList.add('hidden');
-      document.getElementById('main-feed').classList.remove('hidden');
+      document.querySelector('.nav-tabs').classList.remove('hidden');
+      document.getElementById('tab-feed').classList.remove('hidden');
     }
   }
 
@@ -585,26 +661,14 @@
     if(!title || !location) return alert('Bitte alle Felder ausfüllen');
 
     const expiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
+    const { error } = await _supabase.from('live_events').insert([{ 
+      title, location, category: selectedCategory, 
+      university: currentUserEmail === MASTER_ADMIN_EMAIL ? 'Master-Admin' : currentUni,
+      expires_at: expiresAt, joins_count: 0, chats: [] 
+    }]);
 
-    const { error } = await _supabase.from('live_events').insert([
-      { 
-        title: title, 
-        location: location, 
-        category: selectedCategory, 
-        university: currentUserEmail === MASTER_ADMIN_EMAIL ? 'Master-Admin' : currentUni,
-        expires_at: expiresAt,
-        joins_count: 0,
-        chats: []
-      }
-    ]);
-
-    if (error) {
-      alert('Fehler beim Erstellen: ' + error.message);
-      return;
-    }
-
-    await addPoints(20); // 20 Punkte fürs Erstellen eines Treffens
-
+    if (error) return alert('Fehler: ' + error.message);
+    await addPoints(20);
     document.getElementById('title').value = '';
     document.getElementById('location').value = '';
     toggleModal(false);
@@ -612,109 +676,41 @@
   }
 
   async function joinEvent(id, currentJoins) {
-    const safeJoins = (currentJoins === null || currentJoins === undefined || isNaN(currentJoins)) ? 0 : Number(currentJoins);
-    const nextCount = safeJoins + 1;
-
-    const { error } = await _supabase
-      .from('live_events')
-      .update({ joins_count: nextCount })
-      .eq('id', id);
-
-    if (error) {
-      alert('Supabase Fehler: ' + error.message);
-    } else {
-      await addPoints(10); // 10 Punkte fürs Teilnehmen
-      loadEvents();
-    }
-  }
-
-  async function sendChat(id, existingChats) {
-    const inputField = document.getElementById(`chat-input-${id}`);
-    const text = inputField.value.trim();
-    if (!text) return;
-
-    const shortName = currentUserEmail.split('@')[0];
-    const newMsg = { user: shortName, text: text, time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) };
-    
-    const chatsArray = Array.isArray(existingChats) ? existingChats : [];
-    chatsArray.push(newMsg);
-
-    const { error } = await _supabase
-      .from('live_events')
-      .update({ chats: chatsArray })
-      .eq('id', id);
-
-    if (error) {
-      alert('Fehler beim Senden: ' + error.message);
-    } else {
-      inputField.value = '';
+    const nextCount = (Number(currentJoins) || 0) + 1;
+    const { error } = await _supabase.from('live_events').update({ joins_count: nextCount }).eq('id', id);
+    if (!error) {
+      await addPoints(10);
       loadEvents();
     }
   }
 
   async function deleteEvent(id) {
-    if (!confirm('Möchtest du dieses Treffen als Admin wirklich löschen?')) return;
-
-    const { error } = await _supabase
-      .from('live_events')
-      .delete()
-      .eq('id', id);
-
-    if (error) {
-      alert('Fehler beim Löschen: ' + error.message);
-    } else {
-      loadEvents();
-    }
-  }
-
-  function getTimeRemaining(expiresAt) {
-    const total = Date.parse(expiresAt) - Date.parse(new Date());
-    if (total <= 0) return 'Abgelaufen';
-    const minutes = Math.floor((total / 1000 / 60) % 60);
-    const hours = Math.floor((total / (1000 * 60 * 60)) % 24);
-    return `noch ${hours > 0 ? hours + ' Std ' : ''}${minutes} Min`;
+    if (!confirm('Treffen wirklich löschen?')) return;
+    await _supabase.from('live_events').delete().eq('id', id);
+    loadEvents();
   }
 
   async function loadEvents() {
-    if (currentUserEmail !== MASTER_ADMIN_EMAIL) {
-      await fetchUserPoints();
-    }
-    const nowISO = new Date().toISOString();
-    
-    const { data, error } = await _supabase
-      .from('live_events')
-      .select('*')
-      .gt('expires_at', nowISO)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error(error);
-      return;
-    }
-
+    if (currentUserEmail !== MASTER_ADMIN_EMAIL) await fetchUserPoints();
+    const { data } = await _supabase.from('live_events').select('*').gt('expires_at', new Date().toISOString()).order('created_at', { ascending: false });
     allEventsCache = data || [];
     renderEvents();
   }
 
   function renderEvents() {
     const list = document.getElementById('feed-list');
-    
     let filtered = allEventsCache;
-    if (activeFilter !== 'Alle') {
-      filtered = allEventsCache.filter(e => e.category === activeFilter);
-    }
+    if (activeFilter !== 'Alle') filtered = allEventsCache.filter(e => e.category === activeFilter);
 
-    if (!filtered || filtered.length === 0) {
-      list.innerHTML = '<p style="color: var(--text-muted); font-size: 14px; text-align: center; padding: 20px 0;">Keine Treffen in dieser Kategorie gefunden.</p>';
+    if (filtered.length === 0) {
+      list.innerHTML = '<p style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 20px;">Keine Treffen gefunden.</p>';
       return;
     }
 
     const isAdmin = (currentUserEmail === MASTER_ADMIN_EMAIL);
-
     list.innerHTML = filtered.map(e => {
-      const count = (e.joins_count === null || e.joins_count === undefined) ? 0 : e.joins_count;
+      const count = e.joins_count || 0;
       const chats = Array.isArray(e.chats) ? e.chats : [];
-      
       return `
         <div class="event-card">
           <div class="event-header">
@@ -722,29 +718,144 @@
             <div class="event-timer">⏱️ ${getTimeRemaining(e.expires_at)}</div>
           </div>
           <div class="event-meta">${e.location} • <span style="color:var(--primary);">${e.university || 'Campus'}</span></div>
-          
           <div class="event-footer">
             <div style="display: flex; align-items: center; gap: 6px;">
               <span style="font-size: 12px; color: var(--text-muted);">👥 ${count} am Start</span>
-              ${isAdmin ? `<button class="btn-delete" onclick="deleteEvent('${e.id}')">🗑️ Löschen</button>` : ''}
+              ${isAdmin ? `<button class="btn-delete" onclick="deleteEvent('${e.id}')">🗑️</button>` : ''}
             </div>
             <button class="btn-join" onclick="joinEvent('${e.id}', ${count})">🙋‍♂️ Bin dabei!</button>
           </div>
-
-          <!-- EVENT CHAT / DETAILS -->
-          <div class="chat-section">
-            <div class="chat-messages" id="chat-box-${e.id}">
-              ${chats.length === 0 ? '<div style="font-style:italic;">Noch keine Absprachen. Schreib etwas!</div>' : 
-                chats.map(c => `<div class="chat-msg-item"><b>${c.user}</b> (${c.time}): ${c.text}</div>`).join('')}
+          <div style="margin-top: 8px; border-top: 1px dashed var(--border); padding-top: 6px;">
+            <div style="max-height: 80px; overflow-y: auto; font-size: 11px; color: var(--text-muted); margin-bottom: 6px;">
+              ${chats.length === '0' || chats.length === 0 ? '<i>Keine Kommentare</i>' : chats.map(c => `<div><b>${c.user}</b>: ${c.text}</div>`).join('')}
             </div>
-            <div class="chat-input-row">
-              <input type="text" id="chat-input-${e.id}" placeholder="Kurze Nachricht an Teilnehmer..." onkeydown="if(event.key==='Enter') sendChat('${e.id}', ${JSON.stringify(chats).replace(/"/g, '&quot;')})">
-              <button class="btn-chat-send" onclick="sendChat('${e.id}', ${JSON.stringify(chats).replace(/"/g, '&quot;')})">Senden</button>
+            <div style="display:flex; gap:4px;">
+              <input type="text" id="chat-${e.id}" placeholder="Kommentieren..." style="margin:0; padding:6px; font-size:12px;" onkeydown="if(event.key==='Enter') sendEventChat('${e.id}', ${JSON.stringify(chats).replace(/"/g, '&quot;')})">
+              <button class="btn" style="width:auto; margin:0; padding:4px 10px; font-size:11px;" onclick="sendEventChat('${e.id}', ${JSON.stringify(chats).replace(/"/g, '&quot;')})">Senden</button>
             </div>
           </div>
         </div>
       `;
     }).join('');
+  }
+
+  async function sendEventChat(id, existingChats) {
+    const input = document.getElementById(`chat-${id}`);
+    const text = input.value.trim();
+    if (!text) return;
+    const chats = Array.isArray(existingChats) ? existingChats : [];
+    chats.push({ user: currentUserEmail.split('@')[0], text, time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) });
+    await _supabase.from('live_events').update({ chats }).eq('id', id);
+    input.value = '';
+    loadEvents();
+  }
+
+  // GLOBAL CHAT FUNCTIONS
+  async function loadGlobalChat() {
+    const { data } = await _supabase.from('global_chat').select('*').order('created_at', { ascending: true });
+    globalChatCache = data || [];
+    renderGlobalChat();
+  }
+
+  function renderGlobalChat() {
+    const list = document.getElementById('global-chat-list');
+    if (globalChatCache.length === 0) {
+      list.innerHTML = '<p style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 20px;">Noch keine Nachrichten im Campus-Chat.</p>';
+      return;
+    }
+    list.innerHTML = globalChatCache.map(m => {
+      const isMine = m.user_email === currentUserEmail;
+      const shortName = m.user_email ? m.user_email.split('@')[0] : 'Unbekannt';
+      const timeStr = new Date(m.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+      return `
+        <div class="msg-bubble ${isMine ? 'mine' : ''}">
+          <div class="msg-header"><span><b>${shortName}</b></span><span>${timeStr}</span></div>
+          <div>${m.message}</div>
+        </div>
+      `;
+    }).join('');
+    list.scrollTop = list.scrollHeight;
+  }
+
+  async function sendGlobalMessage() {
+    const input = document.getElementById('global-chat-input');
+    const message = input.value.trim();
+    if (!message) return;
+    const { error } = await _supabase.from('global_chat').insert([{ user_email: currentUserEmail, message }]);
+    if (!error) {
+      input.value = '';
+      loadGlobalChat();
+    }
+  }
+
+  // DIRECT MESSAGES (POSTFACH) FUNCTIONS
+  async function loadDMs() {
+    const { data } = await _supabase.from('direct_messages').select('*').order('created_at', { ascending: true });
+    dmCache = data || [];
+    renderDMs();
+  }
+
+  function renderDMs() {
+    const recipient = document.getElementById('dm-recipient').value.trim().toLowerCase();
+    const list = document.getElementById('dm-chat-list');
+    if (!recipient) {
+      list.innerHTML = '<p style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 20px;">Gib oben eine E-Mail-Adresse ein, um den Chatverlauf zu sehen.</p>';
+      return;
+    }
+
+    const filtered = dmCache.filter(m => 
+      (m.sender_email === currentUserEmail && m.recipient_email === recipient) ||
+      (m.sender_email === recipient && m.recipient_email === currentUserEmail)
+    );
+
+    if (filtered.length === 0) {
+      list.innerHTML = `<p style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 20px;">Noch keine Nachrichten mit ${recipient}. Schicke die erste Nachricht!</p>`;
+      return;
+    }
+
+    list.innerHTML = filtered.map(m => {
+      const isMine = m.sender_email === currentUserEmail;
+      const timeStr = new Date(m.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+      return `
+        <div class="msg-bubble ${isMine ? 'mine' : ''}">
+          <div class="msg-header"><span><b>${isMine ? 'Du' : m.sender_email.split('@')[0]}</b></span><span>${timeStr}</span></div>
+          <div>${m.message}</div>
+        </div>
+      `;
+    }).join('');
+    list.scrollTop = list.scrollHeight;
+  }
+
+  async function sendDirectMessage() {
+    const recipient = document.getElementById('dm-recipient').value.trim().toLowerCase();
+    const input = document.getElementById('dm-input');
+    const message = input.value.trim();
+
+    if (!recipient || !message) return alert('Bitte Empfänger und Nachricht eingeben.');
+
+    const { error } = await _supabase.from('direct_messages').insert([{
+      sender_email: currentUserEmail,
+      recipient_email: recipient,
+      message: message
+    }]);
+
+    if (!error) {
+      input.value = '';
+      loadDMs();
+    } else {
+      alert('Fehler beim Senden: ' + error.message);
+    }
+  }
+
+  // Reload DMs when recipient input changes
+  document.getElementById('dm-recipient').addEventListener('input', () => renderDMs());
+
+  function getTimeRemaining(expiresAt) {
+    const total = Date.parse(expiresAt) - Date.parse(new Date());
+    if (total <= 0) return 'Abgelaufen';
+    const minutes = Math.floor((total / 1000 / 60) % 60);
+    const hours = Math.floor((total / (1000 * 60 * 60)) % 24);
+    return `noch ${hours > 0 ? hours + ' Std ' : ''}${minutes} Min`;
   }
 </script>
 
