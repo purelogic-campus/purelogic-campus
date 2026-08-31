@@ -117,9 +117,10 @@
       font-weight: 600;
       font-size: 16px;
       transition: background 0.2s, transform 0.1s;
+      margin-top: 8px;
     }
     .btn:active { transform: scale(0.98); }
-    .btn-secondary { background: #475569; margin-top: 8px; }
+    .btn-secondary { background: #475569; }
     
     input {
       width: 100%;
@@ -206,6 +207,15 @@
       transition: all 0.2s;
     }
     .btn-join:active { transform: scale(0.95); }
+    .msg-box {
+      font-size: 13px;
+      margin-bottom: 12px;
+      padding: 8px;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .msg-error { background: rgba(239,68,68,0.15); color: var(--accent); }
+    .msg-success { background: rgba(16,185,129,0.15); color: var(--success); }
   </style>
 </head>
 <body>
@@ -219,28 +229,28 @@
     </div>
   </div>
 
-  <!-- STEP 1: AUTH GATE -->
+  <!-- STEP 1: AUTH GATE (LOGIN / SIGNUP) -->
   <div id="auth-gate">
-    <h2 style="margin-bottom: 6px;">Login</h2>
-    <p style="font-size: 14px; color: var(--text-muted);">Gib deine E-Mail ein (Master-E-Mail für Admin-Zugang):</p>
-    <input type="email" id="email" placeholder="admin@purelogic.app oder test@test.com">
-    <button class="btn" onclick="login()">Einloggen</button>
+    <h2 style="margin-bottom: 6px;">Willkommen</h2>
+    <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 14px;">Melde dich an oder registriere dich:</p>
+    
+    <div id="auth-msg" class="msg-box hidden"></div>
+
+    <label style="font-size: 12px; color: var(--text-muted);">E-Mail-Adresse:</label>
+    <input type="email" id="email" placeholder="deine.mail@uni.at">
+    
+    <label style="font-size: 12px; color: var(--text-muted);">Passwort:</label>
+    <input type="password" id="password" placeholder="Dein Passwort">
+
+    <button class="btn" onclick="handleLogin()">Einloggen</button>
+    <button class="btn btn-secondary" onclick="handleSignup()">Konto registrieren</button>
   </div>
 
-  <!-- STEP 2: REFERRAL LOCK -->
-  <div id="referral-gate" class="hidden">
-    <h2 style="margin-bottom: 6px;">Fast geschafft! 🚀</h2>
-    <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 12px;">Teile deinen persönlichen Link. Für jeden Klick erhältst du <b>+50 Punkte</b>:</p>
-    <input type="text" id="ref-link" readonly value="...">
-    <button class="btn" id="copy-btn" onclick="copyRefLink()">🔗 Link kopieren</button>
-    <button class="btn btn-secondary" onclick="unlockFeed()">Zum Feed</button>
-  </div>
-
-  <!-- STEP 3: LIVE FEED -->
+  <!-- STEP 2: LIVE FEED -->
   <div id="main-feed" class="hidden">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 16px;">
       <h3>Spontane Treffen</h3>
-      <button class="btn" style="width:auto; padding: 8px 14px; font-size: 13px;" onclick="toggleModal(true)">+ Erstellen</button>
+      <button class="btn" style="width:auto; margin-top:0; padding: 8px 14px; font-size: 13px;" onclick="toggleModal(true)">+ Erstellen</button>
     </div>
     <div id="feed-list">
       <p style="color: var(--text-muted); font-size: 14px;">Lade Treffen...</p>
@@ -271,16 +281,13 @@
   const SUPABASE_KEY = 'sb_publishable_2bLjUm02NS5XDAJMvVDgTA_rSzQKZAe';
   const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-  // HIER DEINE MASTER-E-MAIL EINTRAGEN:
   const MASTER_ADMIN_EMAIL = 'admin@purelogic.app';
+  const MASTER_ADMIN_PASS = 'Doschi08021991';
 
   let currentUni = 'PureLogic-Network';
   let currentUserEmail = localStorage.getItem('campus_email') || '';
   let userPoints = 0;
   let selectedCategory = '☕ Kaffee';
-
-  const urlParams = new URLSearchParams(window.location.search);
-  const referredBy = urlParams.get('ref');
 
   window.addEventListener('DOMContentLoaded', async () => {
     if (currentUserEmail) {
@@ -312,68 +319,79 @@
     selectedCategory = cat;
   }
 
-  async function login() {
-    const emailInput = document.getElementById('email').value.trim().toLowerCase();
-    if (emailInput && emailInput.includes('@')) {
-      currentUserEmail = emailInput;
-      localStorage.setItem('campus_email', currentUserEmail);
-      document.getElementById('logout-btn').classList.remove('hidden');
+  function showMessage(text, isError = true) {
+    const box = document.getElementById('auth-msg');
+    box.innerText = text;
+    box.className = `msg-box ${isError ? 'msg-error' : 'msg-success'}`;
+    box.classList.remove('hidden');
+  }
 
-      if (currentUserEmail === MASTER_ADMIN_EMAIL) {
-        userPoints = 9999;
-        setupAdminUI();
-        document.getElementById('auth-gate').classList.add('hidden');
-        document.getElementById('main-feed').classList.remove('hidden');
-        loadEvents();
-        return;
-      }
+  async function handleLogin() {
+    const email = document.getElementById('email').value.trim().toLowerCase();
+    const password = document.getElementById('password').value;
 
-      const myRefLink = `${window.location.origin}${window.location.pathname}?ref=${encodeURIComponent(currentUserEmail)}`;
-      document.getElementById('ref-link').value = myRefLink;
-
-      let { data: existingUser } = await _supabase.from('users').select('*').eq('email', currentUserEmail).maybeSingle();
-
-      if (!existingUser) {
-        await _supabase.from('users').insert([{ email: currentUserEmail, university: 'Test-Campus', points: 10 }]);
-        userPoints = 10;
-        
-        if (referredBy && referredBy !== currentUserEmail) {
-          await rewardReferrer(referredBy);
-        }
-      } else {
-        userPoints = existingUser.points || 0;
-      }
-
-      updatePointsDisplay();
-
-      document.getElementById('auth-gate').classList.add('hidden');
-      document.getElementById('referral-gate').classList.remove('hidden');
-    } else {
-      alert('Bitte gib eine gültige E-Mail-Adresse ein.');
+    if (!email || !password) {
+      return showMessage('Bitte E-Mail und Passwort eingeben.');
     }
+
+    // MASTER ADMIN OVERRIDE CHECK
+    if (email === MASTER_ADMIN_EMAIL && password === MASTER_ADMIN_PASS) {
+      currentUserEmail = email;
+      localStorage.setItem('campus_email', currentUserEmail);
+      userPoints = 9999;
+      setupAdminUI();
+      document.getElementById('logout-btn').classList.remove('hidden');
+      document.getElementById('auth-gate').classList.add('hidden');
+      document.getElementById('main-feed').classList.remove('hidden');
+      loadEvents();
+      return;
+    }
+
+    // NORMAL SUPABASE AUTH LOGIN
+    const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      return showMessage('Login fehlgeschlagen: ' + error.message);
+    }
+
+    currentUserEmail = email;
+    localStorage.setItem('campus_email', currentUserEmail);
+    document.getElementById('logout-btn').classList.remove('hidden');
+
+    // Check if user exists in public users table, insert if not
+    let { data: existingUser } = await _supabase.from('users').select('*').eq('email', currentUserEmail).maybeSingle();
+    if (!existingUser) {
+      await _supabase.from('users').insert([{ email: currentUserEmail, university: 'Test-Campus', points: 10 }]);
+      userPoints = 10;
+    } else {
+      userPoints = existingUser.points || 0;
+    }
+
+    updatePointsDisplay();
+    document.getElementById('auth-gate').classList.add('hidden');
+    document.getElementById('main-feed').classList.remove('hidden');
+    loadEvents();
+  }
+
+  async function handleSignup() {
+    const email = document.getElementById('email').value.trim().toLowerCase();
+    const password = document.getElementById('password').value;
+
+    if (!email || !password) {
+      return showMessage('Bitte E-Mail und Passwort für die Registrierung eingeben.');
+    }
+
+    const { data, error } = await _supabase.auth.signUp({ email, password });
+    if (error) {
+      return showMessage('Registrierung fehlgeschlagen: ' + error.message);
+    }
+
+    showMessage('Registrierung erfolgreich! Bitte überprüfe dein E-Mail-Postfach für den Bestätigungslink.', false);
   }
 
   function setupAdminUI() {
     const badge = document.getElementById('score');
     badge.innerText = '⭐ Admin';
     badge.className = 'points-badge admin-badge';
-  }
-
-  async function rewardReferrer(referrerEmail) {
-    if (referrerEmail === MASTER_ADMIN_EMAIL) return;
-    const { data: referrer } = await _supabase.from('users').select('*').eq('email', referrerEmail).maybeSingle();
-    if (referrer) {
-      const newPoints = (referrer.points || 0) + 50;
-      await _supabase.from('users').update({ points: newPoints }).eq('email', referrerEmail);
-    }
-  }
-
-  function copyRefLink() {
-    const input = document.getElementById('ref-link');
-    navigator.clipboard.writeText(input.value);
-    const copyBtn = document.getElementById('copy-btn');
-    copyBtn.innerText = '✅ Kopiert!';
-    setTimeout(() => copyBtn.innerText = '🔗 Link kopieren', 2000);
   }
 
   async function fetchUserPoints() {
@@ -396,16 +414,9 @@
   function resetUser(ask = true) {
     if(!ask || confirm('Möchtest du dich abmelden?')) {
       localStorage.removeItem('campus_email');
-      localStorage.removeItem('campus_points');
+      _supabase.auth.signOut();
       location.reload();
     }
-  }
-
-  function unlockFeed() {
-    fetchUserPoints();
-    document.getElementById('referral-gate').classList.add('hidden');
-    document.getElementById('main-feed').classList.remove('hidden');
-    loadEvents();
   }
 
   function toggleModal(show) {
@@ -485,7 +496,7 @@
 
     const list = document.getElementById('feed-list');
     if(error || !data || data.length === 0) {
-      list.innerHTML = '<p style="color: var(--text-muted); font-size: 14px;">Aktuell keine aktiven Treffen. Erstelle das erste!</p>';
+      list.innerHTML = '<p style="color: var::text-muted; font-size: 14px;">Aktuell keine aktiven Treffen. Erstelle das erste!</p>';
       return;
     }
 
@@ -499,7 +510,7 @@
           </div>
           <div class="event-meta">${e.location} • <span style="color:var(--primary);">${e.university || 'Campus'}</span></div>
           <div class="event-footer">
-            <span style="font-size: 12px; color: var::text-muted;">👥 ${count} am Start</span>
+            <span style="font-size: 12px; color: var(--text-muted);">👥 ${count} am Start</span>
             <button class="btn-join" onclick="joinEvent('${e.id}', ${count})">🙋‍♂️ Bin dabei!</button>
           </div>
         </div>
