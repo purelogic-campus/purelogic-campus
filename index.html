@@ -682,4 +682,795 @@
       <h3 style="margin-bottom: 10px;">Neues Treffen anbieten</h3>
       
       <label style="font-size: 12px; color: var(--text-muted); display: block;">Kategorie:</label>
-      <div class="category-group" id="create-category-group
+      <div class="category-group" id="create-category-group">
+        <div class="cat-pill active" onclick="selectCreateCategory(this, '☕ Kaffee')">☕ Kaffee</div>
+        <div class="cat-pill" onclick="selectCreateCategory(this, '📖 Lernen')">📖 Lernen</div>
+        <div class="cat-pill" onclick="selectCreateCategory(this, '🍺 Bier')">🍺 Bier</div>
+        <div class="cat-pill" onclick="selectCreateCategory(this, '🏀 Sport')">🏀 Sport</div>
+      </div>
+
+      <input type="text" id="title" placeholder="Titel (z. B. Pause im Hof)">
+      <input type="text" id="location" placeholder="Ort (z. B. Votivpark / Bib OG2)">
+      <button class="btn" onclick="submitEvent()">Veröffentlichen (+20 P)</button>
+      <button class="btn btn-secondary" onclick="toggleModal(false)">Abbrechen</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const SUPABASE_URL = 'https://ykyfdrnkxqfvhasfbehe.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_2bLjUm02NS5XDAJMvVDgTA_rSzQKZAe';
+  const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  const MASTER_ADMIN_EMAIL = 'admin@purelogic.app';
+  const MASTER_ADMIN_PASS = 'Doschi08021991';
+
+  let currentUni = 'PureLogic-Network';
+  let currentUserEmail = localStorage.getItem('campus_email') || '';
+  let userPoints = 0;
+  let selectedCategory = '☕ Kaffee';
+  let activeFilter = 'Alle';
+  let reelFilter = 'discover'; 
+  let allEventsCache = [];
+  let globalChatCache = [];
+  let dmCache = [];
+  let profilesCache = {};
+  let followsCache = []; 
+  let mediaPostsCache = [];
+  let viewingProfileEmail = null;
+
+  window.addEventListener('DOMContentLoaded', async () => {
+    if (currentUserEmail) {
+      document.getElementById('logout-btn').classList.remove('hidden');
+      if (currentUserEmail === MASTER_ADMIN_EMAIL) {
+        userPoints = 9999;
+        setupAdminUI();
+        initApp();
+      } else {
+        const { data } = await _supabase.from('users').select('*').eq('email', currentUserEmail).maybeSingle();
+        if (data) {
+          userPoints = data.points || 0;
+          updatePointsDisplay();
+          initApp();
+        } else {
+          resetUser(false);
+        }
+      }
+    }
+  });
+
+  async function initApp() {
+    document.getElementById('auth-gate').classList.add('hidden');
+    document.getElementById('main-app').classList.remove('hidden');
+    
+    await loadProfiles();
+    await loadFollows();
+    await ensureMyProfileExists();
+    loadEvents();
+    loadMediaPosts();
+    loadGlobalChat();
+    loadDMs();
+    initRealtime();
+  }
+
+  function initRealtime() {
+    _supabase.channel('public:all')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'live_events' }, () => loadEvents())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'global_chat' }, () => loadGlobalChat())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'direct_messages' }, () => loadDMs())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => loadProfiles())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'follows' }, () => loadFollows())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'media_posts' }, () => loadMediaPosts())
+      .subscribe();
+  }
+
+  async function loadProfiles() {
+    const { data } = await _supabase.from('profiles').select('*');
+    if (data) {
+      profilesCache = {};
+      data.forEach(p => { profilesCache[p.email] = p; });
+      renderMyProfileInputs();
+    }
+  }
+
+  async function loadFollows() {
+    const { data } = await _supabase.from('follows').select('*').eq('follower_email', currentUserEmail);
+    followsCache = data ? data.map(f => f.following_email) : [];
+    updateFollowerStatsUI();
+  }
+
+  async function ensureMyProfileExists() {
+    if (!profilesCache[currentUserEmail]) {
+      const defaultUsername = currentUserEmail.split('@')[0];
+      await _supabase.from('profiles').insert([{
+        email: currentUserEmail,
+        username: defaultUsername,
+        full_name: defaultUsername,
+        bio: 'Hallo! Ich bin neu auf dem Campus.',
+        avatar_url: '',
+        interests: ['Campus']
+      }]);
+      await loadProfiles();
+    }
+    renderMyProfileInputs();
+  }
+
+  function renderMyProfileInputs() {
+    const profile = profilesCache[currentUserEmail];
+    if (!profile) return;
+
+    document.getElementById('profile-username').value = profile.username || '';
+    document.getElementById('profile-fullname').value = profile.full_name || '';
+    document.getElementById('profile-bio').value = profile.bio || '';
+    document.getElementById('profile-avatar').value = profile.avatar_url || '';
+    document.getElementById('profile-interests').value = Array.isArray(profile.interests) ? profile.interests.join(', ') : '';
+
+    document.getElementById('my-profile-display-name').innerText = profile.full_name || profile.username || currentUserEmail.split('@')[0];
+    document.getElementById('my-profile-handle-preview').innerText = '@' + (profile.username || 'user');
+    document.getElementById('my-profile-avatar-preview').src = profile.avatar_url || '';
+    updateFollowerStatsUI();
+  }
+
+  async function updateFollowerStatsUI() {
+    const { count: followingCount } = await _supabase.from('follows').select('*', { count: 'exact', head: true }).eq('follower_email', currentUserEmail);
+    const { count: followerCount } = await _supabase.from('follows').select('*', { count: 'exact', head: true }).eq('following_email', currentUserEmail);
+    const statsEl = document.getElementById('follower-stats');
+    if (statsEl) {
+      statsEl.innerText = `${followerCount || 0} Follower • ${followingCount || 0} Gefolgt`;
+    }
+  }
+
+  async function saveMyProfile() {
+    const username = document.getElementById('profile-username').value.trim().replace(/^@/, '');
+    const full_name = document.getElementById('profile-fullname').value.trim();
+    const bio = document.getElementById('profile-bio').value.trim();
+    const avatar_url = document.getElementById('profile-avatar').value.trim();
+    const interestsRaw = document.getElementById('profile-interests').value.trim();
+    const interests = interestsRaw ? interestsRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
+
+    if (!username) return alert('Bitte einen Benutzernamen (Handle) eingeben.');
+
+    const { error } = await _supabase.from('profiles').update({
+      username, full_name, bio, avatar_url, interests
+    }).eq('email', currentUserEmail);
+
+    if (error) return alert('Fehler beim Speichern: ' + error.message);
+
+    await addPoints(10);
+    await loadProfiles();
+    alert('Profil erfolgreich gespeichert!');
+  }
+
+  async function openUserProfile(email) {
+    viewingProfileEmail = email;
+    const profile = profilesCache[email] || {
+      email: email,
+      username: email.split('@')[0],
+      full_name: email.split('@')[0],
+      bio: 'Kein Profil hinterlegt.',
+      avatar_url: '',
+      interests: []
+    };
+
+    document.getElementById('vp-avatar').src = profile.avatar_url || '';
+    document.getElementById('vp-fullname').innerText = profile.full_name || profile.username;
+    document.getElementById('vp-handle').innerText = '@' + (profile.username || 'user');
+    document.getElementById('vp-bio').innerText = profile.bio || 'Keine Bio angegeben.';
+
+    const followBtn = document.getElementById('vp-follow-btn');
+    if (email === currentUserEmail) {
+      followBtn.classList.add('hidden');
+    } else {
+      followBtn.classList.remove('hidden');
+      if (followsCache.includes(email)) {
+        followBtn.innerText = 'Entfolgen';
+        followBtn.style.background = 'rgba(239, 68, 68, 0.2)';
+        followBtn.style.color = 'var(--accent)';
+      } else {
+        followBtn.innerText = 'Folgen';
+        followBtn.style.background = 'var(--primary)';
+        followBtn.style.color = 'white';
+      }
+    }
+
+    const interestsContainer = document.getElementById('vp-interests-container');
+    const interests = Array.isArray(profile.interests) ? profile.interests : [];
+    if (interests.length === 0) {
+      interestsContainer.innerHTML = '<span style="font-size:12px; color:var(--text-muted);">Keine Interessen angegeben.</span>';
+    } else {
+      interestsContainer.innerHTML = interests.map(i => `<span class="interest-tag">${i}</span>`).join('');
+    }
+
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+    document.getElementById('bottom-nav-bar').classList.add('hidden');
+    document.getElementById('view-profile-modal').classList.remove('hidden');
+  }
+
+  function closeViewProfileModal() {
+    document.getElementById('view-profile-modal').classList.add('hidden');
+    document.getElementById('bottom-nav-bar').classList.remove('hidden');
+    switchTab('reels');
+  }
+
+  async function toggleFollowUserFromModal() {
+    if (!viewingProfileEmail || viewingProfileEmail === currentUserEmail) return;
+    const isFollowing = followsCache.includes(viewingProfileEmail);
+
+    if (isFollowing) {
+      await _supabase.from('follows').delete().eq('follower_email', currentUserEmail).eq('following_email', viewingProfileEmail);
+    } else {
+      await _supabase.from('follows').insert([{ follower_email: currentUserEmail, following_email: viewingProfileEmail }]);
+      await addPoints(5);
+    }
+    await loadFollows();
+    openUserProfile(viewingProfileEmail);
+  }
+
+  async function toggleFollowDirect(targetEmail) {
+    if (targetEmail === currentUserEmail) return;
+    const isFollowing = followsCache.includes(targetEmail);
+    if (isFollowing) {
+      await _supabase.from('follows').delete().eq('follower_email', currentUserEmail).eq('following_email', targetEmail);
+    } else {
+      await _supabase.from('follows').insert([{ follower_email: currentUserEmail, following_email: targetEmail }]);
+      await addPoints(5);
+    }
+    await loadFollows();
+    renderMediaPosts();
+  }
+
+  function switchTab(tabName) {
+    document.querySelectorAll('#bottom-nav-bar .tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.getElementById('tab-reels').classList.add('hidden');
+    document.getElementById('tab-feed').classList.add('hidden');
+    document.getElementById('tab-global').classList.add('hidden');
+    document.getElementById('tab-inbox').classList.add('hidden');
+    document.getElementById('tab-profile').classList.add('hidden');
+
+    if (tabName === 'reels') {
+      document.getElementById('btn-tab-reels').classList.add('active');
+      document.getElementById('tab-reels').classList.remove('hidden');
+    } else if (tabName === 'feed') {
+      document.getElementById('btn-tab-feed').classList.add('active');
+      document.getElementById('tab-feed').classList.remove('hidden');
+    } else if (tabName === 'global') {
+      document.getElementById('btn-tab-global').classList.add('active');
+      document.getElementById('tab-global').classList.remove('hidden');
+    } else if (tabName === 'inbox') {
+      document.getElementById('btn-tab-inbox').classList.add('active');
+      document.getElementById('tab-inbox').classList.remove('hidden');
+    } else if (tabName === 'profile') {
+      document.getElementById('btn-tab-profile').classList.add('active');
+      document.getElementById('tab-profile').classList.remove('hidden');
+      renderMyProfileInputs();
+    }
+  }
+
+  // --- MEDIA POSTS / REELS LOGIK ---
+  function setReelFilter(filter) {
+    reelFilter = filter;
+    if (filter === 'discover') {
+      document.getElementById('reel-filter-discover').classList.add('active');
+      document.getElementById('reel-filter-following').classList.remove('active');
+    } else {
+      document.getElementById('reel-filter-following').classList.add('active');
+      document.getElementById('reel-filter-discover').classList.remove('active');
+    }
+    renderMediaPosts();
+  }
+
+  async function loadMediaPosts() {
+    const { data } = await _supabase.from('media_posts').select('*').order('created_at', { ascending: false });
+    mediaPostsCache = data || [];
+    renderMediaPosts();
+  }
+
+  function renderMediaPosts() {
+    const list = document.getElementById('reels-list');
+    let posts = mediaPostsCache;
+
+    if (reelFilter === 'following') {
+      posts = posts.filter(p => followsCache.includes(p.author_email) || p.author_email === currentUserEmail);
+    }
+
+    if (posts.length === 0) {
+      list.innerHTML = `<p style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 40px;">${reelFilter === 'following' ? 'Keine Beiträge von Leuten, denen du folgst.' : 'Noch keine Medien hochgeladen.'}</p>`;
+      return;
+    }
+
+    list.innerHTML = posts.map(post => {
+      const authorProfile = profilesCache[post.author_email] || {};
+      const authorName = authorProfile.username || post.author_email.split('@')[0];
+      const authorAvatar = authorProfile.avatar_url || '';
+      const isFollowing = followsCache.includes(post.author_email) || post.author_email === currentUserEmail;
+      
+      const likes = Array.isArray(post.likes) ? post.likes : [];
+      const hasLiked = likes.includes(currentUserEmail);
+      const comments = Array.isArray(post.comments) ? post.comments : [];
+      
+      let eventTitle = '';
+      if (post.event_id) {
+        const ev = allEventsCache.find(e => e.id === post.event_id);
+        if (ev) eventTitle = `📍 Event: ${ev.title} (${ev.location})`;
+      }
+
+      let mediaElement = '';
+      if (post.media_type === 'video') {
+        mediaElement = `<video class="reel-media" src="${post.media_url}" autoplay muted loop playsinline></video>`;
+      } else {
+        mediaElement = `<img class="reel-media" src="${post.media_url}" alt="Post">`;
+      }
+
+      return `
+        <div class="reel-item">
+          ${mediaElement}
+          
+          <div class="reel-sidebar-actions">
+            <button class="action-btn" onclick="toggleLikeMedia('${post.id}')" style="color: ${hasLiked ? '#ef4444' : 'white'};">
+              ${hasLiked ? '❤️' : '🤍'}
+              <span>${likes.length}</span>
+            </button>
+            <button class="action-btn" onclick="openCommentModal('${post.id}')">
+              💬
+              <span>${comments.length}</span>
+            </button>
+            ${post.author_email !== currentUserEmail ? `
+              <button class="action-btn" onclick="toggleFollowDirect('${post.author_email}')" style="font-size: 12px; background: ${isFollowing ? 'rgba(59,130,246,0.6)' : 'rgba(0,0,0,0.6)'};">
+                ${isFollowing ? '✓' : '+'}
+                <span>${isFollowing ? 'Folgt' : 'Folgen'}</span>
+              </button>
+            ` : ''}
+          </div>
+
+          <div class="reel-overlay">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 2px;">
+              <img class="profile-avatar-lg" style="width: 32px; height: 32px; font-size: 14px;" src="${authorAvatar}" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'32\' height=\'32\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%2394a3b8\' stroke-width=\'2\'><path d=\'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2\'></path><circle cx=\'12\' cy=\'7\' r=\'4\'></circle></svg>'">
+              <span class="username-link" style="font-size: 14px; font-weight: 600;" onclick="openUserProfile('${post.author_email}')">@${authorName}</span>
+            </div>
+            <p style="font-size: 13px; color: white;">${post.caption || ''}</p>
+            ${eventTitle ? `<div style="font-size: 11px; background: rgba(59,130,246,0.3); padding: 3px 8px; border-radius: 6px; display:inline-block; width:fit-content; margin-top:2px;">${eventTitle}</div>` : ''}
+            
+            <div style="display: flex; gap: 6px; margin-top: 6px;">
+              <input type="text" id="media-comment-${post.id}" placeholder="Kommentieren..." style="margin:0; padding:6px 10px; font-size: 12px; background: rgba(0,0,0,0.6); border-color: rgba(255,255,255,0.2);" onkeydown="if(event.key==='Enter') sendMediaComment('${post.id}')">
+              <button class="btn" style="width: auto; margin:0; padding: 6px 12px; font-size: 12px;" onclick="sendMediaComment('${post.id}')">Senden</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  async function openUploadModal() {
+    const select = document.getElementById('upload-event-select');
+    select.innerHTML = '<option value="">-- Kein Event --</option>' + allEventsCache.map(e => `<option value="${e.id}">${e.title} (${e.location})</option>`).join('');
+    
+    document.getElementById('upload-modal').classList.remove('hidden');
+    document.getElementById('bottom-nav-bar').classList.add('hidden');
+  }
+
+  function closeUploadModal() {
+    document.getElementById('upload-modal').classList.add('hidden');
+    document.getElementById('bottom-nav-bar').classList.remove('hidden');
+  }
+
+  async function submitMediaUpload() {
+    const type = document.getElementById('upload-type').value;
+    const url = document.getElementById('upload-url').value.trim();
+    const caption = document.getElementById('upload-caption').value.trim();
+    const eventId = document.getElementById('upload-event-select').value || null;
+
+    if (!url) return alert('Bitte gib eine gültige Medien-URL an.');
+
+    const { error } = await _supabase.from('media_posts').insert([{
+      author_email: currentUserEmail,
+      media_url: url,
+      media_type: type,
+      caption: caption,
+      event_id: eventId,
+      likes: [],
+      comments: []
+    }]);
+
+    if (error) return alert('Fehler beim Upload: ' + error.message);
+
+    await addPoints(15);
+    document.getElementById('upload-url').value = '';
+    document.getElementById('upload-caption').value = '';
+    closeUploadModal();
+    loadMediaPosts();
+    switchTab('reels');
+  }
+
+  async function toggleLikeMedia(postId) {
+    const post = mediaPostsCache.find(p => p.id === postId);
+    if (!post) return;
+    let likes = Array.isArray(post.likes) ? [...post.likes] : [];
+    
+    if (likes.includes(currentUserEmail)) {
+      likes = likes.filter(e => e !== currentUserEmail);
+    } else {
+      likes.push(currentUserEmail);
+      await addPoints(2);
+    }
+
+    await _supabase.from('media_posts').update({ likes }).eq('id', postId);
+    loadMediaPosts();
+  }
+
+  async function sendMediaComment(postId) {
+    const input = document.getElementById(`media-comment-${postId}`);
+    const text = input.value.trim();
+    if (!text) return;
+
+    const post = mediaPostsCache.find(p => p.id === postId);
+    if (!post) return;
+    let comments = Array.isArray(post.comments) ? [...post.comments] : [];
+
+    comments.push({
+      email: currentUserEmail,
+      text: text,
+      time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+    });
+
+    await _supabase.from('media_posts').update({ comments }).eq('id', postId);
+    await addPoints(3);
+    input.value = '';
+    loadMediaPosts();
+  }
+
+  function togglePasswordVisibility() {
+    const pwInput = document.getElementById('password');
+    const toggleBtn = document.getElementById('toggle-pw-btn');
+    if (pwInput.type === 'password') {
+      pwInput.type = 'text';
+      toggleBtn.innerText = '🙈';
+    } else {
+      pwInput.type = 'password';
+      toggleBtn.innerText = '👁️';
+    }
+  }
+
+  function selectCreateCategory(element, cat) {
+    document.querySelectorAll('#create-category-group .cat-pill').forEach(el => el.classList.remove('active'));
+    element.classList.add('active');
+    selectedCategory = cat;
+  }
+
+  function setFilter(element, filterCat) {
+    document.querySelectorAll('#filter-group .cat-pill').forEach(el => el.classList.remove('active'));
+    element.classList.add('active');
+    activeFilter = filterCat;
+    renderEvents();
+  }
+
+  function showMessage(text, isError = true) {
+    const box = document.getElementById('auth-msg');
+    box.innerText = text;
+    box.className = `msg-box ${isError ? 'msg-error' : 'msg-success'}`;
+    box.classList.remove('hidden');
+  }
+
+  async function handleLogin() {
+    const email = document.getElementById('email').value.trim().toLowerCase();
+    const password = document.getElementById('password').value;
+
+    if (!email || !password) return showMessage('Bitte E-Mail und Passwort eingeben.');
+
+    if (email === MASTER_ADMIN_EMAIL && password === MASTER_ADMIN_PASS) {
+      currentUserEmail = email;
+      localStorage.setItem('campus_email', currentUserEmail);
+      userPoints = 9999;
+      setupAdminUI();
+      document.getElementById('logout-btn').classList.remove('hidden');
+      initApp();
+      return;
+    }
+
+    const { error } = await _supabase.auth.signInWithPassword({ email, password });
+    if (error) return showMessage('Login fehlgeschlagen: ' + error.message);
+
+    currentUserEmail = email;
+    localStorage.setItem('campus_email', currentUserEmail);
+    document.getElementById('logout-btn').classList.remove('hidden');
+
+    let { data: existingUser } = await _supabase.from('users').select('*').eq('email', currentUserEmail).maybeSingle();
+    if (!existingUser) {
+      await _supabase.from('users').insert([{ email: currentUserEmail, university: 'Test-Campus', points: 10 }]);
+      userPoints = 10;
+    } else {
+      userPoints = existingUser.points || 0;
+    }
+
+    updatePointsDisplay();
+    initApp();
+  }
+
+  async function handleSignup() {
+    const email = document.getElementById('email').value.trim().toLowerCase();
+    const password = document.getElementById('password').value;
+    if (!email || !password) return showMessage('Bitte E-Mail und Passwort eingeben.');
+
+    const { error } = await _supabase.auth.signUp({ email, password });
+    if (error) return showMessage('Registrierung fehlgeschlagen: ' + error.message);
+    showMessage('Registrierung erfolgreich! Bitte bestätige deine E-Mail.', false);
+  }
+
+  async function handleForgotPassword() {
+    const email = document.getElementById('email').value.trim().toLowerCase();
+    if (!email) return showMessage('Bitte gib deine E-Mail oben ein.');
+    const { error } = await _supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.href });
+    if (error) return showMessage('Fehler: ' + error.message);
+    showMessage('E-Mail zum Zurücksetzen gesendet!', false);
+  }
+
+  function setupAdminUI() {
+    const badge = document.getElementById('score');
+    badge.innerText = '⭐ Admin';
+    badge.className = 'points-badge admin-badge';
+  }
+
+  async function fetchUserPoints() {
+    if (!currentUserEmail || currentUserEmail === MASTER_ADMIN_EMAIL) return;
+    const { data } = await _supabase.from('users').select('points').eq('email', currentUserEmail).maybeSingle();
+    if (data && data.points !== undefined) userPoints = data.points;
+    updatePointsDisplay();
+  }
+
+  async function addPoints(amount) {
+    if (currentUserEmail === MASTER_ADMIN_EMAIL) return;
+    userPoints += amount;
+    updatePointsDisplay();
+    await _supabase.from('users').update({ points: userPoints }).eq('email', currentUserEmail);
+  }
+
+  function updatePointsDisplay() {
+    if (currentUserEmail === MASTER_ADMIN_EMAIL) {
+      setupAdminUI();
+      return;
+    }
+    document.getElementById('score').innerText = `${userPoints} P`;
+  }
+
+  function resetUser(ask = true) {
+    if(!ask || confirm('Möchtest du dich abmelden?')) {
+      localStorage.removeItem('campus_email');
+      _supabase.auth.signOut();
+      location.reload();
+    }
+  }
+
+  function toggleModal(show) {
+    if(show) {
+      document.getElementById('tab-feed').classList.add('hidden');
+      document.getElementById('bottom-nav-bar').classList.add('hidden');
+      document.getElementById('create-modal').classList.remove('hidden');
+    } else {
+      document.getElementById('create-modal').classList.add('hidden');
+      document.getElementById('bottom-nav-bar').classList.remove('hidden');
+      document.getElementById('tab-feed').classList.remove('hidden');
+    }
+  }
+
+  async function submitEvent() {
+    const title = document.getElementById('title').value.trim();
+    const location = document.getElementById('location').value.trim();
+    if(!title || !location) return alert('Bitte alle Felder ausfüllen');
+
+    const expiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
+    const { error } = await _supabase.from('live_events').insert([{ 
+      title, location, category: selectedCategory, 
+      university: currentUserEmail === MASTER_ADMIN_EMAIL ? 'Master-Admin' : currentUni,
+      expires_at: expiresAt, joins_count: 0, chats: [] 
+    }]);
+
+    if (error) return alert('Fehler: ' + error.message);
+    await addPoints(20);
+    
+    document.getElementById('title').value = '';
+    document.getElementById('location').value = '';
+    
+    toggleModal(false);
+    await loadEvents();
+  }
+
+  async function loadEvents() {
+    if (currentUserEmail !== MASTER_ADMIN_EMAIL) await fetchUserPoints();
+    const { data } = await _supabase.from('live_events').select('*').gt('expires_at', new Date().toISOString()).order('created_at', { ascending: false });
+    allEventsCache = data || [];
+    renderEvents();
+  }
+
+  function renderEvents() {
+    const list = document.getElementById('feed-list');
+    let filtered = allEventsCache;
+    if (activeFilter !== 'Alle') filtered = allEventsCache.filter(e => e.category === activeFilter);
+
+    if (filtered.length === 0) {
+      list.innerHTML = '<p style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 20px;">Keine Treffen gefunden.</p>';
+      return;
+    }
+
+    const isAdmin = (currentUserEmail === MASTER_ADMIN_EMAIL);
+    list.innerHTML = filtered.map(e => {
+      const count = e.joins_count || 0;
+      const chats = Array.isArray(e.chats) ? e.chats : [];
+      return `
+        <div class="event-card">
+          <div class="event-header">
+            <div class="event-title">${e.category || '📍'} ${e.title}</div>
+            <div class="event-timer">⏱️ ${getTimeRemaining(e.expires_at)}</div>
+          </div>
+          <div class="event-meta">${e.location} • <span style="color:var(--primary);">${e.university || 'Campus'}</span></div>
+          <div class="event-footer">
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <span style="font-size: 12px; color: var(--text-muted);">👥 ${count} am Start</span>
+              ${isAdmin ? `<button class="btn-delete" onclick="deleteEvent('${e.id}')">🗑️</button>` : ''}
+            </div>
+            <button class="btn-join" onclick="joinEvent('${e.id}', ${count})">🙋‍♂️ Bin dabei!</button>
+          </div>
+          <div style="margin-top: 8px; border-top: 1px dashed var(--border); padding-top: 6px;">
+            <div style="max-height: 80px; overflow-y: auto; font-size: 12px; color: var(--text-muted); margin-bottom: 6px;">
+              ${chats.length === 0 ? '<i>Keine Kommentare</i>' : chats.map(c => {
+                const p = profilesCache[c.email] || {};
+                const nameToShow = p.username || (c.email ? c.email.split('@')[0] : 'User');
+                return `<div><span class="username-link" onclick="openUserProfile('${c.email || ''}')">${nameToShow}</span>: ${c.text}</div>`;
+              }).join('')}
+            </div>
+            <div style="display:flex; gap:4px;">
+              <input type="text" id="chat-${e.id}" placeholder="Kommentieren..." style="margin:0; padding:6px; font-size:12px;" onkeydown="if(event.key==='Enter') sendEventChat('${e.id}', ${JSON.stringify(chats).replace(/"/g, '&quot;')})">
+              <button class="btn" style="width:auto; margin:0; padding:6px 12px; font-size:12px;" onclick="sendEventChat('${e.id}', ${JSON.stringify(chats).replace(/"/g, '&quot;')})">Senden</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  async function joinEvent(id, currentJoins) {
+    const nextCount = (Number(currentJoins) || 0) + 1;
+    const { error } = await _supabase.from('live_events').update({ joins_count: nextCount }).eq('id', id);
+    if (!error) {
+      await addPoints(10);
+      loadEvents();
+    }
+  }
+
+  async function deleteEvent(id) {
+    if (!confirm('Treffen wirklich löschen?')) return;
+    await _supabase.from('live_events').delete().eq('id', id);
+    loadEvents();
+  }
+
+  async function sendEventChat(id, existingChats) {
+    const input = document.getElementById(`chat-${id}`);
+    const text = input.value.trim();
+    if (!text) return;
+    const chats = Array.isArray(existingChats) ? existingChats : [];
+    chats.push({ 
+      email: currentUserEmail, 
+      text, 
+      time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) 
+    });
+    await _supabase.from('live_events').update({ chats }).eq('id', id);
+    input.value = '';
+    loadEvents();
+  }
+
+  async function loadGlobalChat() {
+    const { data } = await _supabase.from('global_chat').select('*').order('created_at', { ascending: true });
+    globalChatCache = data || [];
+    renderGlobalChat();
+  }
+
+  function renderGlobalChat() {
+    const list = document.getElementById('global-chat-list');
+    if (globalChatCache.length === 0) {
+      list.innerHTML = '<p style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 20px;">Noch keine Nachrichten im Campus-Chat.</p>';
+      return;
+    }
+    list.innerHTML = globalChatCache.map(m => {
+      const isMine = m.user_email === currentUserEmail;
+      const p = profilesCache[m.user_email] || {};
+      const shortName = p.username || (m.user_email ? m.user_email.split('@')[0] : 'Unbekannt');
+      const timeStr = new Date(m.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+      return `
+        <div class="msg-bubble ${isMine ? 'mine' : ''}">
+          <div class="msg-header">
+            <span><b><span class="username-link" onclick="openUserProfile('${m.user_email}')">${shortName}</span></b></span>
+            <span>${timeStr}</span>
+          </div>
+          <div>${m.message}</div>
+        </div>
+      `;
+    }).join('');
+    list.scrollTop = list.scrollHeight;
+  }
+
+  async function sendGlobalMessage() {
+    const input = document.getElementById('global-chat-input');
+    const message = input.value.trim();
+    if (!message) return;
+    const { error } = await _supabase.from('global_chat').insert([{ user_email: currentUserEmail, message }]);
+    if (!error) {
+      input.value = '';
+      loadGlobalChat();
+    }
+  }
+
+  async function loadDMs() {
+    const { data } = await _supabase.from('direct_messages').select('*').order('created_at', { ascending: true });
+    dmCache = data || [];
+    renderDMs();
+  }
+
+  function renderDMs() {
+    const recipient = document.getElementById('dm-recipient').value.trim().toLowerCase();
+    const list = document.getElementById('dm-chat-list');
+    if (!recipient) {
+      list.innerHTML = '<p style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 20px;">Gib oben eine E-Mail-Adresse ein, um den Chatverlauf zu sehen.</p>';
+      return;
+    }
+
+    const filtered = dmCache.filter(m => 
+      (m.sender_email === currentUserEmail && m.recipient_email === recipient) ||
+      (m.sender_email === recipient && m.recipient_email === currentUserEmail)
+    );
+
+    if (filtered.length === 0) {
+      list.innerHTML = `<p style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 20px;">Noch keine Nachrichten mit ${recipient}. Schicke die erste Nachricht!</p>`;
+      return;
+    }
+
+    list.innerHTML = filtered.map(m => {
+      const isMine = m.sender_email === currentUserEmail;
+      const senderEmail = m.sender_email;
+      const p = profilesCache[senderEmail] || {};
+      const senderName = p.username || senderEmail.split('@')[0];
+      const timeStr = new Date(m.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+      return `
+        <div class="msg-bubble ${isMine ? 'mine' : ''}">
+          <div class="msg-header">
+            <span><b><span class="username-link" onclick="openUserProfile('${senderEmail}')">${isMine ? 'Du' : senderName}</span></b></span>
+            <span>${timeStr}</span>
+          </div>
+          <div>${m.message}</div>
+        </div>
+      `;
+    }).join('');
+    list.scrollTop = list.scrollHeight;
+  }
+
+  async function sendDirectMessage() {
+    const recipient = document.getElementById('dm-recipient').value.trim().toLowerCase();
+    const input = document.getElementById('dm-input');
+    const message = input.value.trim();
+
+    if (!recipient || !message) return alert('Bitte Empfänger und Nachricht eingeben.');
+
+    const { error } = await _supabase.from('direct_messages').insert([{
+      sender_email: currentUserEmail,
+      recipient_email: recipient,
+      message: message
+    }]);
+
+    if (!error) {
+      input.value = '';
+      loadDMs();
+    } else {
+      alert('Fehler beim Senden: ' + error.message);
+    }
+  }
+
+  document.getElementById('dm-recipient').addEventListener('input', () => renderDMs());
+
+  function getTimeRemaining(expiresAt) {
+    const total = Date.parse(expiresAt) - Date.parse(new Date());
+    if (total <= 0) return 'Abgelaufen';
+    const minutes = Math.floor((total / 1000 / 60) % 60);
+    const hours = Math.floor((total / (1000 * 60 * 60)) % 24);
+    return `noch ${hours > 0 ? hours + ' Std ' : ''}${minutes} Min`;
+  }
+</script>
+
+</body>
+</html>
