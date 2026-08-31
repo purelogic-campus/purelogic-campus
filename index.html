@@ -3,23 +3,25 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <meta name="theme-color" content="#0f172a">
+  <meta name="theme-color" content="#090d16">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>PURE LOGIC • Campus Feed & Profiles</title>
+  <title>PURE LOGIC • GenZ Campus</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     :root {
-      --bg: #0f172a;
-      --card: #1e293b;
-      --border: #334155;
-      --text: #f8fafc;
+      --bg: #090d16;
+      --card: #131c31;
+      --card-glass: rgba(19, 28, 49, 0.75);
+      --border: rgba(255, 255, 255, 0.08);
+      --text: #f1f5f9;
       --text-muted: #94a3b8;
-      --primary: #3b82f6;
-      --primary-hover: #2563eb;
-      --accent: #ef4444;
+      --primary: #6366f1; /* Modern Indigo */
+      --primary-hover: #4f46e5;
+      --accent: #ec4899;  /* GenZ Pink/Magenta */
       --success: #10b981;
       --admin: #f59e0b;
+      --gradient-main: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
     }
     * { 
       box-sizing: border-box; 
@@ -30,7 +32,7 @@
     body {
       background-color: var(--bg);
       color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       height: 100vh;
       width: 100vw;
       overflow: hidden;
@@ -40,19 +42,16 @@
     }
     
     .app-card {
-      background: var(--card);
+      background: var(--bg);
       border: none;
       border-radius: 0;
-      padding: 16px;
+      padding: 14px;
       width: 100vw;
       height: 100vh;
-      max-width: none;
-      max-height: none;
-      box-shadow: none;
       display: flex;
       flex-direction: column;
-      padding-top: calc(12px + env(safe-area-inset-top));
-      padding-bottom: calc(16px + env(safe-area-inset-bottom));
+      padding-top: calc(10px + env(safe-area-inset-top));
+      padding-bottom: calc(14px + env(safe-area-inset-bottom));
     }
 
     .header {
@@ -61,10 +60,17 @@
       align-items: center;
       margin-bottom: 12px;
       border-bottom: 1px solid var(--border);
-      padding-bottom: 10px;
+      padding-bottom: 12px;
       flex-shrink: 0;
     }
-    .logo { font-weight: 800; font-size: 18px; letter-spacing: 1px; color: var(--primary); }
+    .logo { 
+      font-weight: 900; 
+      font-size: 20px; 
+      letter-spacing: -0.5px; 
+      background: var(--gradient-main);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
     
     .header-right {
       display: flex;
@@ -73,12 +79,14 @@
     }
 
     .points-badge { 
-      background: rgba(59, 130, 246, 0.1); 
-      color: var(--primary); 
-      padding: 5px 10px; 
-      border-radius: 20px; 
+      background: rgba(99, 102, 241, 0.15); 
+      color: #818cf8; 
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      padding: 6px 12px; 
+      border-radius: 30px; 
       font-size: 12px; 
-      font-weight: 600; 
+      font-weight: 700; 
+      letter-spacing: 0.3px;
     }
     .points-badge.admin-badge { 
       background: rgba(245, 158, 11, 0.15); 
@@ -87,45 +95,47 @@
     }
 
     .btn-logout {
-      background: rgba(239, 68, 68, 0.1);
+      background: rgba(236, 72, 153, 0.1);
       color: var(--accent);
-      border: 1px solid rgba(239, 68, 68, 0.3);
-      padding: 5px 8px;
-      border-radius: 10px;
+      border: 1px solid rgba(236, 72, 153, 0.25);
+      padding: 6px 10px;
+      border-radius: 12px;
       font-size: 12px;
       font-weight: 600;
       cursor: pointer;
     }
 
-    /* UNTERE NAVIGATION (Unten platziert) */
+    /* UNTERE NAVIGATION (Glassmorphism & Clean Icons) */
     .nav-tabs {
       display: flex;
       gap: 4px;
-      margin-top: 12px;
+      margin-top: 10px;
       flex-shrink: 0;
-      background: var(--bg);
+      background: var(--card-glass);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
       padding: 6px;
-      border-radius: 14px;
+      border-radius: 20px;
       border: 1px solid var(--border);
-      overflow-x: auto;
     }
     .tab-btn {
       flex: 1;
       background: none;
       border: none;
       color: var(--text-muted);
-      padding: 10px 4px;
+      padding: 10px 2px;
       font-size: 11px;
-      font-weight: 600;
+      font-weight: 700;
       cursor: pointer;
-      border-radius: 10px;
-      transition: all 0.2s;
+      border-radius: 14px;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
       text-align: center;
       white-space: nowrap;
     }
     .tab-btn.active {
-      background: var(--primary);
+      background: var(--gradient-main);
       color: white;
+      box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
     }
 
     .tab-content-wrapper {
@@ -146,35 +156,43 @@
     .hidden { display: none !important; }
 
     .btn {
-      background: var(--primary);
+      background: var(--gradient-main);
       color: white;
       border: none;
       padding: 12px;
-      border-radius: 12px;
+      border-radius: 14px;
       cursor: pointer;
       width: 100%;
-      font-weight: 600;
-      font-size: 15px;
-      transition: background 0.2s, transform 0.1s;
+      font-weight: 700;
+      font-size: 14px;
+      box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
+      transition: all 0.2s;
       margin-top: 8px;
     }
-    .btn:active { transform: scale(0.98); }
-    .btn-secondary { background: #475569; }
+    .btn:active { transform: scale(0.97); }
+    .btn-secondary { 
+      background: rgba(255, 255, 255, 0.05); 
+      border: 1px solid var(--border);
+      color: var(--text);
+      box-shadow: none;
+    }
     
     input, textarea, select {
       width: 100%;
-      padding: 12px;
+      padding: 13px 16px;
       margin: 6px 0 14px;
-      background: var(--bg);
+      background: var(--card);
       border: 1px solid var(--border);
       color: white;
-      border-radius: 12px;
-      font-size: 15px;
+      border-radius: 14px;
+      font-size: 14px;
       font-family: inherit;
+      transition: border-color 0.2s;
     }
     input:focus, textarea:focus, select:focus {
       outline: none;
       border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
     }
 
     .password-container { position: relative; }
@@ -192,12 +210,13 @@
     .forgot-password {
       display: block;
       text-align: right;
-      font-size: 13px;
-      color: var(--primary);
+      font-size: 12px;
+      color: #818cf8;
       text-decoration: none;
       margin-top: -8px;
       margin-bottom: 14px;
       cursor: pointer;
+      font-weight: 600;
     }
     
     .category-group {
@@ -209,72 +228,74 @@
       flex-shrink: 0;
     }
     .cat-pill {
-      background: var(--bg);
+      background: var(--card);
       border: 1px solid var(--border);
       color: var(--text-muted);
-      padding: 6px 14px;
-      border-radius: 20px;
+      padding: 7px 16px;
+      border-radius: 30px;
       font-size: 13px;
       cursor: pointer;
       white-space: nowrap;
+      font-weight: 600;
+      transition: all 0.2s;
     }
     .cat-pill.active {
-      background: rgba(59, 130, 246, 0.2);
+      background: rgba(99, 102, 241, 0.2);
       border-color: var(--primary);
-      color: white;
-      font-weight: 600;
+      color: #818cf8;
     }
     
     .event-card {
-      background: rgba(255, 255, 255, 0.03);
+      background: var(--card);
       border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 14px;
-      margin-bottom: 10px;
+      border-radius: 18px;
+      padding: 16px;
+      margin-bottom: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
     }
     .event-header {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      margin-bottom: 4px;
+      margin-bottom: 6px;
     }
-    .event-title { font-size: 15px; font-weight: 600; }
+    .event-title { font-size: 16px; font-weight: 700; }
     .event-timer { 
-      font-size: 10px; 
-      background: rgba(239, 68, 68, 0.15); 
+      font-size: 11px; 
+      background: rgba(236, 72, 153, 0.15); 
       color: var(--accent); 
-      padding: 3px 6px; 
-      border-radius: 6px; 
-      font-weight: 600;
+      padding: 4px 8px; 
+      border-radius: 8px; 
+      font-weight: 700;
       white-space: nowrap;
     }
-    .event-meta { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; }
+    .event-meta { font-size: 13px; color: var(--text-muted); margin-bottom: 12px; }
     
     .event-footer {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      border-top: 1px solid rgba(255,255,255,0.05);
-      padding-top: 8px;
+      border-top: 1px solid var(--border);
+      padding-top: 10px;
     }
     .btn-join {
       background: rgba(16, 185, 129, 0.15);
       color: var(--success);
       border: 1px solid rgba(16, 185, 129, 0.3);
-      padding: 5px 10px;
-      border-radius: 8px;
+      padding: 6px 14px;
+      border-radius: 10px;
       font-size: 12px;
-      font-weight: 600;
+      font-weight: 700;
       cursor: pointer;
     }
     .btn-delete {
-      background: rgba(239, 68, 68, 0.15);
+      background: rgba(236, 72, 153, 0.15);
       color: var(--accent);
-      border: 1px solid rgba(239, 68, 68, 0.3);
-      padding: 3px 6px;
-      border-radius: 6px;
-      font-size: 10px;
-      font-weight: 600;
+      border: 1px solid rgba(236, 72, 153, 0.3);
+      padding: 4px 8px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 700;
       cursor: pointer;
       margin-left: 6px;
     }
@@ -289,21 +310,21 @@
       overflow-y: auto;
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 10px;
       padding-right: 4px;
-      margin-bottom: 10px;
+      margin-bottom: 12px;
     }
     .msg-bubble {
-      background: rgba(255, 255, 255, 0.05);
+      background: var(--card);
       border: 1px solid var(--border);
-      padding: 10px 12px;
-      border-radius: 12px;
+      padding: 12px 14px;
+      border-radius: 16px;
       font-size: 14px;
-      max-width: 600px;
+      max-width: 650px;
     }
     .msg-bubble.mine {
-      background: rgba(59, 130, 246, 0.15);
-      border-color: rgba(59, 130, 246, 0.3);
+      background: rgba(99, 102, 241, 0.15);
+      border-color: rgba(99, 102, 241, 0.3);
       align-self: flex-end;
     }
     .msg-header {
@@ -323,12 +344,13 @@
 
     .msg-box {
       font-size: 13px;
-      margin-bottom: 12px;
-      padding: 8px;
-      border-radius: 8px;
+      margin-bottom: 14px;
+      padding: 10px;
+      border-radius: 12px;
       text-align: center;
+      font-weight: 600;
     }
-    .msg-error { background: rgba(239,68,68,0.15); color: var(--accent); }
+    .msg-error { background: rgba(236,72,153,0.15); color: var(--accent); }
     .msg-success { background: rgba(16,185,129,0.15); color: var(--success); }
 
     /* Profil Styles */
@@ -336,45 +358,46 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      background: rgba(255,255,255,0.03);
+      background: var(--card);
       border: 1px solid var(--border);
-      padding: 16px;
-      border-radius: 16px;
+      padding: 18px;
+      border-radius: 20px;
       margin-bottom: 16px;
       max-width: 600px;
     }
     .profile-avatar-lg {
-      width: 70px;
-      height: 70px;
+      width: 75px;
+      height: 75px;
       border-radius: 50%;
       background: var(--border);
       object-fit: cover;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 28px;
+      font-size: 30px;
       color: var(--text-muted);
       border: 2px solid var(--primary);
       flex-shrink: 0;
     }
     .username-link {
-      color: var(--primary);
+      color: #818cf8;
       cursor: pointer;
       text-decoration: none;
-      font-weight: 600;
+      font-weight: 700;
     }
     .username-link:hover { text-decoration: underline; }
     
     .interest-tag {
-      background: rgba(59, 130, 246, 0.15);
-      color: var(--primary);
-      padding: 4px 10px;
-      border-radius: 12px;
+      background: rgba(99, 102, 241, 0.15);
+      color: #818cf8;
+      padding: 5px 12px;
+      border-radius: 14px;
       font-size: 11px;
-      font-weight: 600;
+      font-weight: 700;
       display: inline-block;
       margin-right: 4px;
-      margin-bottom: 4px;
+      margin-bottom: 6px;
+      border: 1px solid rgba(99, 102, 241, 0.3);
     }
 
     /* CAMPUS-FEED / REELS STYLES */
@@ -386,25 +409,28 @@
     }
     .reels-subnav {
       display: flex;
-      justify-content: center;
-      gap: 12px;
-      margin-bottom: 10px;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 4px;
       flex-shrink: 0;
     }
     .reel-pill {
-      background: var(--bg);
+      background: var(--card);
       border: 1px solid var(--border);
       color: var(--text-muted);
-      padding: 6px 16px;
+      padding: 6px 14px;
       border-radius: 20px;
-      font-size: 13px;
+      font-size: 12px;
       cursor: pointer;
-      font-weight: 600;
+      font-weight: 700;
+      white-space: nowrap;
+      transition: all 0.2s;
     }
     .reel-pill.active {
-      background: var(--primary);
+      background: var(--gradient-main);
       color: white;
-      border-color: var(--primary);
+      border-color: transparent;
+      box-shadow: 0 4px 12px rgba(99,102,241,0.3);
     }
     .reel-card-wrapper {
       flex: 1;
@@ -418,19 +444,20 @@
     .reel-item {
       scroll-snap-align: start;
       height: 100%;
-      min-height: 380px;
+      min-height: 400px;
       max-height: 560px;
-      background: black;
-      border-radius: 16px;
+      background: #000;
+      border-radius: 20px;
       border: 1px solid var(--border);
       position: relative;
       overflow: hidden;
       display: flex;
       flex-direction: column;
       justify-content: flex-end;
-      max-width: 450px;
+      max-width: 440px;
       margin: 0 auto;
       width: 100%;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
     }
     .reel-media {
       position: absolute;
@@ -441,8 +468,8 @@
     .reel-overlay {
       position: relative;
       z-index: 2;
-      background: linear-gradient(to top, rgba(0,0,0,0.9), rgba(0,0,0,0));
-      padding: 20px 16px 16px 16px;
+      background: linear-gradient(to top, rgba(9,13,22,0.95) 0%, rgba(9,13,22,0.5) 60%, rgba(9,13,22,0) 100%);
+      padding: 24px 16px 16px 16px;
       display: flex;
       flex-direction: column;
       gap: 8px;
@@ -450,7 +477,7 @@
     .reel-sidebar-actions {
       position: absolute;
       right: 12px;
-      bottom: 80px;
+      bottom: 90px;
       z-index: 3;
       display: flex;
       flex-direction: column;
@@ -458,8 +485,10 @@
       align-items: center;
     }
     .action-btn {
-      background: rgba(0,0,0,0.5);
-      border: 1px solid rgba(255,255,255,0.2);
+      background: rgba(19, 28, 49, 0.7);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.15);
       color: white;
       width: 45px;
       height: 45px;
@@ -469,11 +498,11 @@
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      font-size: 18px;
+      font-size: 17px;
       transition: transform 0.1s;
     }
     .action-btn:active { transform: scale(0.9); }
-    .action-btn span { font-size: 10px; font-weight: bold; margin-top: 2px; }
+    .action-btn span { font-size: 10px; font-weight: 800; margin-top: 2px; }
 
     @media (min-width: 768px) {
       .app-card {
@@ -496,39 +525,43 @@
     </div>
   </div>
 
+  <!-- STEP 1: AUTH GATE -->
   <div id="auth-gate" class="tab-content" style="justify-content: center; align-items: center;">
     <div style="width: 100%; max-width: 400px;">
-      <h2 style="margin-bottom: 6px;">Willkommen</h2>
-      <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 14px;">Melde dich an oder registriere dich:</p>
+      <h2 style="margin-bottom: 6px; font-size: 24px; font-weight: 800;">Hey there 👋</h2>
+      <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">Logge dich ein oder starte direkt durch:</p>
       
       <div id="auth-msg" class="msg-box hidden"></div>
 
-      <label style="font-size: 12px; color: var(--text-muted);">E-Mail-Adresse:</label>
+      <label style="font-size: 12px; font-weight: 600; color: var(--text-muted);">E-Mail-Adresse:</label>
       <input type="email" id="email" placeholder="deine.mail@uni.at">
       
-      <label style="font-size: 12px; color: var(--text-muted);">Passwort:</label>
+      <label style="font-size: 12px; font-weight: 600; color: var(--text-muted);">Passwort:</label>
       <div class="password-container">
-        <input type="password" id="password" placeholder="Dein Passwort">
+        <input type="password" id="password" placeholder="Dein geheimes Passwort">
         <button type="button" class="password-toggle" id="toggle-pw-btn" onclick="togglePasswordVisibility()">👁️</button>
       </div>
       
       <a class="forgot-password" onclick="handleForgotPassword()">Passwort vergessen?</a>
 
       <button class="btn" onclick="handleLogin()">Einloggen</button>
-      <button class="btn btn-secondary" onclick="handleSignup()">Konto registrieren</button>
+      <button class="btn btn-secondary" onclick="handleSignup()">Account erstellen</button>
     </div>
   </div>
 
+  <!-- STEP 2: MAIN APP -->
   <div id="main-app" class="hidden" style="flex: 1; display: flex; flex-direction: column; overflow: hidden;">
     
     <div class="tab-content-wrapper">
+      <!-- TAB 0: CAMPUS-FEED / REELS (Mit Entdecken, Für dich, Gefolgt) -->
       <div id="tab-reels" class="tab-content">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px; flex-shrink:0;">
-          <div class="reels-subnav" style="margin:0;">
-            <div class="reel-pill active" id="reel-filter-discover" onclick="setReelFilter('discover')">Entdecken</div>
-            <div class="reel-pill" id="reel-filter-following" onclick="setReelFilter('following')">Gefolgt 👥</div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px; flex-shrink:0; gap: 8px;">
+          <div class="reels-subnav" style="margin:0; overflow-x: auto;">
+            <div class="reel-pill active" id="reel-filter-discover" onclick="setReelFilter('discover')">🔥 Entdecken</div>
+            <div class="reel-pill" id="reel-filter-foryou" onclick="setReelFilter('foryou')">✨ Für dich</div>
+            <div class="reel-pill" id="reel-filter-following" onclick="setReelFilter('following')">👥 Gefolgt</div>
           </div>
-          <button class="btn" style="width:auto; margin-top:0; padding: 8px 14px; font-size: 13px;" onclick="openUploadModal()">+ Video/Bild</button>
+          <button class="btn" style="width:auto; margin-top:0; padding: 8px 14px; font-size: 12px; flex-shrink: 0;" onclick="openUploadModal()">+ Beitrag</button>
         </div>
 
         <div class="reel-card-wrapper" id="reels-list">
@@ -536,9 +569,10 @@
         </div>
       </div>
 
+      <!-- TAB 1: BEITRAG (Treffen) -->
       <div id="tab-feed" class="tab-content hidden">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px; flex-shrink:0;">
-          <h3 style="font-size: 18px;">Spontane Treffen</h3>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px; flex-shrink:0;">
+          <h3 style="font-size: 18px; font-weight: 800;">Spontane Treffen</h3>
           <button class="btn" style="width:auto; margin-top:0; padding: 8px 16px; font-size: 13px;" onclick="toggleModal(true)">+ Erstellen</button>
         </div>
 
@@ -555,60 +589,63 @@
         </div>
       </div>
 
+      <!-- TAB 2: GLOBAL CHAT -->
       <div id="tab-global" class="tab-content hidden">
         <div class="chat-container">
           <div class="messages-list" id="global-chat-list">
             <p style="color: var(--text-muted); font-size: 13px; text-align:center; padding: 20px;">Lade Campus-Chat...</p>
           </div>
           <div class="chat-input-area">
-            <input type="text" id="global-chat-input" placeholder="Nachricht an den Campus..." onkeydown="if(event.key==='Enter') sendGlobalMessage()">
+            <input type="text" id="global-chat-input" placeholder="Nachricht an alle..." onkeydown="if(event.key==='Enter') sendGlobalMessage()">
             <button class="btn" style="width: auto; margin:0; padding: 0 20px;" onclick="sendGlobalMessage()">Senden</button>
           </div>
         </div>
       </div>
 
+      <!-- TAB 3: POSTFACH -->
       <div id="tab-inbox" class="tab-content hidden">
         <div class="chat-container">
-          <label style="font-size: 11px; color: var(--text-muted); flex-shrink:0;">Empfänger (E-Mail):</label>
+          <label style="font-size: 11px; font-weight: 600; color: var(--text-muted); flex-shrink:0;">Empfänger (E-Mail):</label>
           <input type="email" id="dm-recipient" placeholder="kommilitone@uni.at" style="margin-bottom: 8px; flex-shrink:0; max-width: 400px;">
           
           <div class="messages-list" id="dm-chat-list">
-            <p style="color: var(--text-muted); font-size: 13px; text-align:center; padding: 20px;">Gib oben eine E-Mail ein, um Nachrichten zu sehen.</p>
+            <p style="color: var(--text-muted); font-size: 13px; text-align:center; padding: 20px;">Gib oben eine E-Mail ein, um zu schreiben.</p>
           </div>
           <div class="chat-input-area">
-            <input type="text" id="dm-input" placeholder="Direktnachricht schreiben..." onkeydown="if(event.key==='Enter') sendDirectMessage()">
+            <input type="text" id="dm-input" placeholder="Direktnachricht..." onkeydown="if(event.key==='Enter') sendDirectMessage()">
             <button class="btn" style="width: auto; margin:0; padding: 0 20px;" onclick="sendDirectMessage()">Senden</button>
           </div>
         </div>
       </div>
 
+      <!-- TAB 4: PROFIL -->
       <div id="tab-profile" class="tab-content hidden">
         <div style="overflow-y: auto; flex: 1; padding-right: 4px;">
           <div class="profile-header-card">
             <div style="display:flex; align-items:center; gap:14px;">
-              <img id="my-profile-avatar-preview" class="profile-avatar-lg" src="" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'70\' height=\'70\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%2394a3b8\' stroke-width=\'2\'><path d=\'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2\'></path><circle cx=\'12\' cy=\'7\' r=\'4\'></circle></svg>'" alt="Avatar">
+              <img id="my-profile-avatar-preview" class="profile-avatar-lg" src="" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'75\' height=\'75\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%2394a3b8\' stroke-width=\'2\'><path d=\'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2\'></path><circle cx=\'12\' cy=\'7\' r=\'4\'></circle></svg>'" alt="Avatar">
               <div>
-                <h3 id="my-profile-display-name" style="font-size: 18px; margin-bottom: 2px;">Dein Name</h3>
-                <p id="my-profile-handle-preview" style="font-size: 13px; color: var(--primary);">@benutzername</p>
-                <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;" id="follower-stats">0 Follower • 0 Gefolgt</div>
+                <h3 id="my-profile-display-name" style="font-size: 18px; font-weight: 800; margin-bottom: 2px;">Dein Name</h3>
+                <p id="my-profile-handle-preview" style="font-size: 13px; color: #818cf8; font-weight: 700;">@benutzername</p>
+                <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px; font-weight: 600;" id="follower-stats">0 Follower • 0 Gefolgt</div>
               </div>
             </div>
           </div>
 
           <div style="max-width: 600px;">
-            <label style="font-size: 12px; color: var(--text-muted);">Benutzername (Handle):</label>
+            <label style="font-size: 12px; font-weight: 600; color: var(--text-muted);">Benutzername (Handle):</label>
             <input type="text" id="profile-username" placeholder="z. B. johndoe">
 
-            <label style="font-size: 12px; color: var(--text-muted);">Anzeigename:</label>
+            <label style="font-size: 12px; font-weight: 600; color: var(--text-muted);">Anzeigename:</label>
             <input type="text" id="profile-fullname" placeholder="z. B. John Doe">
 
-            <label style="font-size: 12px; color: var(--text-muted);">Bio / Über mich:</label>
-            <textarea id="profile-bio" rows="3" placeholder="Erzähl etwas über dich (Studiengang, Hobbys...)"></textarea>
+            <label style="font-size: 12px; font-weight: 600; color: var(--text-muted);">Bio / Über mich:</label>
+            <textarea id="profile-bio" rows="3" placeholder="Dein Studiengang, Vibe, Hobbys..."></textarea>
 
-            <label style="font-size: 12px; color: var(--text-muted);">Profilbild URL (Link zu einem Bild):</label>
+            <label style="font-size: 12px; font-weight: 600; color: var(--text-muted);">Profilbild URL:</label>
             <input type="text" id="profile-avatar" placeholder="https://beispiel.de/bild.jpg">
 
-            <label style="font-size: 12px; color: var(--text-muted);">Interessen (mit Komma getrennt):</label>
+            <label style="font-size: 12px; font-weight: 600; color: var(--text-muted);">Interessen (mit Komma getrennt für den 'Für dich'-Algorithmus):</label>
             <input type="text" id="profile-interests" placeholder="Programmieren, Kaffee, Fitness, Musik">
 
             <button class="btn" onclick="saveMyProfile()" style="margin-bottom: 30px;">Profil speichern (+10 P)</button>
@@ -617,36 +654,38 @@
       </div>
     </div>
 
+    <!-- UNTERE NAVIGATION (Unten platziert unter Treffen, Chat, Postfach, Profil) -->
     <div class="nav-tabs" id="bottom-nav-bar">
       <button class="tab-btn active" onclick="switchTab('reels')" id="btn-tab-reels">📱 Feed</button>
-      <button class="tab-btn" onclick="switchTab('feed')" id="btn-tab-feed">📋 Treffen</button>
-      <button class="tab-btn" onclick="switchTab('global')" id="btn-tab-global">💬 Chat</button>
+      <button class="tab-btn" onclick="switchTab('feed')" id="btn-tab-feed">💬 Beitrag</button>
+      <button class="tab-btn" onclick="switchTab('global')" id="btn-tab-global">⚡ Chat</button>
       <button class="tab-btn" onclick="switchTab('inbox')" id="btn-tab-inbox">📬 Postfach</button>
       <button class="tab-btn" onclick="switchTab('profile')" id="btn-tab-profile">👤 Profil</button>
     </div>
 
   </div>
 
+  <!-- MODAL: UPLOAD MEDIEN -->
   <div id="upload-modal" class="hidden tab-content" style="align-items: center; justify-content: center;">
-    <div style="width: 100%; max-width: 450px; background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 16px; padding: 20px;">
-      <h3 style="margin-bottom: 10px;">Neues Bild / Video hochladen</h3>
-      <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">Videos max. 60 Sek. (Direktlink zu MP4 oder Bild-URL).</p>
+    <div style="width: 100%; max-width: 440px; background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 20px;">
+      <h3 style="margin-bottom: 10px; font-weight: 800;">Neuen Beitrag hochladen</h3>
+      <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 14px;">Videos oder Bilder teilen.</p>
 
-      <label style="font-size: 12px; color: var(--text-muted);">Medientyp:</label>
+      <label style="font-size: 12px; font-weight: 600; color: var(--text-muted);">Medientyp:</label>
       <select id="upload-type" style="margin-bottom: 10px;">
-        <option value="video">Video (MP4 Link, max. 60s)</option>
+        <option value="video">Video (MP4 Link)</option>
         <option value="image">Bild (URL)</option>
       </select>
 
-      <label style="font-size: 12px; color: var(--text-muted);">Medien-URL (Link):</label>
-      <input type="text" id="upload-url" placeholder="https://beispiel.de/video.mp4 oder bild.jpg">
+      <label style="font-size: 12px; font-weight: 600; color: var(--text-muted);">Medien-URL:</label>
+      <input type="text" id="upload-url" placeholder="https://beispiel.de/video.mp4">
 
-      <label style="font-size: 12px; color: var(--text-muted);">Beschreibung (Caption):</label>
-      <input type="text" id="upload-caption" placeholder="Was gibt's Neues am Campus?">
+      <label style="font-size: 12px; font-weight: 600; color: var(--text-muted);">Beschreibung (Caption):</label>
+      <input type="text" id="upload-caption" placeholder="Was geht am Campus?">
 
-      <label style="font-size: 12px; color: var(--text-muted);">Mit Event verknüpfen (optional):</label>
+      <label style="font-size: 12px; font-weight: 600; color: var(--text-muted);">Mit Treffen verknüpfen (optional):</label>
       <select id="upload-event-select" style="margin-bottom: 14px;">
-        <option value="">-- Kein Event --</option>
+        <option value="">-- Kein Treffen --</option>
       </select>
 
       <button class="btn" onclick="submitMediaUpload()">Hochladen (+15 P)</button>
@@ -654,34 +693,36 @@
     </div>
   </div>
 
+  <!-- MODAL: FREMDES PROFIL -->
   <div id="view-profile-modal" class="hidden tab-content" style="align-items: center; justify-content: center;">
-    <div style="width: 100%; max-width: 450px; background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 16px; padding: 20px;">
+    <div style="width: 100%; max-width: 440px; background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 20px;">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 14px;">
-        <h3>Nutzerprofil</h3>
-        <button class="btn btn-secondary" style="width:auto; margin:0; padding:4px 10px; font-size:12px;" onclick="closeViewProfileModal()">Schließen</button>
+        <h3 style="font-weight: 800;">Creator Profil</h3>
+        <button class="btn btn-secondary" style="width:auto; margin:0; padding:6px 12px; font-size:12px;" onclick="closeViewProfileModal()">Schließen</button>
       </div>
       <div style="text-align: center; margin-bottom: 16px;">
         <img id="vp-avatar" class="profile-avatar-lg" style="margin: 0 auto 10px auto;" src="" alt="Avatar">
-        <h3 id="vp-fullname" style="font-size: 18px;"></h3>
-        <p id="vp-handle" style="font-size: 13px; color: var(--primary); margin-bottom: 8px;"></p>
-        <button class="btn" id="vp-follow-btn" style="width: auto; padding: 6px 20px; font-size: 13px; margin: 0 auto;" onclick="toggleFollowUserFromModal()">Folgen</button>
+        <h3 id="vp-fullname" style="font-size: 18px; font-weight: 800;"></h3>
+        <p id="vp-handle" style="font-size: 13px; color: #818cf8; font-weight: 700; margin-bottom: 10px;"></p>
+        <button class="btn" id="vp-follow-btn" style="width: auto; padding: 8px 24px; font-size: 13px; margin: 0 auto;" onclick="toggleFollowUserFromModal()">Folgen</button>
       </div>
-      <div style="background: rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:12px; padding:12px; margin-bottom: 12px;">
-        <label style="font-size: 11px; color: var(--text-muted); display:block; margin-bottom:4px;">Bio:</label>
+      <div style="background: rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:14px; padding:14px; margin-bottom: 12px;">
+        <label style="font-size: 11px; font-weight: 700; color: var(--text-muted); display:block; margin-bottom:4px;">Bio:</label>
         <p id="vp-bio" style="font-size: 13px; font-style: italic;">Keine Bio angegeben.</p>
       </div>
-      <div style="background: rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:12px; padding:12px;">
-        <label style="font-size: 11px; color: var(--text-muted); display:block; margin-bottom:6px;">Interessen:</label>
+      <div style="background: rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:14px; padding:14px;">
+        <label style="font-size: 11px; font-weight: 700; color: var(--text-muted); display:block; margin-bottom:6px;">Interessen:</label>
         <div id="vp-interests-container"></div>
       </div>
     </div>
   </div>
 
+  <!-- MODAL: TREFFEN ERSTELLEN -->
   <div id="create-modal" class="hidden tab-content" style="align-items: center; justify-content: center;">
-    <div style="width: 100%; max-width: 450px; background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 16px; padding: 20px;">
-      <h3 style="margin-bottom: 10px;">Neues Treffen anbieten</h3>
+    <div style="width: 100%; max-width: 440px; background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 20px;">
+      <h3 style="margin-bottom: 10px; font-weight: 800;">Spontanes Treffen erstellen</h3>
       
-      <label style="font-size: 12px; color: var(--text-muted); display: block;">Kategorie:</label>
+      <label style="font-size: 12px; font-weight: 600; color: var(--text-muted); display: block;">Kategorie:</label>
       <div class="category-group" id="create-category-group">
         <div class="cat-pill active" onclick="selectCreateCategory(this, '☕ Kaffee')">☕ Kaffee</div>
         <div class="cat-pill" onclick="selectCreateCategory(this, '📖 Lernen')">📖 Lernen</div>
@@ -689,8 +730,8 @@
         <div class="cat-pill" onclick="selectCreateCategory(this, '🏀 Sport')">🏀 Sport</div>
       </div>
 
-      <input type="text" id="title" placeholder="Titel (z. B. Pause im Hof)">
-      <input type="text" id="location" placeholder="Ort (z. B. Votivpark / Bib OG2)">
+      <input type="text" id="title" placeholder="Titel (z. B. Pause am Campus)">
+      <input type="text" id="location" placeholder="Ort (z. B. Lounge OG1)">
       <button class="btn" onclick="submitEvent()">Veröffentlichen (+20 P)</button>
       <button class="btn btn-secondary" onclick="toggleModal(false)">Abbrechen</button>
     </div>
@@ -786,9 +827,9 @@
         email: currentUserEmail,
         username: defaultUsername,
         full_name: defaultUsername,
-        bio: 'Hallo! Ich bin neu auf dem Campus.',
+        bio: 'Hey! Frisch am Campus.',
         avatar_url: '',
-        interests: ['Campus']
+        interests: ['Campus', 'Kaffee']
       }]);
       await loadProfiles();
     }
@@ -838,7 +879,7 @@
 
     await addPoints(10);
     await loadProfiles();
-    alert('Profil erfolgreich gespeichert!');
+    alert('Profil erfolgreich aktualisiert!');
   }
 
   async function openUserProfile(email) {
@@ -864,11 +905,11 @@
       followBtn.classList.remove('hidden');
       if (followsCache.includes(email)) {
         followBtn.innerText = 'Entfolgen';
-        followBtn.style.background = 'rgba(239, 68, 68, 0.2)';
+        followBtn.style.background = 'rgba(236, 72, 153, 0.2)';
         followBtn.style.color = 'var(--accent)';
       } else {
         followBtn.innerText = 'Folgen';
-        followBtn.style.background = 'var(--primary)';
+        followBtn.style.background = 'var(--gradient-main)';
         followBtn.style.color = 'white';
       }
     }
@@ -946,15 +987,19 @@
     }
   }
 
-  // --- MEDIA POSTS / REELS LOGIK ---
+  // --- REELS & ALGORITHMUS LOGIK ("Entdecken", "Für dich", "Gefolgt") ---
   function setReelFilter(filter) {
     reelFilter = filter;
+    document.getElementById('reel-filter-discover').classList.remove('active');
+    document.getElementById('reel-filter-foryou').classList.remove('active');
+    document.getElementById('reel-filter-following').classList.remove('active');
+
     if (filter === 'discover') {
       document.getElementById('reel-filter-discover').classList.add('active');
-      document.getElementById('reel-filter-following').classList.remove('active');
+    } else if (filter === 'foryou') {
+      document.getElementById('reel-filter-foryou').classList.add('active');
     } else {
       document.getElementById('reel-filter-following').classList.add('active');
-      document.getElementById('reel-filter-discover').classList.remove('active');
     }
     renderMediaPosts();
   }
@@ -965,16 +1010,44 @@
     renderMediaPosts();
   }
 
+  // Berechnet Prozent-Übereinstimmung von Interessen ( >= 60% match für "Für dich" )
+  function calculateInterestMatch(myInterests, otherInterests) {
+    if (!Array.isArray(myInterests) || !Array.isArray(otherInterests) || myInterests.length === 0 || otherInterests.length === 0) return 0;
+    const lowerMy = myInterests.map(i => i.toLowerCase().trim());
+    const lowerOther = otherInterests.map(i => i.toLowerCase().trim());
+    let matches = 0;
+    lowerMy.forEach(item => {
+      if (lowerOther.includes(item)) matches++;
+    });
+    const maxLen = Math.max(lowerMy.length, lowerOther.length);
+    return (matches / maxLen) * 100;
+  }
+
   function renderMediaPosts() {
     const list = document.getElementById('reels-list');
-    let posts = mediaPostsCache;
+    let posts = [...mediaPostsCache];
+    const myProfile = profilesCache[currentUserEmail] || { interests: [] };
+    const myInterests = myProfile.interests || [];
 
     if (reelFilter === 'following') {
       posts = posts.filter(p => followsCache.includes(p.author_email) || p.author_email === currentUserEmail);
+    } else if (reelFilter === 'foryou') {
+      // Filtert Beiträge von Contributern, die mind. 60% gemeinsame Interessen haben
+      posts = posts.filter(p => {
+        if (p.author_email === currentUserEmail) return true;
+        const authorProfile = profilesCache[p.author_email] || {};
+        const authorInterests = authorProfile.interests || [];
+        const matchPercentage = calculateInterestMatch(myInterests, authorInterests);
+        return matchPercentage >= 60;
+      });
     }
 
     if (posts.length === 0) {
-      list.innerHTML = `<p style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 40px;">${reelFilter === 'following' ? 'Keine Beiträge von Leuten, denen du folgst.' : 'Noch keine Medien hochgeladen.'}</p>`;
+      let emptyText = 'Noch keine Medien hochgeladen.';
+      if (reelFilter === 'following') emptyText = 'Keine Beiträge von Konten, denen du folgst.';
+      if (reelFilter === 'foryou') emptyText = 'Noch keine passenden Beiträge (min. 60% Interessen-Übereinstimmung). Ergänze deine Interessen im Profil!';
+      
+      list.innerHTML = `<p style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 40px; font-weight: 600;">${emptyText}</p>`;
       return;
     }
 
@@ -991,7 +1064,7 @@
       let eventTitle = '';
       if (post.event_id) {
         const ev = allEventsCache.find(e => e.id === post.event_id);
-        if (ev) eventTitle = `📍 Event: ${ev.title} (${ev.location})`;
+        if (ev) eventTitle = `📍 Treffen: ${ev.title} (${ev.location})`;
       }
 
       let mediaElement = '';
@@ -1006,7 +1079,7 @@
           ${mediaElement}
           
           <div class="reel-sidebar-actions">
-            <button class="action-btn" onclick="toggleLikeMedia('${post.id}')" style="color: ${hasLiked ? '#ef4444' : 'white'};">
+            <button class="action-btn" onclick="toggleLikeMedia('${post.id}')" style="color: ${hasLiked ? '#ec4899' : 'white'};">
               ${hasLiked ? '❤️' : '🤍'}
               <span>${likes.length}</span>
             </button>
@@ -1015,7 +1088,7 @@
               <span>${comments.length}</span>
             </button>
             ${post.author_email !== currentUserEmail ? `
-              <button class="action-btn" onclick="toggleFollowDirect('${post.author_email}')" style="font-size: 12px; background: ${isFollowing ? 'rgba(59,130,246,0.6)' : 'rgba(0,0,0,0.6)'};">
+              <button class="action-btn" onclick="toggleFollowDirect('${post.author_email}')" style="font-size: 12px; background: ${isFollowing ? 'rgba(99,102,241,0.7)' : 'rgba(19,28,49,0.7)'};">
                 ${isFollowing ? '✓' : '+'}
                 <span>${isFollowing ? 'Folgt' : 'Folgen'}</span>
               </button>
@@ -1025,14 +1098,14 @@
           <div class="reel-overlay">
             <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 2px;">
               <img class="profile-avatar-lg" style="width: 32px; height: 32px; font-size: 14px;" src="${authorAvatar}" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'32\' height=\'32\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%2394a3b8\' stroke-width=\'2\'><path d=\'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2\'></path><circle cx=\'12\' cy=\'7\' r=\'4\'></circle></svg>'">
-              <span class="username-link" style="font-size: 14px; font-weight: 600;" onclick="openUserProfile('${post.author_email}')">@${authorName}</span>
+              <span class="username-link" style="font-size: 14px;" onclick="openUserProfile('${post.author_email}')">@${authorName}</span>
             </div>
-            <p style="font-size: 13px; color: white;">${post.caption || ''}</p>
-            ${eventTitle ? `<div style="font-size: 11px; background: rgba(59,130,246,0.3); padding: 3px 8px; border-radius: 6px; display:inline-block; width:fit-content; margin-top:2px;">${eventTitle}</div>` : ''}
+            <p style="font-size: 13px; color: white; font-weight: 500;">${post.caption || ''}</p>
+            ${eventTitle ? `<div style="font-size: 11px; font-weight: 700; background: rgba(99,102,241,0.25); border: 1px solid rgba(99,102,241,0.4); padding: 3px 8px; border-radius: 8px; display:inline-block; width:fit-content; margin-top:2px;">${eventTitle}</div>` : ''}
             
             <div style="display: flex; gap: 6px; margin-top: 6px;">
-              <input type="text" id="media-comment-${post.id}" placeholder="Kommentieren..." style="margin:0; padding:6px 10px; font-size: 12px; background: rgba(0,0,0,0.6); border-color: rgba(255,255,255,0.2);" onkeydown="if(event.key==='Enter') sendMediaComment('${post.id}')">
-              <button class="btn" style="width: auto; margin:0; padding: 6px 12px; font-size: 12px;" onclick="sendMediaComment('${post.id}')">Senden</button>
+              <input type="text" id="media-comment-${post.id}" placeholder="Schreibe einen Kommentar..." style="margin:0; padding:6px 10px; font-size: 12px; background: rgba(9,13,22,0.8); border-color: rgba(255,255,255,0.15);" onkeydown="if(event.key==='Enter') sendMediaComment('${post.id}')">
+              <button class="btn" style="width: auto; margin:0; padding: 6px 14px; font-size: 12px;" onclick="sendMediaComment('${post.id}')">Senden</button>
             </div>
           </div>
         </div>
@@ -1042,7 +1115,7 @@
 
   async function openUploadModal() {
     const select = document.getElementById('upload-event-select');
-    select.innerHTML = '<option value="">-- Kein Event --</option>' + allEventsCache.map(e => `<option value="${e.id}">${e.title} (${e.location})</option>`).join('');
+    select.innerHTML = '<option value="">-- Kein Treffen --</option>' + allEventsCache.map(e => `<option value="${e.id}">${e.title} (${e.location})</option>`).join('');
     
     document.getElementById('upload-modal').classList.remove('hidden');
     document.getElementById('bottom-nav-bar').classList.add('hidden');
@@ -1192,7 +1265,7 @@
 
     const { error } = await _supabase.auth.signUp({ email, password });
     if (error) return showMessage('Registrierung fehlgeschlagen: ' + error.message);
-    showMessage('Registrierung erfolgreich! Bitte bestätige deine E-Mail.', false);
+    showMessage('Account erstellt! Bitte bestätige deine E-Mail.', false);
   }
 
   async function handleForgotPassword() {
@@ -1300,15 +1373,15 @@
             <div class="event-title">${e.category || '📍'} ${e.title}</div>
             <div class="event-timer">⏱️ ${getTimeRemaining(e.expires_at)}</div>
           </div>
-          <div class="event-meta">${e.location} • <span style="color:var(--primary);">${e.university || 'Campus'}</span></div>
+          <div class="event-meta">${e.location} • <span style="color:#818cf8; font-weight: 600;">${e.university || 'Campus'}</span></div>
           <div class="event-footer">
             <div style="display: flex; align-items: center; gap: 6px;">
-              <span style="font-size: 12px; color: var(--text-muted);">👥 ${count} am Start</span>
+              <span style="font-size: 12px; font-weight: 600; color: var(--text-muted);">👥 ${count} am Start</span>
               ${isAdmin ? `<button class="btn-delete" onclick="deleteEvent('${e.id}')">🗑️</button>` : ''}
             </div>
             <button class="btn-join" onclick="joinEvent('${e.id}', ${count})">🙋‍♂️ Bin dabei!</button>
           </div>
-          <div style="margin-top: 8px; border-top: 1px dashed var(--border); padding-top: 6px;">
+          <div style="margin-top: 10px; border-top: 1px dashed var(--border); padding-top: 8px;">
             <div style="max-height: 80px; overflow-y: auto; font-size: 12px; color: var(--text-muted); margin-bottom: 6px;">
               ${chats.length === 0 ? '<i>Keine Kommentare</i>' : chats.map(c => {
                 const p = profilesCache[c.email] || {};
@@ -1316,9 +1389,9 @@
                 return `<div><span class="username-link" onclick="openUserProfile('${c.email || ''}')">${nameToShow}</span>: ${c.text}</div>`;
               }).join('')}
             </div>
-            <div style="display:flex; gap:4px;">
-              <input type="text" id="chat-${e.id}" placeholder="Kommentieren..." style="margin:0; padding:6px; font-size:12px;" onkeydown="if(event.key==='Enter') sendEventChat('${e.id}', ${JSON.stringify(chats).replace(/"/g, '&quot;')})">
-              <button class="btn" style="width:auto; margin:0; padding:6px 12px; font-size:12px;" onclick="sendEventChat('${e.id}', ${JSON.stringify(chats).replace(/"/g, '&quot;')})">Senden</button>
+            <div style="display:flex; gap:6px;">
+              <input type="text" id="chat-${e.id}" placeholder="Kommentieren..." style="margin:0; padding:8px; font-size:12px;" onkeydown="if(event.key==='Enter') sendEventChat('${e.id}', ${JSON.stringify(chats).replace(/"/g, '&quot;')})">
+              <button class="btn" style="width:auto; margin:0; padding:8px 14px; font-size:12px;" onclick="sendEventChat('${e.id}', ${JSON.stringify(chats).replace(/"/g, '&quot;')})">Senden</button>
             </div>
           </div>
         </div>
@@ -1407,7 +1480,7 @@
     const recipient = document.getElementById('dm-recipient').value.trim().toLowerCase();
     const list = document.getElementById('dm-chat-list');
     if (!recipient) {
-      list.innerHTML = '<p style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 20px;">Gib oben eine E-Mail-Adresse ein, um den Chatverlauf zu sehen.</p>';
+      list.innerHTML = '<p style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 20px;">Gib oben eine E-Mail-Adresse ein.</p>';
       return;
     }
 
@@ -1417,7 +1490,7 @@
     );
 
     if (filtered.length === 0) {
-      list.innerHTML = `<p style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 20px;">Noch keine Nachrichten mit ${recipient}. Schicke die erste Nachricht!</p>`;
+      list.innerHTML = `<p style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 20px;">Noch keine Nachrichten mit ${recipient}.</p>`;
       return;
     }
 
