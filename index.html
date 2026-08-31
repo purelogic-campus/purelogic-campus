@@ -39,7 +39,6 @@
       align-items: center;
     }
     
-    /* App nimmt nun den gesamten Bildschirm ein */
     .app-card {
       background: var(--card);
       border: none;
@@ -106,6 +105,7 @@
       padding: 4px;
       border-radius: 12px;
       border: 1px solid var(--border);
+      overflow-x: auto;
     }
     .tab-btn {
       flex: 1;
@@ -113,12 +113,13 @@
       border: none;
       color: var(--text-muted);
       padding: 10px 4px;
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 600;
       cursor: pointer;
       border-radius: 8px;
       transition: all 0.2s;
       text-align: center;
+      white-space: nowrap;
     }
     .tab-btn.active {
       background: var(--primary);
@@ -150,7 +151,7 @@
     .btn:active { transform: scale(0.98); }
     .btn-secondary { background: #475569; }
     
-    input, textarea {
+    input, textarea, select {
       width: 100%;
       padding: 12px;
       margin: 6px 0 14px;
@@ -161,7 +162,7 @@
       font-size: 15px;
       font-family: inherit;
     }
-    input:focus, textarea:focus {
+    input:focus, textarea:focus, select:focus {
       outline: none;
       border-color: var(--primary);
     }
@@ -324,7 +325,7 @@
     .profile-header-card {
       display: flex;
       align-items: center;
-      gap: 16px;
+      justify-content: space-between;
       background: rgba(255,255,255,0.03);
       border: 1px solid var(--border);
       padding: 16px;
@@ -366,7 +367,104 @@
       margin-bottom: 4px;
     }
 
-    /* Auf größeren Bildschirmen Formularen etwas max-width geben, damit es übersichtlich bleibt */
+    /* SWIPE / REELS STYLES (TikTok-Style) */
+    .reels-container {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      position: relative;
+    }
+    .reels-subnav {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 10px;
+      flex-shrink: 0;
+    }
+    .reel-pill {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 13px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .reel-pill.active {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+    .reel-card-wrapper {
+      flex: 1;
+      overflow-y: scroll;
+      scroll-snap-type: y mandatory;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      padding-bottom: 40px;
+    }
+    .reel-item {
+      scroll-snap-align: start;
+      height: 100%;
+      min-height: 400px;
+      max-height: 600px;
+      background: black;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      max-width: 450px;
+      margin: 0 auto;
+      width: 100%;
+    }
+    .reel-media {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      object-fit: cover;
+      z-index: 1;
+    }
+    .reel-overlay {
+      position: relative;
+      z-index: 2;
+      background: linear-gradient(to top, rgba(0,0,0,0.9), rgba(0,0,0,0));
+      padding: 20px 16px 16px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .reel-sidebar-actions {
+      position: absolute;
+      right: 12px;
+      bottom: 80px;
+      z-index: 3;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      align-items: center;
+    }
+    .action-btn {
+      background: rgba(0,0,0,0.5);
+      border: 1px solid rgba(255,255,255,0.2);
+      color: white;
+      width: 45px;
+      height: 45px;
+      border-radius: 50%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 18px;
+      transition: transform 0.1s;
+    }
+    .action-btn:active { transform: scale(0.9); }
+    .action-btn span { font-size: 10px; font-weight: bold; margin-top: 2px; }
+
     @media (min-width: 768px) {
       .app-card {
         padding: 30px 40px;
@@ -416,14 +514,30 @@
   <div id="main-app" class="hidden tab-content">
     
     <div class="nav-tabs">
-      <button class="tab-btn active" onclick="switchTab('feed')" id="btn-tab-feed">📋 Feed</button>
+      <button class="tab-btn active" onclick="switchTab('reels')" id="btn-tab-reels">🎬 Swipe</button>
+      <button class="tab-btn" onclick="switchTab('feed')" id="btn-tab-feed">📋 Treffen</button>
       <button class="tab-btn" onclick="switchTab('global')" id="btn-tab-global">💬 Chat</button>
       <button class="tab-btn" onclick="switchTab('inbox')" id="btn-tab-inbox">📬 Postfach</button>
       <button class="tab-btn" onclick="switchTab('profile')" id="btn-tab-profile">👤 Profil</button>
     </div>
 
-    <!-- TAB 1: FEED -->
-    <div id="tab-feed" class="tab-content">
+    <!-- TAB 0: SWIPE / REELS (NEU) -->
+    <div id="tab-reels" class="tab-content">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px; flex-shrink:0;">
+        <div class="reels-subnav" style="margin:0;">
+          <div class="reel-pill active" id="reel-filter-discover" onclick="setReelFilter('discover')">Entdecken</div>
+          <div class="reel-pill" id="reel-filter-following" onclick="setReelFilter('following')">Gefolgt 👥</div>
+        </div>
+        <button class="btn" style="width:auto; margin-top:0; padding: 8px 14px; font-size: 13px;" onclick="openUploadModal()">+ Video/Bild</button>
+      </div>
+
+      <div class="reel-card-wrapper" id="reels-list">
+        <p style="color: var(--text-muted); font-size: 13px; text-align:center; padding: 20px;">Lade Campus-Reels...</p>
+      </div>
+    </div>
+
+    <!-- TAB 1: FEED (TREFFEN) -->
+    <div id="tab-feed" class="tab-content hidden">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px; flex-shrink:0;">
         <h3 style="font-size: 18px;">Spontane Treffen</h3>
         <button class="btn" style="width:auto; margin-top:0; padding: 8px 16px; font-size: 13px;" onclick="toggleModal(true)">+ Erstellen</button>
@@ -475,10 +589,13 @@
     <div id="tab-profile" class="tab-content hidden">
       <div style="overflow-y: auto; flex: 1; padding-right: 4px;">
         <div class="profile-header-card">
-          <img id="my-profile-avatar-preview" class="profile-avatar-lg" src="" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'70\' height=\'70\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%2394a3b8\' stroke-width=\'2\'><path d=\'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2\'></path><circle cx=\'12\' cy=\'7\' r=\'4\'></circle></svg>'" alt="Avatar">
-          <div>
-            <h3 id="my-profile-display-name" style="font-size: 18px; margin-bottom: 2px;">Dein Name</h3>
-            <p id="my-profile-handle-preview" style="font-size: 13px; color: var(--primary);">@benutzername</p>
+          <div style="display:flex; align-items:center; gap:14px;">
+            <img id="my-profile-avatar-preview" class="profile-avatar-lg" src="" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'70\' height=\'70\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%2394a3b8\' stroke-width=\'2\'><path d=\'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2\'></path><circle cx=\'12\' cy=\'7\' r=\'4\'></circle></svg>'" alt="Avatar">
+            <div>
+              <h3 id="my-profile-display-name" style="font-size: 18px; margin-bottom: 2px;">Dein Name</h3>
+              <p id="my-profile-handle-preview" style="font-size: 13px; color: var(--primary);">@benutzername</p>
+              <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;" id="follower-stats">0 Follower • 0 Gefolgt</div>
+            </div>
           </div>
         </div>
 
@@ -505,6 +622,34 @@
 
   </div>
 
+  <!-- MODAL: UPLOAD MEDIEN / REEL (NEU) -->
+  <div id="upload-modal" class="hidden tab-content" style="align-items: center; justifyContent: center;">
+    <div style="width: 100%; max-width: 450px; background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 16px; padding: 20px;">
+      <h3 style="margin-bottom: 10px;">Neues Bild / Video hochladen</h3>
+      <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">Videos max. 60 Sek. (Direktlink zu MP4 oder Bild-URL).</p>
+
+      <label style="font-size: 12px; color: var(--text-muted);">Medientyp:</label>
+      <select id="upload-type" style="margin-bottom: 10px;">
+        <option value="video">Video (MP4 Link, max. 60s)</option>
+        <option value="image">Bild (URL)</option>
+      </select>
+
+      <label style="font-size: 12px; color: var(--text-muted);">Medien-URL (Link):</label>
+      <input type="text" id="upload-url" placeholder="https://beispiel.de/video.mp4 oder bild.jpg">
+
+      <label style="font-size: 12px; color: var(--text-muted);">Beschreibung (Caption):</label>
+      <input type="text" id="upload-caption" placeholder="Was gibt's Neues am Campus?">
+
+      <label style="font-size: 12px; color: var(--text-muted);">Mit Event verknüpfen (optional):</label>
+      <select id="upload-event-select" style="margin-bottom: 14px;">
+        <option value="">-- Kein Event --</option>
+      </select>
+
+      <button class="btn" onclick="submitMediaUpload()">Hochladen (+15 P)</button>
+      <button class="btn btn-secondary" onclick="closeUploadModal()">Abbrechen</button>
+    </div>
+  </div>
+
   <!-- MODAL: FREMDES PROFIL ANSEHEN -->
   <div id="view-profile-modal" class="hidden tab-content" style="align-items: center; justify-content: center;">
     <div style="width: 100%; max-width: 450px; background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 16px; padding: 20px;">
@@ -515,7 +660,8 @@
       <div style="text-align: center; margin-bottom: 16px;">
         <img id="vp-avatar" class="profile-avatar-lg" style="margin: 0 auto 10px auto;" src="" alt="Avatar">
         <h3 id="vp-fullname" style="font-size: 18px;"></h3>
-        <p id="vp-handle" style="font-size: 13px; color: var(--primary);"></p>
+        <p id="vp-handle" style="font-size: 13px; color: var(--primary); margin-bottom: 8px;"></p>
+        <button class="btn" id="vp-follow-btn" style="width: auto; padding: 6px 20px; font-size: 13px; margin: 0 auto;" onclick="toggleFollowUserFromModal()">Folgen</button>
       </div>
       <div style="background: rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:12px; padding:12px; margin-bottom: 12px;">
         <label style="font-size: 11px; color: var(--text-muted); display:block; margin-bottom:4px;">Bio:</label>
@@ -562,10 +708,14 @@
   let userPoints = 0;
   let selectedCategory = '☕ Kaffee';
   let activeFilter = 'Alle';
+  let reelFilter = 'discover'; // 'discover' oder 'following'
   let allEventsCache = [];
   let globalChatCache = [];
   let dmCache = [];
   let profilesCache = {};
+  let followsCache = []; // Liste der gefolgten E-Mails
+  let mediaPostsCache = [];
+  let viewingProfileEmail = null;
 
   window.addEventListener('DOMContentLoaded', async () => {
     if (currentUserEmail) {
@@ -592,8 +742,10 @@
     document.getElementById('main-app').classList.remove('hidden');
     
     await loadProfiles();
+    await loadFollows();
     await ensureMyProfileExists();
     loadEvents();
+    loadMediaPosts();
     loadGlobalChat();
     loadDMs();
     initRealtime();
@@ -605,6 +757,8 @@
       .on('postgres_changes', { event: '*', schema: 'public', table: 'global_chat' }, () => loadGlobalChat())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'direct_messages' }, () => loadDMs())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => loadProfiles())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'follows' }, () => loadFollows())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'media_posts' }, () => loadMediaPosts())
       .subscribe();
   }
 
@@ -612,11 +766,15 @@
     const { data } = await _supabase.from('profiles').select('*');
     if (data) {
       profilesCache = {};
-      data.forEach(p => {
-        profilesCache[p.email] = p;
-      });
+      data.forEach(p => { profilesCache[p.email] = p; });
       renderMyProfileInputs();
     }
+  }
+
+  async function loadFollows() {
+    const { data } = await _supabase.from('follows').select('*').eq('follower_email', currentUserEmail);
+    followsCache = data ? data.map(f => f.following_email) : [];
+    updateFollowerStatsUI();
   }
 
   async function ensureMyProfileExists() {
@@ -648,6 +806,16 @@
     document.getElementById('my-profile-display-name').innerText = profile.full_name || profile.username || currentUserEmail.split('@')[0];
     document.getElementById('my-profile-handle-preview').innerText = '@' + (profile.username || 'user');
     document.getElementById('my-profile-avatar-preview').src = profile.avatar_url || '';
+    updateFollowerStatsUI();
+  }
+
+  async function updateFollowerStatsUI() {
+    const { count: followingCount } = await _supabase.from('follows').select('*', { count: 'exact', head: true }).eq('follower_email', currentUserEmail);
+    const { count: followerCount } = await _supabase.from('follows').select('*', { count: 'exact', head: true }).eq('following_email', currentUserEmail);
+    const statsEl = document.getElementById('follower-stats');
+    if (statsEl) {
+      statsEl.innerText = `${followerCount || 0} Follower • ${followingCount || 0} Gefolgt`;
+    }
   }
 
   async function saveMyProfile() {
@@ -672,6 +840,7 @@
   }
 
   async function openUserProfile(email) {
+    viewingProfileEmail = email;
     const profile = profilesCache[email] || {
       email: email,
       username: email.split('@')[0],
@@ -685,6 +854,22 @@
     document.getElementById('vp-fullname').innerText = profile.full_name || profile.username;
     document.getElementById('vp-handle').innerText = '@' + (profile.username || 'user');
     document.getElementById('vp-bio').innerText = profile.bio || 'Keine Bio angegeben.';
+
+    const followBtn = document.getElementById('vp-follow-btn');
+    if (email === currentUserEmail) {
+      followBtn.classList.add('hidden');
+    } else {
+      followBtn.classList.remove('hidden');
+      if (followsCache.includes(email)) {
+        followBtn.innerText = 'Entfolgen';
+        followBtn.style.background = 'rgba(239, 68, 68, 0.2)';
+        followBtn.style.color = 'var(--accent)';
+      } else {
+        followBtn.innerText = 'Folgen';
+        followBtn.style.background = 'var(--primary)';
+        followBtn.style.color = 'white';
+      }
+    }
 
     const interestsContainer = document.getElementById('vp-interests-container');
     const interests = Array.isArray(profile.interests) ? profile.interests : [];
@@ -702,17 +887,48 @@
   function closeViewProfileModal() {
     document.getElementById('view-profile-modal').classList.add('hidden');
     document.querySelector('.nav-tabs').classList.remove('hidden');
-    switchTab('feed');
+    switchTab('reels');
+  }
+
+  async function toggleFollowUserFromModal() {
+    if (!viewingProfileEmail || viewingProfileEmail === currentUserEmail) return;
+    const isFollowing = followsCache.includes(viewingProfileEmail);
+
+    if (isFollowing) {
+      await _supabase.from('follows').delete().eq('follower_email', currentUserEmail).eq('following_email', viewingProfileEmail);
+    } else {
+      await _supabase.from('follows').insert([{ follower_email: currentUserEmail, following_email: viewingProfileEmail }]);
+      await addPoints(5);
+    }
+    await loadFollows();
+    openUserProfile(viewingProfileEmail);
+  }
+
+  async function toggleFollowDirect(targetEmail) {
+    if (targetEmail === currentUserEmail) return;
+    const isFollowing = followsCache.includes(targetEmail);
+    if (isFollowing) {
+      await _supabase.from('follows').delete().eq('follower_email', currentUserEmail).eq('following_email', targetEmail);
+    } else {
+      await _supabase.from('follows').insert([{ follower_email: currentUserEmail, following_email: targetEmail }]);
+      await addPoints(5);
+    }
+    await loadFollows();
+    renderMediaPosts();
   }
 
   function switchTab(tabName) {
     document.querySelectorAll('.nav-tabs .tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.getElementById('tab-reels').classList.add('hidden');
     document.getElementById('tab-feed').classList.add('hidden');
     document.getElementById('tab-global').classList.add('hidden');
     document.getElementById('tab-inbox').classList.add('hidden');
     document.getElementById('tab-profile').classList.add('hidden');
 
-    if (tabName === 'feed') {
+    if (tabName === 'reels') {
+      document.getElementById('btn-tab-reels').classList.add('active');
+      document.getElementById('tab-reels').classList.remove('hidden');
+    } else if (tabName === 'feed') {
       document.getElementById('btn-tab-feed').classList.add('active');
       document.getElementById('tab-feed').classList.remove('hidden');
     } else if (tabName === 'global') {
@@ -726,6 +942,183 @@
       document.getElementById('tab-profile').classList.remove('hidden');
       renderMyProfileInputs();
     }
+  }
+
+  // --- MEDIA POSTS / REELS LOGIK ---
+  function setReelFilter(filter) {
+    reelFilter = filter;
+    if (filter === 'discover') {
+      document.getElementById('reel-filter-discover').classList.add('active');
+      document.getElementById('reel-filter-following').classList.remove('active');
+    } else {
+      document.getElementById('reel-filter-following').classList.add('active');
+      document.getElementById('reel-filter-discover').classList.remove('active');
+    }
+    renderMediaPosts();
+  }
+
+  async function loadMediaPosts() {
+    const { data } = await _supabase.from('media_posts').select('*').order('created_at', { ascending: false });
+    mediaPostsCache = data || [];
+    renderMediaPosts();
+  }
+
+  function renderMediaPosts() {
+    const list = document.getElementById('reels-list');
+    let posts = mediaPostsCache;
+
+    if (reelFilter === 'following') {
+      posts = posts.filter(p => followsCache.includes(p.author_email) || p.author_email === currentUserEmail);
+    }
+
+    if (posts.length === 0) {
+      list.innerHTML = `<p style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 40px;">${reelFilter === 'following' ? 'Keine Beiträge von Leuten, denen du folgst.' : 'Noch keine Medien hochgeladen.'}</p>`;
+      return;
+    }
+
+    list.innerHTML = posts.map(post => {
+      const authorProfile = profilesCache[post.author_email] || {};
+      const authorName = authorProfile.username || post.author_email.split('@')[0];
+      const authorAvatar = authorProfile.avatar_url || '';
+      const isFollowing = followsCache.includes(post.author_email) || post.author_email === currentUserEmail;
+      
+      const likes = Array.isArray(post.likes) ? post.likes : [];
+      const hasLiked = likes.includes(currentUserEmail);
+      const comments = Array.isArray(post.comments) ? post.comments : [];
+      
+      // Event-Verknüpfung finden falls vorhanden
+      let eventTitle = '';
+      if (post.event_id) {
+        const ev = allEventsCache.find(e => e.id === post.event_id);
+        if (ev) eventTitle = `📍 Event: ${ev.title} (${ev.location})`;
+      }
+
+      let mediaElement = '';
+      if (post.media_type === 'video') {
+        mediaElement = `<video class="reel-media" src="${post.media_url}" autoplay muted loop playsinline></video>`;
+      } else {
+        mediaElement = `<img class="reel-media" src="${post.media_url}" alt="Post">`;
+      }
+
+      return `
+        <div class="reel-item">
+          ${mediaElement}
+          
+          <!-- Interaktions-Leiste rechts -->
+          <div class="reel-sidebar-actions">
+            <button class="action-btn" onclick="toggleLikeMedia('${post.id}')" style="color: ${hasLiked ? '#ef4444' : 'white'};">
+              ${hasLiked ? '❤️' : '🤍'}
+              <span>${likes.length}</span>
+            </button>
+            <button class="action-btn" onclick="openCommentModal('${post.id}')">
+              💬
+              <span>${comments.length}</span>
+            </button>
+            ${post.author_email !== currentUserEmail ? `
+              <button class="action-btn" onclick="toggleFollowDirect('${post.author_email}')" style="font-size: 12px; background: ${isFollowing ? 'rgba(59,130,246,0.6)' : 'rgba(0,0,0,0.6)'};">
+                ${isFollowing ? '✓' : '+'}
+                <span>${isFollowing ? 'Folgt' : 'Folgen'}</span>
+              </button>
+            ` : ''}
+          </div>
+
+          <!-- Unterer Bereich mit Beschreibung und Autor -->
+          <div class="reel-overlay">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 2px;">
+              <img class="profile-avatar-lg" style="width: 32px; height: 32px; font-size: 14px;" src="${authorAvatar}" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'32\' height=\'32\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%2394a3b8\' stroke-width=\'2\'><path d=\'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2\'></path><circle cx=\'12\' cy=\'7\' r=\'4\'></circle></svg>'">
+              <span class="username-link" style="font-size: 14px; font-weight: 600;" onclick="openUserProfile('${post.author_email}')">@${authorName}</span>
+            </div>
+            <p style="font-size: 13px; color: white;">${post.caption || ''}</p>
+            ${eventTitle ? `<div style="font-size: 11px; background: rgba(59,130,246,0.3); padding: 3px 8px; border-radius: 6px; display:inline-block; width:fit-content; margin-top:2px;">${eventTitle}</div>` : ''}
+            
+            <!-- Kommentar-Vorschau oder Schnell-Eingabe -->
+            <div style="display: flex; gap: 6px; margin-top: 6px;">
+              <input type="text" id="media-comment-${post.id}" placeholder="Kommentieren..." style="margin:0; padding:6px 10px; font-size: 12px; background: rgba(0,0,0,0.6); border-color: rgba(255,255,255,0.2);" onkeydown="if(event.key==='Enter') sendMediaComment('${post.id}')">
+              <button class="btn" style="width: auto; margin:0; padding: 6px 12px; font-size: 12px;" onclick="sendMediaComment('${post.id}')">Senden</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  async function openUploadModal() {
+    // Event-Dropdown befüllen
+    const select = document.getElementById('upload-event-select');
+    select.innerHTML = '<option value="">-- Kein Event --</option>' + allEventsCache.map(e => `<option value="${e.id}">${e.title} (${e.location})</option>`).join('');
+    
+    document.getElementById('upload-modal').classList.remove('hidden');
+    document.querySelector('.nav-tabs').classList.add('hidden');
+  }
+
+  function closeUploadModal() {
+    document.getElementById('upload-modal').classList.add('hidden');
+    document.querySelector('.nav-tabs').classList.remove('hidden');
+  }
+
+  async function submitMediaUpload() {
+    const type = document.getElementById('upload-type').value;
+    const url = document.getElementById('upload-url').value.trim();
+    const caption = document.getElementById('upload-caption').value.trim();
+    const eventId = document.getElementById('upload-event-select').value || null;
+
+    if (!url) return alert('Bitte gib eine gültige Medien-URL an.');
+
+    const { error } = await _supabase.from('media_posts').insert([{
+      author_email: currentUserEmail,
+      media_url: url,
+      media_type: type,
+      caption: caption,
+      event_id: eventId,
+      likes: [],
+      comments: []
+    }]);
+
+    if (error) return alert('Fehler beim Upload: ' + error.message);
+
+    await addPoints(15);
+    document.getElementById('upload-url').value = '';
+    document.getElementById('upload-caption').value = '';
+    closeUploadModal();
+    loadMediaPosts();
+    switchTab('reels');
+  }
+
+  async function toggleLikeMedia(postId) {
+    const post = mediaPostsCache.find(p => p.id === postId);
+    if (!post) return;
+    let likes = Array.isArray(post.likes) ? [...post.likes] : [];
+    
+    if (likes.includes(currentUserEmail)) {
+      likes = likes.filter(e => e !== currentUserEmail);
+    } else {
+      likes.push(currentUserEmail);
+      await addPoints(2);
+    }
+
+    await _supabase.from('media_posts').update({ likes }).eq('id', postId);
+    loadMediaPosts();
+  }
+
+  async function sendMediaComment(postId) {
+    const input = document.getElementById(`media-comment-${postId}`);
+    const text = input.value.trim();
+    if (!text) return;
+
+    const post = mediaPostsCache.find(p => p.id === postId);
+    if (!post) return;
+    let comments = Array.isArray(post.comments) ? [...post.comments] : [];
+
+    comments.push({
+      email: currentUserEmail,
+      text: text,
+      time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+    });
+
+    await _supabase.from('media_posts').update({ comments }).eq('id', postId);
+    await addPoints(3);
+    input.value = '';
+    loadMediaPosts();
   }
 
   function togglePasswordVisibility() {
@@ -879,29 +1272,8 @@
     document.getElementById('title').value = '';
     document.getElementById('location').value = '';
     
-    activeFilter = 'Alle';
-    document.querySelectorAll('#filter-group .cat-pill').forEach((el, idx) => {
-      if (idx === 0) el.classList.add('active');
-      else el.classList.remove('active');
-    });
-
     toggleModal(false);
     await loadEvents();
-  }
-
-  async function joinEvent(id, currentJoins) {
-    const nextCount = (Number(currentJoins) || 0) + 1;
-    const { error } = await _supabase.from('live_events').update({ joins_count: nextCount }).eq('id', id);
-    if (!error) {
-      await addPoints(10);
-      loadEvents();
-    }
-  }
-
-  async function deleteEvent(id) {
-    if (!confirm('Treffen wirklich löschen?')) return;
-    await _supabase.from('live_events').delete().eq('id', id);
-    loadEvents();
   }
 
   async function loadEvents() {
@@ -955,6 +1327,21 @@
         </div>
       `;
     }).join('');
+  }
+
+  async function joinEvent(id, currentJoins) {
+    const nextCount = (Number(currentJoins) || 0) + 1;
+    const { error } = await _supabase.from('live_events').update({ joins_count: nextCount }).eq('id', id);
+    if (!error) {
+      await addPoints(10);
+      loadEvents();
+    }
+  }
+
+  async function deleteEvent(id) {
+    if (!confirm('Treffen wirklich löschen?')) return;
+    await _supabase.from('live_events').delete().eq('id', id);
+    loadEvents();
   }
 
   async function sendEventChat(id, existingChats) {
