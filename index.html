@@ -122,7 +122,7 @@
     .btn:active { transform: scale(0.98); }
     .btn-secondary { background: #475569; }
     
-    input {
+    input, textarea {
       width: 100%;
       padding: 14px;
       margin: 8px 0 16px;
@@ -131,8 +131,9 @@
       color: white;
       border-radius: 12px;
       font-size: 16px;
+      font-family: inherit;
     }
-    input:focus {
+    input:focus, textarea:focus {
       outline: none;
       border-color: var(--primary);
     }
@@ -246,6 +247,46 @@
       margin-left: 8px;
     }
 
+    .chat-section {
+      margin-top: 12px;
+      border-top: 1px dashed var(--border);
+      padding-top: 10px;
+    }
+    .chat-messages {
+      max-height: 100px;
+      overflow-y: auto;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .chat-msg-item {
+      background: rgba(255,255,255,0.05);
+      padding: 4px 8px;
+      border-radius: 6px;
+    }
+    .chat-input-row {
+      display: flex;
+      gap: 6px;
+    }
+    .chat-input-row input {
+      margin: 0;
+      padding: 8px;
+      font-size: 13px;
+    }
+    .btn-chat-send {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 0 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
     .msg-box {
       font-size: 13px;
       margin-bottom: 12px;
@@ -263,7 +304,7 @@
   <div class="header">
     <div class="logo">PURE LOGIC</div>
     <div class="header-right">
-      <div class="points-badge" id="score">0 Punkte</div>
+      <div class="points-badge" id="score">0 P</div>
       <button class="btn-logout hidden" id="logout-btn" onclick="resetUser()" title="Abmelden">🚪 Logout</button>
     </div>
   </div>
@@ -325,7 +366,7 @@
 
     <input type="text" id="title" placeholder="Titel (z. B. Pause im Hof)">
     <input type="text" id="location" placeholder="Ort (z. B. Votivpark / Bib OG2)">
-    <button class="btn" onclick="submitEvent()">Veröffentlichen</button>
+    <button class="btn" onclick="submitEvent()">Veröffentlichen (+20 P)</button>
     <button class="btn btn-secondary" onclick="toggleModal(false)">Abbrechen</button>
   </div>
 </div>
@@ -353,6 +394,7 @@
         setupAdminUI();
         document.getElementById('auth-gate').classList.add('hidden');
         document.getElementById('main-feed').classList.remove('hidden');
+        initAppRealtime();
         loadEvents();
       } else {
         const { data } = await _supabase.from('users').select('*').eq('email', currentUserEmail).maybeSingle();
@@ -361,6 +403,7 @@
           updatePointsDisplay();
           document.getElementById('auth-gate').classList.add('hidden');
           document.getElementById('main-feed').classList.remove('hidden');
+          initAppRealtime();
           loadEvents();
         } else {
           resetUser(false);
@@ -368,6 +411,15 @@
       }
     }
   });
+
+  function initAppRealtime() {
+    _supabase
+      .channel('public:live_events')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'live_events' }, payload => {
+        loadEvents();
+      })
+      .subscribe();
+  }
 
   function togglePasswordVisibility() {
     const pwInput = document.getElementById('password');
@@ -417,6 +469,7 @@
       document.getElementById('logout-btn').classList.remove('hidden');
       document.getElementById('auth-gate').classList.add('hidden');
       document.getElementById('main-feed').classList.remove('hidden');
+      initAppRealtime();
       loadEvents();
       return;
     }
@@ -441,6 +494,7 @@
     updatePointsDisplay();
     document.getElementById('auth-gate').classList.add('hidden');
     document.getElementById('main-feed').classList.remove('hidden');
+    initAppRealtime();
     loadEvents();
   }
 
@@ -492,6 +546,13 @@
     updatePointsDisplay();
   }
 
+  async function addPoints(amount) {
+    if (currentUserEmail === MASTER_ADMIN_EMAIL) return;
+    userPoints += amount;
+    updatePointsDisplay();
+    await _supabase.from('users').update({ points: userPoints }).eq('email', currentUserEmail);
+  }
+
   function updatePointsDisplay() {
     if (currentUserEmail === MASTER_ADMIN_EMAIL) {
       setupAdminUI();
@@ -532,7 +593,8 @@
         category: selectedCategory, 
         university: currentUserEmail === MASTER_ADMIN_EMAIL ? 'Master-Admin' : currentUni,
         expires_at: expiresAt,
-        joins_count: 0
+        joins_count: 0,
+        chats: []
       }
     ]);
 
@@ -540,6 +602,8 @@
       alert('Fehler beim Erstellen: ' + error.message);
       return;
     }
+
+    await addPoints(20); // 20 Punkte fürs Erstellen eines Treffens
 
     document.getElementById('title').value = '';
     document.getElementById('location').value = '';
@@ -559,6 +623,31 @@
     if (error) {
       alert('Supabase Fehler: ' + error.message);
     } else {
+      await addPoints(10); // 10 Punkte fürs Teilnehmen
+      loadEvents();
+    }
+  }
+
+  async function sendChat(id, existingChats) {
+    const inputField = document.getElementById(`chat-input-${id}`);
+    const text = inputField.value.trim();
+    if (!text) return;
+
+    const shortName = currentUserEmail.split('@')[0];
+    const newMsg = { user: shortName, text: text, time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) };
+    
+    const chatsArray = Array.isArray(existingChats) ? existingChats : [];
+    chatsArray.push(newMsg);
+
+    const { error } = await _supabase
+      .from('live_events')
+      .update({ chats: chatsArray })
+      .eq('id', id);
+
+    if (error) {
+      alert('Fehler beim Senden: ' + error.message);
+    } else {
+      inputField.value = '';
       loadEvents();
     }
   }
@@ -624,6 +713,8 @@
 
     list.innerHTML = filtered.map(e => {
       const count = (e.joins_count === null || e.joins_count === undefined) ? 0 : e.joins_count;
+      const chats = Array.isArray(e.chats) ? e.chats : [];
+      
       return `
         <div class="event-card">
           <div class="event-header">
@@ -631,12 +722,25 @@
             <div class="event-timer">⏱️ ${getTimeRemaining(e.expires_at)}</div>
           </div>
           <div class="event-meta">${e.location} • <span style="color:var(--primary);">${e.university || 'Campus'}</span></div>
+          
           <div class="event-footer">
             <div style="display: flex; align-items: center; gap: 6px;">
               <span style="font-size: 12px; color: var(--text-muted);">👥 ${count} am Start</span>
               ${isAdmin ? `<button class="btn-delete" onclick="deleteEvent('${e.id}')">🗑️ Löschen</button>` : ''}
             </div>
             <button class="btn-join" onclick="joinEvent('${e.id}', ${count})">🙋‍♂️ Bin dabei!</button>
+          </div>
+
+          <!-- EVENT CHAT / DETAILS -->
+          <div class="chat-section">
+            <div class="chat-messages" id="chat-box-${e.id}">
+              ${chats.length === 0 ? '<div style="font-style:italic;">Noch keine Absprachen. Schreib etwas!</div>' : 
+                chats.map(c => `<div class="chat-msg-item"><b>${c.user}</b> (${c.time}): ${c.text}</div>`).join('')}
+            </div>
+            <div class="chat-input-row">
+              <input type="text" id="chat-input-${e.id}" placeholder="Kurze Nachricht an Teilnehmer..." onkeydown="if(event.key==='Enter') sendChat('${e.id}', ${JSON.stringify(chats).replace(/"/g, '&quot;')})">
+              <button class="btn-chat-send" onclick="sendChat('${e.id}', ${JSON.stringify(chats).replace(/"/g, '&quot;')})">Senden</button>
+            </div>
           </div>
         </div>
       `;
