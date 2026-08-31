@@ -136,6 +136,32 @@
       outline: none;
       border-color: var(--primary);
     }
+
+    .password-container {
+      position: relative;
+    }
+    .password-toggle {
+      position: absolute;
+      right: 14px;
+      top: 18px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 18px;
+      color: var(--text-muted);
+    }
+
+    .forgot-password {
+      display: block;
+      text-align: right;
+      font-size: 13px;
+      color: var(--primary);
+      text-decoration: none;
+      margin-top: -10px;
+      margin-bottom: 16px;
+      cursor: pointer;
+    }
+    .forgot-password:hover { text-decoration: underline; }
     
     .category-group {
       display: flex;
@@ -240,7 +266,12 @@
     <input type="email" id="email" placeholder="deine.mail@uni.at">
     
     <label style="font-size: 12px; color: var(--text-muted);">Passwort:</label>
-    <input type="password" id="password" placeholder="Dein Passwort">
+    <div class="password-container">
+      <input type="password" id="password" placeholder="Dein Passwort">
+      <button type="button" class="password-toggle" id="toggle-pw-btn" onclick="togglePasswordVisibility()">👁️</button>
+    </div>
+    
+    <a class="forgot-password" onclick="handleForgotPassword()">Passwort vergessen?</a>
 
     <button class="btn" onclick="handleLogin()">Einloggen</button>
     <button class="btn btn-secondary" onclick="handleSignup()">Konto registrieren</button>
@@ -313,6 +344,18 @@
     }
   });
 
+  function togglePasswordVisibility() {
+    const pwInput = document.getElementById('password');
+    const toggleBtn = document.getElementById('toggle-pw-btn');
+    if (pwInput.type === 'password') {
+      pwInput.type = 'text';
+      toggleBtn.innerText = '🙈';
+    } else {
+      pwInput.type = 'password';
+      toggleBtn.innerText = '👁️';
+    }
+  }
+
   function selectCategory(element, cat) {
     document.querySelectorAll('.cat-pill').forEach(el => el.classList.remove('active'));
     element.classList.add('active');
@@ -357,7 +400,6 @@
     localStorage.setItem('campus_email', currentUserEmail);
     document.getElementById('logout-btn').classList.remove('hidden');
 
-    // Check if user exists in public users table, insert if not
     let { data: existingUser } = await _supabase.from('users').select('*').eq('email', currentUserEmail).maybeSingle();
     if (!existingUser) {
       await _supabase.from('users').insert([{ email: currentUserEmail, university: 'Test-Campus', points: 10 }]);
@@ -386,6 +428,23 @@
     }
 
     showMessage('Registrierung erfolgreich! Bitte überprüfe dein E-Mail-Postfach für den Bestätigungslink.', false);
+  }
+
+  async function handleForgotPassword() {
+    const email = document.getElementById('email').value.trim().toLowerCase();
+    if (!email) {
+      return showMessage('Bitte gib oben deine E-Mail-Adresse ein, um das Passwort zurückzusetzen.');
+    }
+
+    const { error } = await _supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.href,
+    });
+
+    if (error) {
+      return showMessage('Fehler: ' + error.message);
+    }
+
+    showMessage('Eine E-Mail zum Zurücksetzen des Passworts wurde gesendet!', false);
   }
 
   function setupAdminUI() {
@@ -496,7 +555,7 @@
 
     const list = document.getElementById('feed-list');
     if(error || !data || data.length === 0) {
-      list.innerHTML = '<p style="color: var::text-muted; font-size: 14px;">Aktuell keine aktiven Treffen. Erstelle das erste!</p>';
+      list.innerHTML = '<p style="color: var(--text-muted); font-size: 14px;">Aktuell keine aktiven Treffen. Erstelle das erste!</p>';
       return;
     }
 
