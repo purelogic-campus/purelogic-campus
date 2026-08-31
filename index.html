@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#0f172a">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>PURE LOGIC • Campus Feed & Chat</title>
+  <title>PURE LOGIC • Campus Feed & Profiles</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     :root {
@@ -111,7 +111,7 @@
 
     .nav-tabs {
       display: flex;
-      gap: 6px;
+      gap: 4px;
       margin-bottom: 16px;
       flex-shrink: 0;
       background: var(--bg);
@@ -124,8 +124,8 @@
       background: none;
       border: none;
       color: var(--text-muted);
-      padding: 8px;
-      font-size: 13px;
+      padding: 8px 4px;
+      font-size: 12px;
       font-weight: 600;
       cursor: pointer;
       border-radius: 8px;
@@ -330,6 +330,51 @@
     }
     .msg-error { background: rgba(239,68,68,0.15); color: var(--accent); }
     .msg-success { background: rgba(16,185,129,0.15); color: var(--success); }
+
+    /* Profil Styles */
+    .profile-header-card {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      padding: 16px;
+      border-radius: 16px;
+      margin-bottom: 16px;
+    }
+    .profile-avatar-lg {
+      width: 70px;
+      height: 70px;
+      border-radius: 50%;
+      background: var(--border);
+      object-fit: cover;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      color: var(--text-muted);
+      border: 2px solid var(--primary);
+      flex-shrink: 0;
+    }
+    .username-link {
+      color: var(--primary);
+      cursor: pointer;
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .username-link:hover { text-decoration: underline; }
+    
+    .interest-tag {
+      background: rgba(59, 130, 246, 0.15);
+      color: var(--primary);
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      display: inline-block;
+      margin-right: 4px;
+      margin-bottom: 4px;
+    }
   </style>
 </head>
 <body>
@@ -370,8 +415,9 @@
     
     <div class="nav-tabs">
       <button class="tab-btn active" onclick="switchTab('feed')" id="btn-tab-feed">📋 Feed</button>
-      <button class="tab-btn" onclick="switchTab('global')" id="btn-tab-global">💬 Campus Chat</button>
+      <button class="tab-btn" onclick="switchTab('global')" id="btn-tab-global">💬 Chat</button>
       <button class="tab-btn" onclick="switchTab('inbox')" id="btn-tab-inbox">📬 Postfach</button>
+      <button class="tab-btn" onclick="switchTab('profile')" id="btn-tab-profile">👤 Profil</button>
     </div>
 
     <!-- TAB 1: FEED -->
@@ -423,6 +469,57 @@
       </div>
     </div>
 
+    <!-- TAB 4: PROFIL -->
+    <div id="tab-profile" class="tab-content hidden">
+      <div style="overflow-y: auto; flex: 1; padding-right: 4px;">
+        <div class="profile-header-card">
+          <img id="my-profile-avatar-preview" class="profile-avatar-lg" src="" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'70\' height=\'70\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%2394a3b8\' stroke-width=\'2\'><path d=\'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2\'></path><circle cx=\'12\' cy=\'7\' r=\'4\'></circle></svg>'" alt="Avatar">
+          <div>
+            <h3 id="my-profile-display-name" style="font-size: 16px; margin-bottom: 2px;">Dein Name</h3>
+            <p id="my-profile-handle-preview" style="font-size: 13px; color: var(--primary);">@benutzername</p>
+          </div>
+        </div>
+
+        <label style="font-size: 12px; color: var(--text-muted);">Benutzername (Handle):</label>
+        <input type="text" id="profile-username" placeholder="z. B. johndoe">
+
+        <label style="font-size: 12px; color: var(--text-muted);">Anzeigename:</label>
+        <input type="text" id="profile-fullname" placeholder="z. B. John Doe">
+
+        <label style="font-size: 12px; color: var(--text-muted);">Bio / Über mich:</label>
+        <textarea id="profile-bio" rows="3" placeholder="Erzähl etwas über dich (Studiengang, Hobbys...)"></textarea>
+
+        <label style="font-size: 12px; color: var(--text-muted);">Profilbild URL (Link zu einem Bild):</label>
+        <input type="text" id="profile-avatar" placeholder="https://beispiel.de/bild.jpg">
+
+        <label style="font-size: 12px; color: var(--text-muted);">Interessen (mit Komma getrennt):</label>
+        <input type="text" id="profile-interests" placeholder="Programmieren, Kaffee, Fitness, Musik">
+
+        <button class="btn" onclick="saveMyProfile()">Profil speichern (+10 P)</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- MODAL: FREMDES PROFIL ANSEHEN -->
+  <div id="view-profile-modal" class="hidden tab-content">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 14px;">
+      <h3>Nutzerprofil</h3>
+      <button class="btn btn-secondary" style="width:auto; margin:0; padding:4px 10px; font-size:12px;" onclick="closeViewProfileModal()">Schließen</button>
+    </div>
+    <div style="text-align: center; margin-bottom: 16px;">
+      <img id="vp-avatar" class="profile-avatar-lg" style="margin: 0 auto 10px auto;" src="" alt="Avatar">
+      <h3 id="vp-fullname" style="font-size: 18px;"></h3>
+      <p id="vp-handle" style="font-size: 13px; color: var(--primary);"></p>
+    </div>
+    <div style="background: rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:12px; padding:12px; margin-bottom: 12px;">
+      <label style="font-size: 11px; color: var(--text-muted); display:block; margin-bottom:4px;">Bio:</label>
+      <p id="vp-bio" style="font-size: 13px; font-style: italic;">Keine Bio angegeben.</p>
+    </div>
+    <div style="background: rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:12px; padding:12px;">
+      <label style="font-size: 11px; color: var(--text-muted); display:block; margin-bottom:6px;">Interessen:</label>
+      <div id="vp-interests-container"></div>
+    </div>
   </div>
 
   <!-- MODAL: TREFFEN ERSTELLEN -->
@@ -460,6 +557,7 @@
   let allEventsCache = [];
   let globalChatCache = [];
   let dmCache = [];
+  let profilesCache = {}; // E-Mail -> Profil-Daten
 
   window.addEventListener('DOMContentLoaded', async () => {
     if (currentUserEmail) {
@@ -481,10 +579,12 @@
     }
   });
 
-  function initApp() {
+  async function initApp() {
     document.getElementById('auth-gate').classList.add('hidden');
     document.getElementById('main-app').classList.remove('hidden');
     
+    await loadProfiles();
+    await ensureMyProfileExists();
     loadEvents();
     loadGlobalChat();
     loadDMs();
@@ -496,7 +596,107 @@
       .on('postgres_changes', { event: '*', schema: 'public', table: 'live_events' }, () => loadEvents())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'global_chat' }, () => loadGlobalChat())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'direct_messages' }, () => loadDMs())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => loadProfiles())
       .subscribe();
+  }
+
+  async function loadProfiles() {
+    const { data } = await _supabase.from('profiles').select('*');
+    if (data) {
+      profilesCache = {};
+      data.forEach(p => {
+        profilesCache[p.email] = p;
+      });
+      // Falls wir gerade im Profil-Tab sind, UI auffrischen
+      renderMyProfileInputs();
+    }
+  }
+
+  async function ensureMyProfileExists() {
+    if (!profilesCache[currentUserEmail]) {
+      const defaultUsername = currentUserEmail.split('@')[0];
+      await _supabase.from('profiles').insert([{
+        email: currentUserEmail,
+        username: defaultUsername,
+        full_name: defaultUsername,
+        bio: 'Hallo! Ich bin neu auf dem Campus.',
+        avatar_url: '',
+        interests: ['Campus']
+      }]);
+      await loadProfiles();
+    }
+    renderMyProfileInputs();
+  }
+
+  function renderMyProfileInputs() {
+    const profile = profilesCache[currentUserEmail];
+    if (!profile) return;
+
+    document.getElementById('profile-username').value = profile.username || '';
+    document.getElementById('profile-fullname').value = profile.full_name || '';
+    document.getElementById('profile-bio').value = profile.bio || '';
+    document.getElementById('profile-avatar').value = profile.avatar_url || '';
+    document.getElementById('profile-interests').value = Array.isArray(profile.interests) ? profile.interests.join(', ') : '';
+
+    document.getElementById('my-profile-display-name').innerText = profile.full_name || profile.username || currentUserEmail.split('@')[0];
+    document.getElementById('my-profile-handle-preview').innerText = '@' + (profile.username || 'user');
+    document.getElementById('my-profile-avatar-preview').src = profile.avatar_url || '';
+  }
+
+  async function saveMyProfile() {
+    const username = document.getElementById('profile-username').value.trim().replace(/^@/, '');
+    const full_name = document.getElementById('profile-fullname').value.trim();
+    const bio = document.getElementById('profile-bio').value.trim();
+    const avatar_url = document.getElementById('profile-avatar').value.trim();
+    const interestsRaw = document.getElementById('profile-interests').value.trim();
+    const interests = interestsRaw ? interestsRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
+
+    if (!username) return alert('Bitte einen Benutzernamen (Handle) eingeben.');
+
+    const { error } = await _supabase.from('profiles').update({
+      username, full_name, bio, avatar_url, interests
+    }).eq('email', currentUserEmail);
+
+    if (error) return alert('Fehler beim Speichern: ' + error.message);
+
+    await addPoints(10);
+    await loadProfiles();
+    alert('Profil erfolgreich gespeichert!');
+  }
+
+  async function openUserProfile(email) {
+    const profile = profilesCache[email] || {
+      email: email,
+      username: email.split('@')[0],
+      full_name: email.split('@')[0],
+      bio: 'Kein Profil hinterlegt.',
+      avatar_url: '',
+      interests: []
+    };
+
+    document.getElementById('vp-avatar').src = profile.avatar_url || '';
+    document.getElementById('vp-fullname').innerText = profile.full_name || profile.username;
+    document.getElementById('vp-handle').innerText = '@' + (profile.username || 'user');
+    document.getElementById('vp-bio').innerText = profile.bio || 'Keine Bio angegeben.';
+
+    const interestsContainer = document.getElementById('vp-interests-container');
+    const interests = Array.isArray(profile.interests) ? profile.interests : [];
+    if (interests.length === 0) {
+      interestsContainer.innerHTML = '<span style="font-size:12px; color:var(--text-muted);">Keine Interessen angegeben.</span>';
+    } else {
+      interestsContainer.innerHTML = interests.map(i => `<span class="interest-tag">${i}</span>`).join('');
+    }
+
+    // Modal anzeigen
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+    document.querySelector('.nav-tabs').classList.add('hidden');
+    document.getElementById('view-profile-modal').classList.remove('hidden');
+  }
+
+  function closeViewProfileModal() {
+    document.getElementById('view-profile-modal').classList.add('hidden');
+    document.querySelector('.nav-tabs').classList.remove('hidden');
+    switchTab('feed');
   }
 
   function switchTab(tabName) {
@@ -504,6 +704,7 @@
     document.getElementById('tab-feed').classList.add('hidden');
     document.getElementById('tab-global').classList.add('hidden');
     document.getElementById('tab-inbox').classList.add('hidden');
+    document.getElementById('tab-profile').classList.add('hidden');
 
     if (tabName === 'feed') {
       document.getElementById('btn-tab-feed').classList.add('active');
@@ -514,6 +715,10 @@
     } else if (tabName === 'inbox') {
       document.getElementById('btn-tab-inbox').classList.add('active');
       document.getElementById('tab-inbox').classList.remove('hidden');
+    } else if (tabName === 'profile') {
+      document.getElementById('btn-tab-profile').classList.add('active');
+      document.getElementById('tab-profile').classList.remove('hidden');
+      renderMyProfileInputs();
     }
   }
 
@@ -668,7 +873,6 @@
     document.getElementById('title').value = '';
     document.getElementById('location').value = '';
     
-    // Sofort zurück zum Feed schalten und Filter auf "Alle" (oder die erstellte Kategorie) setzen
     activeFilter = 'Alle';
     document.querySelectorAll('#filter-group .cat-pill').forEach((el, idx) => {
       if (idx === 0) el.classList.add('active');
@@ -731,7 +935,11 @@
           </div>
           <div style="margin-top: 8px; border-top: 1px dashed var(--border); padding-top: 6px;">
             <div style="max-height: 80px; overflow-y: auto; font-size: 11px; color: var(--text-muted); margin-bottom: 6px;">
-              ${chats.length === 0 ? '<i>Keine Kommentare</i>' : chats.map(c => `<div><b>${c.user}</b>: ${c.text}</div>`).join('')}
+              ${chats.length === 0 ? '<i>Keine Kommentare</i>' : chats.map(c => {
+                const p = profilesCache[c.email] || {};
+                const nameToShow = p.username || (c.email ? c.email.split('@')[0] : 'User');
+                return `<div><span class="username-link" onclick="openUserProfile('${c.email || ''}')">${nameToShow}</span>: ${c.text}</div>`;
+              }).join('')}
             </div>
             <div style="display:flex; gap:4px;">
               <input type="text" id="chat-${e.id}" placeholder="Kommentieren..." style="margin:0; padding:6px; font-size:12px;" onkeydown="if(event.key==='Enter') sendEventChat('${e.id}', ${JSON.stringify(chats).replace(/"/g, '&quot;')})">
@@ -748,7 +956,11 @@
     const text = input.value.trim();
     if (!text) return;
     const chats = Array.isArray(existingChats) ? existingChats : [];
-    chats.push({ user: currentUserEmail.split('@')[0], text, time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) });
+    chats.push({ 
+      email: currentUserEmail, 
+      text, 
+      time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) 
+    });
     await _supabase.from('live_events').update({ chats }).eq('id', id);
     input.value = '';
     loadEvents();
@@ -768,11 +980,15 @@
     }
     list.innerHTML = globalChatCache.map(m => {
       const isMine = m.user_email === currentUserEmail;
-      const shortName = m.user_email ? m.user_email.split('@')[0] : 'Unbekannt';
+      const p = profilesCache[m.user_email] || {};
+      const shortName = p.username || (m.user_email ? m.user_email.split('@')[0] : 'Unbekannt');
       const timeStr = new Date(m.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
       return `
         <div class="msg-bubble ${isMine ? 'mine' : ''}">
-          <div class="msg-header"><span><b>${shortName}</b></span><span>${timeStr}</span></div>
+          <div class="msg-header">
+            <span><b><span class="username-link" onclick="openUserProfile('${m.user_email}')">${shortName}</span></b></span>
+            <span>${timeStr}</span>
+          </div>
           <div>${m.message}</div>
         </div>
       `;
@@ -817,10 +1033,16 @@
 
     list.innerHTML = filtered.map(m => {
       const isMine = m.sender_email === currentUserEmail;
+      const senderEmail = m.sender_email;
+      const p = profilesCache[senderEmail] || {};
+      const senderName = p.username || senderEmail.split('@')[0];
       const timeStr = new Date(m.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
       return `
         <div class="msg-bubble ${isMine ? 'mine' : ''}">
-          <div class="msg-header"><span><b>${isMine ? 'Du' : m.sender_email.split('@')[0]}</b></span><span>${timeStr}</span></div>
+          <div class="msg-header">
+            <span><b><span class="username-link" onclick="openUserProfile('${senderEmail}')">${isMine ? 'Du' : senderName}</span></b></span>
+            <span>${timeStr}</span>
+          </div>
           <div>${m.message}</div>
         </div>
       `;
