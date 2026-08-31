@@ -31,40 +31,28 @@
       background-color: var(--bg);
       color: var(--text);
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      min-height: 100vh;
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
       display: flex;
       justify-content: center;
       align-items: center;
     }
     
+    /* App nimmt nun den gesamten Bildschirm ein */
     .app-card {
       background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 20px;
+      border: none;
+      border-radius: 0;
       padding: 20px;
-      width: 100%;
-      max-width: 460px;
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+      width: 100vw;
+      height: 100vh;
+      max-width: none;
+      max-height: none;
+      box-shadow: none;
       display: flex;
       flex-direction: column;
-      height: 90vh;
-      max-height: 800px;
-    }
-
-    @media (max-width: 480px) {
-      body {
-        align-items: flex-start;
-        background-color: var(--card);
-      }
-      .app-card {
-        border: none;
-        border-radius: 0;
-        box-shadow: none;
-        height: 100vh;
-        max-height: 100vh;
-        padding: 16px;
-        padding-top: calc(12px + env(safe-area-inset-top));
-      }
+      padding-top: calc(16px + env(safe-area-inset-top));
     }
 
     .header {
@@ -124,8 +112,8 @@
       background: none;
       border: none;
       color: var(--text-muted);
-      padding: 8px 4px;
-      font-size: 12px;
+      padding: 10px 4px;
+      font-size: 13px;
       font-weight: 600;
       cursor: pointer;
       border-radius: 8px;
@@ -213,9 +201,9 @@
       background: var(--bg);
       border: 1px solid var(--border);
       color: var(--text-muted);
-      padding: 6px 12px;
+      padding: 6px 14px;
       border-radius: 20px;
-      font-size: 12px;
+      font-size: 13px;
       cursor: pointer;
       white-space: nowrap;
     }
@@ -299,13 +287,13 @@
       border: 1px solid var(--border);
       padding: 10px 12px;
       border-radius: 12px;
-      font-size: 13px;
+      font-size: 14px;
+      max-width: 600px;
     }
     .msg-bubble.mine {
       background: rgba(59, 130, 246, 0.15);
       border-color: rgba(59, 130, 246, 0.3);
       align-self: flex-end;
-      width: 85%;
     }
     .msg-header {
       display: flex;
@@ -313,6 +301,7 @@
       font-size: 11px;
       color: var(--text-muted);
       margin-bottom: 4px;
+      gap: 12px;
     }
     .chat-input-area {
       display: flex;
@@ -341,6 +330,7 @@
       padding: 16px;
       border-radius: 16px;
       margin-bottom: 16px;
+      max-width: 600px;
     }
     .profile-avatar-lg {
       width: 70px;
@@ -375,6 +365,16 @@
       margin-right: 4px;
       margin-bottom: 4px;
     }
+
+    /* Auf größeren Bildschirmen Formularen etwas max-width geben, damit es übersichtlich bleibt */
+    @media (min-width: 768px) {
+      .app-card {
+        padding: 30px 40px;
+      }
+      #tab-profile, #auth-gate > div {
+        max-width: 600px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -389,25 +389,27 @@
   </div>
 
   <!-- STEP 1: AUTH GATE -->
-  <div id="auth-gate" class="tab-content" style="justify-content: center;">
-    <h2 style="margin-bottom: 6px;">Willkommen</h2>
-    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 14px;">Melde dich an oder registriere dich:</p>
-    
-    <div id="auth-msg" class="msg-box hidden"></div>
+  <div id="auth-gate" class="tab-content" style="justify-content: center; align-items: center;">
+    <div style="width: 100%; max-width: 400px;">
+      <h2 style="margin-bottom: 6px;">Willkommen</h2>
+      <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 14px;">Melde dich an oder registriere dich:</p>
+      
+      <div id="auth-msg" class="msg-box hidden"></div>
 
-    <label style="font-size: 12px; color: var(--text-muted);">E-Mail-Adresse:</label>
-    <input type="email" id="email" placeholder="deine.mail@uni.at">
-    
-    <label style="font-size: 12px; color: var(--text-muted);">Passwort:</label>
-    <div class="password-container">
-      <input type="password" id="password" placeholder="Dein Passwort">
-      <button type="button" class="password-toggle" id="toggle-pw-btn" onclick="togglePasswordVisibility()">👁️</button>
+      <label style="font-size: 12px; color: var(--text-muted);">E-Mail-Adresse:</label>
+      <input type="email" id="email" placeholder="deine.mail@uni.at">
+      
+      <label style="font-size: 12px; color: var(--text-muted);">Passwort:</label>
+      <div class="password-container">
+        <input type="password" id="password" placeholder="Dein Passwort">
+        <button type="button" class="password-toggle" id="toggle-pw-btn" onclick="togglePasswordVisibility()">👁️</button>
+      </div>
+      
+      <a class="forgot-password" onclick="handleForgotPassword()">Passwort vergessen?</a>
+
+      <button class="btn" onclick="handleLogin()">Einloggen</button>
+      <button class="btn btn-secondary" onclick="handleSignup()">Konto registrieren</button>
     </div>
-    
-    <a class="forgot-password" onclick="handleForgotPassword()">Passwort vergessen?</a>
-
-    <button class="btn" onclick="handleLogin()">Einloggen</button>
-    <button class="btn btn-secondary" onclick="handleSignup()">Konto registrieren</button>
   </div>
 
   <!-- STEP 2: MAIN APP -->
@@ -423,8 +425,8 @@
     <!-- TAB 1: FEED -->
     <div id="tab-feed" class="tab-content">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px; flex-shrink:0;">
-        <h3 style="font-size: 16px;">Spontane Treffen</h3>
-        <button class="btn" style="width:auto; margin-top:0; padding: 6px 12px; font-size: 12px;" onclick="toggleModal(true)">+ Erstellen</button>
+        <h3 style="font-size: 18px;">Spontane Treffen</h3>
+        <button class="btn" style="width:auto; margin-top:0; padding: 8px 16px; font-size: 13px;" onclick="toggleModal(true)">+ Erstellen</button>
       </div>
 
       <div class="category-group" id="filter-group">
@@ -448,7 +450,7 @@
         </div>
         <div class="chat-input-area">
           <input type="text" id="global-chat-input" placeholder="Nachricht an den Campus..." onkeydown="if(event.key==='Enter') sendGlobalMessage()">
-          <button class="btn" style="width: auto; margin:0; padding: 0 16px;" onclick="sendGlobalMessage()">Senden</button>
+          <button class="btn" style="width: auto; margin:0; padding: 0 20px;" onclick="sendGlobalMessage()">Senden</button>
         </div>
       </div>
     </div>
@@ -457,14 +459,14 @@
     <div id="tab-inbox" class="tab-content hidden">
       <div class="chat-container">
         <label style="font-size: 11px; color: var(--text-muted); flex-shrink:0;">Empfänger (E-Mail):</label>
-        <input type="email" id="dm-recipient" placeholder="kommilitone@uni.at" style="margin-bottom: 8px; flex-shrink:0;">
+        <input type="email" id="dm-recipient" placeholder="kommilitone@uni.at" style="margin-bottom: 8px; flex-shrink:0; max-width: 400px;">
         
         <div class="messages-list" id="dm-chat-list">
           <p style="color: var(--text-muted); font-size: 13px; text-align:center; padding: 20px;">Gib oben eine E-Mail ein, um Nachrichten zu sehen.</p>
         </div>
         <div class="chat-input-area">
           <input type="text" id="dm-input" placeholder="Direktnachricht schreiben..." onkeydown="if(event.key==='Enter') sendDirectMessage()">
-          <button class="btn" style="width: auto; margin:0; padding: 0 16px;" onclick="sendDirectMessage()">Senden</button>
+          <button class="btn" style="width: auto; margin:0; padding: 0 20px;" onclick="sendDirectMessage()">Senden</button>
         </div>
       </div>
     </div>
@@ -475,69 +477,75 @@
         <div class="profile-header-card">
           <img id="my-profile-avatar-preview" class="profile-avatar-lg" src="" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'70\' height=\'70\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%2394a3b8\' stroke-width=\'2\'><path d=\'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2\'></path><circle cx=\'12\' cy=\'7\' r=\'4\'></circle></svg>'" alt="Avatar">
           <div>
-            <h3 id="my-profile-display-name" style="font-size: 16px; margin-bottom: 2px;">Dein Name</h3>
+            <h3 id="my-profile-display-name" style="font-size: 18px; margin-bottom: 2px;">Dein Name</h3>
             <p id="my-profile-handle-preview" style="font-size: 13px; color: var(--primary);">@benutzername</p>
           </div>
         </div>
 
-        <label style="font-size: 12px; color: var(--text-muted);">Benutzername (Handle):</label>
-        <input type="text" id="profile-username" placeholder="z. B. johndoe">
+        <div style="max-width: 600px;">
+          <label style="font-size: 12px; color: var(--text-muted);">Benutzername (Handle):</label>
+          <input type="text" id="profile-username" placeholder="z. B. johndoe">
 
-        <label style="font-size: 12px; color: var(--text-muted);">Anzeigename:</label>
-        <input type="text" id="profile-fullname" placeholder="z. B. John Doe">
+          <label style="font-size: 12px; color: var(--text-muted);">Anzeigename:</label>
+          <input type="text" id="profile-fullname" placeholder="z. B. John Doe">
 
-        <label style="font-size: 12px; color: var(--text-muted);">Bio / Über mich:</label>
-        <textarea id="profile-bio" rows="3" placeholder="Erzähl etwas über dich (Studiengang, Hobbys...)"></textarea>
+          <label style="font-size: 12px; color: var(--text-muted);">Bio / Über mich:</label>
+          <textarea id="profile-bio" rows="3" placeholder="Erzähl etwas über dich (Studiengang, Hobbys...)"></textarea>
 
-        <label style="font-size: 12px; color: var(--text-muted);">Profilbild URL (Link zu einem Bild):</label>
-        <input type="text" id="profile-avatar" placeholder="https://beispiel.de/bild.jpg">
+          <label style="font-size: 12px; color: var(--text-muted);">Profilbild URL (Link zu einem Bild):</label>
+          <input type="text" id="profile-avatar" placeholder="https://beispiel.de/bild.jpg">
 
-        <label style="font-size: 12px; color: var(--text-muted);">Interessen (mit Komma getrennt):</label>
-        <input type="text" id="profile-interests" placeholder="Programmieren, Kaffee, Fitness, Musik">
+          <label style="font-size: 12px; color: var(--text-muted);">Interessen (mit Komma getrennt):</label>
+          <input type="text" id="profile-interests" placeholder="Programmieren, Kaffee, Fitness, Musik">
 
-        <button class="btn" onclick="saveMyProfile()">Profil speichern (+10 P)</button>
+          <button class="btn" onclick="saveMyProfile()" style="margin-bottom: 30px;">Profil speichern (+10 P)</button>
+        </div>
       </div>
     </div>
 
   </div>
 
   <!-- MODAL: FREMDES PROFIL ANSEHEN -->
-  <div id="view-profile-modal" class="hidden tab-content">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 14px;">
-      <h3>Nutzerprofil</h3>
-      <button class="btn btn-secondary" style="width:auto; margin:0; padding:4px 10px; font-size:12px;" onclick="closeViewProfileModal()">Schließen</button>
-    </div>
-    <div style="text-align: center; margin-bottom: 16px;">
-      <img id="vp-avatar" class="profile-avatar-lg" style="margin: 0 auto 10px auto;" src="" alt="Avatar">
-      <h3 id="vp-fullname" style="font-size: 18px;"></h3>
-      <p id="vp-handle" style="font-size: 13px; color: var(--primary);"></p>
-    </div>
-    <div style="background: rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:12px; padding:12px; margin-bottom: 12px;">
-      <label style="font-size: 11px; color: var(--text-muted); display:block; margin-bottom:4px;">Bio:</label>
-      <p id="vp-bio" style="font-size: 13px; font-style: italic;">Keine Bio angegeben.</p>
-    </div>
-    <div style="background: rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:12px; padding:12px;">
-      <label style="font-size: 11px; color: var(--text-muted); display:block; margin-bottom:6px;">Interessen:</label>
-      <div id="vp-interests-container"></div>
+  <div id="view-profile-modal" class="hidden tab-content" style="align-items: center; justify-content: center;">
+    <div style="width: 100%; max-width: 450px; background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 16px; padding: 20px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 14px;">
+        <h3>Nutzerprofil</h3>
+        <button class="btn btn-secondary" style="width:auto; margin:0; padding:4px 10px; font-size:12px;" onclick="closeViewProfileModal()">Schließen</button>
+      </div>
+      <div style="text-align: center; margin-bottom: 16px;">
+        <img id="vp-avatar" class="profile-avatar-lg" style="margin: 0 auto 10px auto;" src="" alt="Avatar">
+        <h3 id="vp-fullname" style="font-size: 18px;"></h3>
+        <p id="vp-handle" style="font-size: 13px; color: var(--primary);"></p>
+      </div>
+      <div style="background: rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:12px; padding:12px; margin-bottom: 12px;">
+        <label style="font-size: 11px; color: var(--text-muted); display:block; margin-bottom:4px;">Bio:</label>
+        <p id="vp-bio" style="font-size: 13px; font-style: italic;">Keine Bio angegeben.</p>
+      </div>
+      <div style="background: rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:12px; padding:12px;">
+        <label style="font-size: 11px; color: var(--text-muted); display:block; margin-bottom:6px;">Interessen:</label>
+        <div id="vp-interests-container"></div>
+      </div>
     </div>
   </div>
 
   <!-- MODAL: TREFFEN ERSTELLEN -->
-  <div id="create-modal" class="hidden tab-content">
-    <h3 style="margin-bottom: 10px;">Neues Treffen anbieten</h3>
-    
-    <label style="font-size: 12px; color: var(--text-muted); display: block;">Kategorie:</label>
-    <div class="category-group" id="create-category-group">
-      <div class="cat-pill active" onclick="selectCreateCategory(this, '☕ Kaffee')">☕ Kaffee</div>
-      <div class="cat-pill" onclick="selectCreateCategory(this, '📖 Lernen')">📖 Lernen</div>
-      <div class="cat-pill" onclick="selectCreateCategory(this, '🍺 Bier')">🍺 Bier</div>
-      <div class="cat-pill" onclick="selectCreateCategory(this, '🏀 Sport')">🏀 Sport</div>
-    </div>
+  <div id="create-modal" class="hidden tab-content" style="align-items: center; justify-content: center;">
+    <div style="width: 100%; max-width: 450px; background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 16px; padding: 20px;">
+      <h3 style="margin-bottom: 10px;">Neues Treffen anbieten</h3>
+      
+      <label style="font-size: 12px; color: var(--text-muted); display: block;">Kategorie:</label>
+      <div class="category-group" id="create-category-group">
+        <div class="cat-pill active" onclick="selectCreateCategory(this, '☕ Kaffee')">☕ Kaffee</div>
+        <div class="cat-pill" onclick="selectCreateCategory(this, '📖 Lernen')">📖 Lernen</div>
+        <div class="cat-pill" onclick="selectCreateCategory(this, '🍺 Bier')">🍺 Bier</div>
+        <div class="cat-pill" onclick="selectCreateCategory(this, '🏀 Sport')">🏀 Sport</div>
+      </div>
 
-    <input type="text" id="title" placeholder="Titel (z. B. Pause im Hof)">
-    <input type="text" id="location" placeholder="Ort (z. B. Votivpark / Bib OG2)">
-    <button class="btn" onclick="submitEvent()">Veröffentlichen (+20 P)</button>
-    <button class="btn btn-secondary" onclick="toggleModal(false)">Abbrechen</button>
+      <input type="text" id="title" placeholder="Titel (z. B. Pause im Hof)">
+      <input type="text" id="location" placeholder="Ort (z. B. Votivpark / Bib OG2)">
+      <button class="btn" onclick="submitEvent()">Veröffentlichen (+20 P)</button>
+      <button class="btn btn-secondary" onclick="toggleModal(false)">Abbrechen</button>
+    </div>
   </div>
 </div>
 
@@ -557,7 +565,7 @@
   let allEventsCache = [];
   let globalChatCache = [];
   let dmCache = [];
-  let profilesCache = {}; // E-Mail -> Profil-Daten
+  let profilesCache = {};
 
   window.addEventListener('DOMContentLoaded', async () => {
     if (currentUserEmail) {
@@ -607,7 +615,6 @@
       data.forEach(p => {
         profilesCache[p.email] = p;
       });
-      // Falls wir gerade im Profil-Tab sind, UI auffrischen
       renderMyProfileInputs();
     }
   }
@@ -687,7 +694,6 @@
       interestsContainer.innerHTML = interests.map(i => `<span class="interest-tag">${i}</span>`).join('');
     }
 
-    // Modal anzeigen
     document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
     document.querySelector('.nav-tabs').classList.add('hidden');
     document.getElementById('view-profile-modal').classList.remove('hidden');
@@ -934,7 +940,7 @@
             <button class="btn-join" onclick="joinEvent('${e.id}', ${count})">🙋‍♂️ Bin dabei!</button>
           </div>
           <div style="margin-top: 8px; border-top: 1px dashed var(--border); padding-top: 6px;">
-            <div style="max-height: 80px; overflow-y: auto; font-size: 11px; color: var(--text-muted); margin-bottom: 6px;">
+            <div style="max-height: 80px; overflow-y: auto; font-size: 12px; color: var(--text-muted); margin-bottom: 6px;">
               ${chats.length === 0 ? '<i>Keine Kommentare</i>' : chats.map(c => {
                 const p = profilesCache[c.email] || {};
                 const nameToShow = p.username || (c.email ? c.email.split('@')[0] : 'User');
@@ -943,7 +949,7 @@
             </div>
             <div style="display:flex; gap:4px;">
               <input type="text" id="chat-${e.id}" placeholder="Kommentieren..." style="margin:0; padding:6px; font-size:12px;" onkeydown="if(event.key==='Enter') sendEventChat('${e.id}', ${JSON.stringify(chats).replace(/"/g, '&quot;')})">
-              <button class="btn" style="width:auto; margin:0; padding:4px 10px; font-size:11px;" onclick="sendEventChat('${e.id}', ${JSON.stringify(chats).replace(/"/g, '&quot;')})">Senden</button>
+              <button class="btn" style="width:auto; margin:0; padding:6px 12px; font-size:12px;" onclick="sendEventChat('${e.id}', ${JSON.stringify(chats).replace(/"/g, '&quot;')})">Senden</button>
             </div>
           </div>
         </div>
