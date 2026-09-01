@@ -189,11 +189,14 @@
     
     <div class="tab-content-wrapper">
       
-      <!-- TAB 0: LIVE STREAMING (Gaming, Musik, Plaudern, Lernen & Wissenschaft) -->
+      <!-- TAB 0: LIVE STREAMING -->
       <div id="tab-live" class="tab-content hidden">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px; flex-shrink:0;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px; flex-shrink:0; gap: 8px;">
           <h3 style="font-size: 18px; font-weight: 800;">🔴 Campus Live</h3>
-          <button class="btn" style="width:auto; margin-top:0; padding: 8px 16px; font-size: 13px;" onclick="openGoLiveModal()">+ Stream starten</button>
+          <div style="display:flex; gap:6px;">
+            <button class="btn btn-secondary" style="width:auto; margin-top:0; padding: 8px 12px; font-size: 12px;" onclick="openStreamHelpModal()">💡 Hilfe</button>
+            <button class="btn" style="width:auto; margin-top:0; padding: 8px 14px; font-size: 12px;" onclick="openGoLiveModal()">+ Stream starten</button>
+          </div>
         </div>
 
         <div class="category-group" id="live-filter-group">
@@ -310,7 +313,7 @@
       </div>
     </div>
 
-    <!-- FOOTER LINKS (Impressum, AGB, Melden) -->
+    <!-- FOOTER LINKS -->
     <div class="footer-links">
       <span onclick="openReportModal()">🚨 Inhalts melden</span>
       <span>•</span>
@@ -331,7 +334,39 @@
 
   </div>
 
-  <!-- MODAL: GO LIVE (Stream starten) -->
+  <!-- MODAL: STREAM HILFE & APP LINKS -->
+  <div id="stream-help-modal" class="hidden tab-content" style="align-items: center; justify-content: center;">
+    <div style="width: 100%; max-width: 460px; background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 20px; max-height: 85vh; overflow-y: auto;">
+      <h3 style="margin-bottom: 10px; font-weight: 800;">💡 Leitfaden: Live gehen</h3>
+      <p style="font-size: 13px; color: var(--text-muted); line-height: 1.5; margin-bottom: 14px;">
+        Weil Handys direkt im Browser keine Kamera-Live-Streams erzeugen können, nutzen wir kostenlose Streaming-Apps, um deinen Campus-Stream zu starten:
+      </p>
+
+      <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 12px;">
+        <strong style="font-size: 13px; color: #818cf8;">Schritt 1: Streaming-App installieren</strong>
+        <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px; margin-bottom: 8px;">Lade dir eine der folgenden kostenlosen Apps herunter:</p>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <a href="https://apps.apple.com/app/twitch-stream-games-and-chats/id464253900" target="_blank" class="btn btn-secondary" style="font-size: 11px; padding: 6px 10px; width: auto; margin:0; text-decoration:none;">🍏 Twitch (iOS)</a>
+          <a href="https://play.google.com/store/apps/details?id=tv.twitch.android.app" target="_blank" class="btn btn-secondary" style="font-size: 11px; padding: 6px 10px; width: auto; margin:0; text-decoration:none;">🤖 Twitch (Android)</a>
+          <a href="https://apps.apple.com/app/youtube-studio/id888530715" target="_blank" class="btn btn-secondary" style="font-size: 11px; padding: 6px 10px; width: auto; margin:0; text-decoration:none;">🍏 YouTube Studio (iOS)</a>
+          <a href="https://play.google.com/store/apps/details?id=com.google.android.apps.youtube.creator" target="_blank" class="btn btn-secondary" style="font-size: 11px; padding: 6px 10px; width: auto; margin:0; text-decoration:none;">🤖 YouTube (Android)</a>
+        </div>
+      </div>
+
+      <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 14px;">
+        <strong style="font-size: 13px; color: #818cf8;">Schritt 2: Streamen & Link einfügen</strong>
+        <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
+          1. Starte in der App deinen Live-Stream über die Kamera.<br>
+          2. Kopiere den Link zu deinem Stream.<br>
+          3. Klicke in PURE LOGIC auf <b>„+ Stream starten“</b>, füge den Link ein und sichere dir direkt <b>+25 Punkte</b>!
+        </p>
+      </div>
+
+      <button class="btn" onclick="closeStreamHelpModal()">Verstanden & Loslegen</button>
+    </div>
+  </div>
+
+  <!-- MODAL: GO LIVE -->
   <div id="go-live-modal" class="hidden tab-content" style="align-items: center; justify-content: center;">
     <div style="width: 100%; max-width: 440px; background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 20px;">
       <h3 style="margin-bottom: 10px; font-weight: 800;">🔴 Live-Stream starten</h3>
@@ -347,7 +382,7 @@
       <label style="font-size: 12px; font-weight: 600; color: var(--text-muted);">Stream Titel:</label>
       <input type="text" id="live-title" placeholder="z. B. Zusammen lernen für Mathe Klausur">
       
-      <label style="font-size: 12px; font-weight: 600; color: var(--text-muted);">Stream URL (z.B. Twitch, YouTube Live oder Videolink):</label>
+      <label style="font-size: 12px; font-weight: 600; color: var(--text-muted);">Stream URL (Twitch, YouTube etc.):</label>
       <input type="text" id="live-url" placeholder="https://twitch.tv/deinname">
 
       <button class="btn" onclick="submitLiveStream()">Live gehen (+25 P)</button>
@@ -355,7 +390,7 @@
     </div>
   </div>
 
-  <!-- MODAL: MELDEN (Inhalt melden) -->
+  <!-- MODAL: MELDEN -->
   <div id="report-modal" class="hidden tab-content" style="align-items: center; justify-content: center;">
     <div style="width: 100%; max-width: 440px; background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 20px;">
       <h3 style="margin-bottom: 10px; font-weight: 800;">🚨 Inhalts-Meldung</h3>
@@ -387,7 +422,7 @@
         Ansprechpartner & Betreiber:<br>
         PURE LOGIC Network Administration<br>
         E-Mail: admin@purelogic.app<br><br>
-        Verantwortlich für den Inhalt gemäß § 5 TMG. Alle Rechte vorbehalten.
+        Verantwortlich für den Inhalt. Alle Rechte vorbehalten.
       </p>
       <button class="btn btn-secondary" onclick="closeImpressumModal()">Schließen</button>
     </div>
@@ -752,6 +787,18 @@
     document.querySelectorAll('#go-live-category-group .cat-pill').forEach(el => el.classList.remove('active'));
     element.classList.add('active');
     selectedGoLiveCategory = cat;
+  }
+
+  function openStreamHelpModal() {
+    document.getElementById('tab-live').classList.add('hidden');
+    document.getElementById('bottom-nav-bar').classList.add('hidden');
+    document.getElementById('stream-help-modal').classList.remove('hidden');
+  }
+
+  function closeStreamHelpModal() {
+    document.getElementById('stream-help-modal').classList.add('hidden');
+    document.getElementById('bottom-nav-bar').classList.remove('hidden');
+    document.getElementById('tab-live').classList.remove('hidden');
   }
 
   function openGoLiveModal() {
