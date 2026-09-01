@@ -90,6 +90,7 @@
       box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35); transition: all 0.2s; margin-top: 8px;
     }
     .btn:active { transform: scale(0.97); }
+    .btn:disabled { background: #334155; opacity: 0.5; cursor: not-allowed; box-shadow: none; }
     .btn-secondary { background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border); color: var(--text); box-shadow: none; }
     input, textarea, select {
       width: 100%; padding: 13px 16px; margin: 6px 0 14px;
@@ -194,8 +195,8 @@
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px; flex-shrink:0; gap: 8px;">
           <h3 style="font-size: 18px; font-weight: 800;">🔴 Campus Live</h3>
           <div style="display:flex; gap:6px;">
-            <button class="btn btn-secondary" style="width:auto; margin-top:0; padding: 8px 12px; font-size: 12px;" onclick="openStreamHelpModal()">💡 Hilfe</button>
-            <button class="btn" style="width:auto; margin-top:0; padding: 8px 14px; font-size: 12px;" onclick="openGoLiveModal()">+ Stream starten</button>
+            <button class="btn btn-secondary" style="width:auto; margin-top:0; padding: 8px 12px; font-size: 12px;" onclick="openStreamHelpModal()">💡 Hilfe & Tutorial</button>
+            <button class="btn" style="width:auto; margin-top:0; padding: 8px 14px; font-size: 12px;" onclick="handlePreLiveCheck()">+ Stream starten</button>
           </div>
         </div>
 
@@ -334,12 +335,12 @@
 
   </div>
 
-  <!-- MODAL: STREAM HILFE & APP LINKS -->
+  <!-- MODAL: STREAM HILFE & TUTORIAL PFLICHT -->
   <div id="stream-help-modal" class="hidden tab-content" style="align-items: center; justify-content: center;">
     <div style="width: 100%; max-width: 460px; background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 20px; max-height: 85vh; overflow-y: auto;">
-      <h3 style="margin-bottom: 10px; font-weight: 800;">💡 Leitfaden: Live gehen</h3>
+      <h3 style="margin-bottom: 10px; font-weight: 800;">💡 Pflicht-Tutorial: Live gehen</h3>
       <p style="font-size: 13px; color: var(--text-muted); line-height: 1.5; margin-bottom: 14px;">
-        Weil Handys direkt im Browser keine Kamera-Live-Streams erzeugen können, nutzen wir kostenlose Streaming-Apps, um deinen Campus-Stream zu starten:
+        Bevor du deinen ersten Campus-Stream startest, lies dir bitte diese kurze Anleitung durch. Dies ist verpflichtend, um einen reibungslosen Ablauf zu garantieren:
       </p>
 
       <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 12px;">
@@ -356,13 +357,14 @@
       <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 14px;">
         <strong style="font-size: 13px; color: #818cf8;">Schritt 2: Streamen & Link einfügen</strong>
         <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
-          1. Starte in der App deinen Live-Stream über die Kamera.<br>
-          2. Kopiere den Link zu deinem Stream.<br>
-          3. Klicke in PURE LOGIC auf <b>„+ Stream starten“</b>, füge den Link ein und sichere dir direkt <b>+25 Punkte</b>!
+          1. Starte in der App deinen Live-Stream.<br>
+          2. Kopiere den Link zu deinem Stream (z. B. Twitch oder YouTube URL).<br>
+          3. Füge den Link im nächsten Schritt ein, um live zu gehen!
         </p>
       </div>
 
-      <button class="btn" onclick="closeStreamHelpModal()">Verstanden & Loslegen</button>
+      <button class="btn" onclick="completeTutorialAndProceed()">Tutorial abgeschlossen & Loslegen ✅</button>
+      <button class="btn btn-secondary" onclick="closeStreamHelpModal()" style="margin-top: 6px;">Abbrechen</button>
     </div>
   </div>
 
@@ -382,10 +384,13 @@
       <label style="font-size: 12px; font-weight: 600; color: var(--text-muted);">Stream Titel:</label>
       <input type="text" id="live-title" placeholder="z. B. Zusammen lernen für Mathe Klausur">
       
-      <label style="font-size: 12px; font-weight: 600; color: var(--text-muted);">Stream URL (Twitch, YouTube etc.):</label>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-top: 4px;">
+        <label style="font-size: 12px; font-weight: 600; color: var(--text-muted); margin:0;">Stream URL (Twitch, YouTube etc.):</label>
+        <span onclick="openStreamHelpModal()" style="font-size: 11px; color: #818cf8; cursor: pointer; font-weight: 700;">ℹ️ Hilfe & Anleitung</span>
+      </div>
       <input type="text" id="live-url" placeholder="https://twitch.tv/deinname">
 
-      <button class="btn" onclick="submitLiveStream()">Live gehen (+25 P)</button>
+      <button class="btn" id="go-live-submit-btn" onclick="submitLiveStream()">Live gehen (+25 P)</button>
       <button class="btn btn-secondary" onclick="closeGoLiveModal()">Abbrechen</button>
     </div>
   </div>
@@ -613,7 +618,8 @@
         full_name: defaultUsername,
         bio: 'Hey! Frisch am Campus.',
         avatar_url: '',
-        interests: ['Campus', 'Kaffee']
+        interests: ['Campus', 'Kaffee'],
+        tutorial_completed: false
       }]);
       await loadProfiles();
     }
@@ -775,7 +781,7 @@
     }
   }
 
-  // --- LIVE STREAMING LOGIK ---
+  // --- LIVE STREAMING & TUTORIAL LOGIK ---
   function setLiveFilter(element, cat) {
     document.querySelectorAll('#live-filter-group .cat-pill').forEach(el => el.classList.remove('active'));
     element.classList.add('active');
@@ -791,6 +797,7 @@
 
   function openStreamHelpModal() {
     document.getElementById('tab-live').classList.add('hidden');
+    document.getElementById('go-live-modal').classList.add('hidden');
     document.getElementById('bottom-nav-bar').classList.add('hidden');
     document.getElementById('stream-help-modal').classList.remove('hidden');
   }
@@ -801,8 +808,31 @@
     document.getElementById('tab-live').classList.remove('hidden');
   }
 
+  async function completeTutorialAndProceed() {
+    // Tutorial in der Datenbank als erledigt markieren
+    await _supabase.from('profiles').update({ tutorial_completed: true }).eq('email', currentUserEmail);
+    if (profilesCache[currentUserEmail]) {
+      profilesCache[currentUserEmail].tutorial_completed = true;
+    }
+    
+    closeStreamHelpModal();
+    openGoLiveModal();
+  }
+
+  async function handlePreLiveCheck() {
+    const profile = profilesCache[currentUserEmail] || {};
+    // Admin überspringt das Tutorial immer
+    if (currentUserEmail === MASTER_ADMIN_EMAIL || profile.tutorial_completed) {
+      openGoLiveModal();
+    } else {
+      // Wenn Tutorial noch nicht gemacht, zwingend anzeigen
+      openStreamHelpModal();
+    }
+  }
+
   function openGoLiveModal() {
     document.getElementById('tab-live').classList.add('hidden');
+    document.getElementById('stream-help-modal').classList.add('hidden');
     document.getElementById('bottom-nav-bar').classList.add('hidden');
     document.getElementById('go-live-modal').classList.remove('hidden');
   }
@@ -1052,30 +1082,6 @@
     closeUploadModal();
     loadMediaPosts();
     switchTab('reels');
-  }
-
-  async function toggleLikeMedia(postId) {
-    const post = mediaPostsCache.find(p => p.id === postId);
-    if (!post) return;
-    let likes = Array.isArray(post.likes) ? [...post.likes] : [];
-    if (likes.includes(currentUserEmail)) likes = likes.filter(e => e !== currentUserEmail);
-    else { likes.push(currentUserEmail); await addPoints(2); }
-    await _supabase.from('media_posts').update({ likes }).eq('id', postId);
-    loadMediaPosts();
-  }
-
-  async function sendMediaComment(postId) {
-    const input = document.getElementById(`media-comment-${postId}`);
-    const text = input.value.trim();
-    if (!text) return;
-    const post = mediaPostsCache.find(p => p.id === postId);
-    if (!post) return;
-    let comments = Array.isArray(post.comments) ? [...post.comments] : [];
-    comments.push({ email: currentUserEmail, text: text, time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) });
-    await _supabase.from('media_posts').update({ comments }).eq('id', postId);
-    await addPoints(3);
-    input.value = '';
-    loadMediaPosts();
   }
 
   function togglePasswordVisibility() {
