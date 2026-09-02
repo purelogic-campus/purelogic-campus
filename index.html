@@ -12,7 +12,7 @@
     :root {
       --bg: #090d16;
       --card: #131c31;
-      --card-glass: rgba(19, 28, 49, 0.75);
+      --card-glass: rgba(19, 28, 49, 0.85);
       --border: rgba(255, 255, 255, 0.08);
       --text: #f1f5f9;
       --text-muted: #94a3b8;
@@ -67,16 +67,37 @@
       padding: 6px 12px; border-radius: 30px; font-size: 12px; font-weight: 700; 
     }
     .points-badge.admin-badge { background: rgba(245, 158, 11, 0.15); color: var(--admin); border: 1px solid rgba(245, 158, 11, 0.3); }
+    
+    /* HEADER PROFIL BUTTON MIT MINI-AVATAR */
+    .header-profile-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      padding: 3px 10px 3px 3px;
+      border-radius: 30px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .header-profile-btn:hover { background: rgba(255, 255, 255, 0.1); }
+    .header-avatar-sm {
+      width: 24px; height: 24px; border-radius: 50%; object-fit: cover; background: var(--border);
+      display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--text-muted);
+    }
+    .header-profile-text { font-size: 12px; font-weight: 600; color: var(--text); }
+
     .btn-logout {
       background: rgba(236, 72, 153, 0.1); color: var(--accent); border: 1px solid rgba(236, 72, 153, 0.25);
       padding: 6px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; cursor: pointer;
     }
     
-    /* MODERNE UNTERE NAVIGATION MIT PROMINENTEM MITTIGEN PLUS-BUTTON */
+    /* UNTERE NAVIGATION MIT HERVORSTEHENDEM PLUS-BUTTON */
     .nav-tabs {
-      display: flex; align-items: center; gap: 4px; margin-top: 10px; flex-shrink: 0;
+      display: flex; align-items: center; gap: 4px; margin-top: 15px; flex-shrink: 0;
       background: var(--card-glass); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
       padding: 6px 8px; border-radius: 24px; border: 1px solid var(--border);
+      position: relative; overflow: visible;
     }
     .tab-btn {
       flex: 1; background: none; border: none; color: var(--text-muted);
@@ -85,25 +106,35 @@
     }
     .tab-btn.active { background: rgba(99, 102, 241, 0.15); color: #818cf8; }
     
-    /* DER HIGHLIGHT-BUTTON IN DER MITTE (BEITRAG ERSTELLEN) */
-    .tab-btn-action {
+    /* DER VERGRÖßERTE, ÜBERRAGENDE HIGHLIGHT-PLUS-BUTTON */
+    .tab-btn-action-container {
       flex: 0 0 auto;
-      width: 46px; height: 46px;
+      position: relative;
+      width: 56px;
+      height: 20px;
+      margin: 0 4px;
+    }
+    .tab-btn-action {
+      position: absolute;
+      bottom: -2px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 56px; 
+      height: 56px;
       border-radius: 50%;
       background: var(--gradient-main);
       color: white;
-      border: none;
-      font-size: 22px;
+      border: 3px solid var(--bg);
+      font-size: 28px;
       font-weight: 900;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
+      box-shadow: 0 8px 24px rgba(99, 102, 241, 0.6);
       transition: transform 0.2s, box-shadow 0.2s;
-      margin: 0 4px;
     }
-    .tab-btn-action:active { transform: scale(0.92); box-shadow: 0 2px 10px rgba(99, 102, 241, 0.3); }
+    .tab-btn-action:active { transform: translateX(-50%) scale(0.92); box-shadow: 0 3px 12px rgba(99, 102, 241, 0.4); }
 
     .tab-content-wrapper { flex: 1; overflow-y: auto; display: flex; flex-direction: column; position: relative; }
     .tab-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; }
@@ -173,6 +204,11 @@
     <div class="logo">PURE LOGIC</div>
     <div class="header-right">
       <div class="points-badge" id="score">0 P</div>
+      <!-- NEU: PROFIL-BUTTON MIT MINI-AVATAR IM HEADER -->
+      <button class="header-profile-btn hidden" id="header-profile-btn" onclick="switchTab('profile')">
+        <img id="header-avatar-preview" class="header-avatar-sm" src="" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'24\' height=\'24\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%2394a3b8\' stroke-width=\'2\'><path d=\'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2\'></path><circle cx=\'12\' cy=\'7\' r=\'4\'></circle></svg>'" alt="Profil">
+        <span class="header-profile-text">Profil</span>
+      </button>
       <button class="btn-logout hidden" id="logout-btn" onclick="resetUser()" title="Abmelden">🚪 Logout</button>
     </div>
   </div>
@@ -318,7 +354,7 @@
             <textarea id="profile-bio" rows="3" placeholder="Dein Studiengang, Vibe, Hobbys..."></textarea>
 
             <label style="font-size: 12px; font-weight: 600; color: var(--text-muted);">Profilbild URL oder Upload:</label>
-            <input type="text" id="profile-avatar" placeholder="https://beispiel.de/bild.jpg" oninput="document.getElementById('my-profile-avatar-preview').src = this.value">
+            <input type="text" id="profile-avatar" placeholder="https://beispiel.de/bild.jpg" oninput="document.getElementById('my-profile-avatar-preview').src = this.value; document.getElementById('header-avatar-preview').src = this.value;">
 
             <label style="font-size: 12px; font-weight: 600; color: var(--text-muted);">Interessen (mit Komma getrennt für den 'Für dich'-Algorithmus):</label>
             <input type="text" id="profile-interests" placeholder="Programmieren, Kaffee, Fitness, Musik">
@@ -344,18 +380,20 @@
       <span onclick="openAgbModal()">AGB</span>
     </div>
 
-    <!-- UNTERE NAVIGATION MIT ZENTRIERTEM HIGHLIGHT-PLUS-BUTTON -->
+    <!-- UNTERE NAVIGATION MIT ÜBERRAGENDEM PLUS-BUTTON -->
     <div class="nav-tabs" id="bottom-nav-bar">
       <button class="tab-btn" onclick="switchTab('live')" id="btn-tab-live">🔴 Live</button>
       <button class="tab-btn active" onclick="switchTab('reels')" id="btn-tab-reels">📱 Feed</button>
       
-      <!-- DER NEUE ZENTRIERTE HIGHLIGHT-BUTTON FÜR BEITRÄGE -->
-      <button class="tab-btn-action" onclick="openUploadModal()" title="Beitrag erstellen">+</button>
+      <!-- DER VERGRÖßERTE, HÄLFTIG ÜBERRAGENDE HIGHLIGHT-BUTTON -->
+      <div class="tab-btn-action-container">
+        <button class="tab-btn-action" onclick="openUploadModal()" title="Beitrag erstellen">+</button>
+      </div>
 
       <button class="tab-btn" onclick="switchTab('feed')" id="btn-tab-feed">💬 Treffen</button>
       <button class="tab-btn" onclick="switchTab('global')" id="btn-tab-global">⚡ Chat</button>
       <button class="tab-btn" onclick="switchTab('inbox')" id="btn-tab-inbox">📬 Postfach</button>
-      <button class="tab-btn" onclick="switchTab('profile')" id="btn-tab-profile">👤 Profil</button>
+      <!-- HINWEIS: Profil ist jetzt im Header direkt neben dem Logout/Admin-Badge platziert -->
     </div>
 
   </div>
@@ -504,6 +542,7 @@
   window.addEventListener('DOMContentLoaded', async () => {
     if (currentUserEmail) {
       document.getElementById('logout-btn').classList.remove('hidden');
+      document.getElementById('header-profile-btn').classList.remove('hidden');
       if (currentUserEmail === MASTER_ADMIN_EMAIL) {
         userPoints = 9999;
         setupAdminUI();
@@ -604,7 +643,11 @@
 
     document.getElementById('my-profile-display-name').innerText = profile.full_name || profile.username || currentUserEmail.split('@')[0];
     document.getElementById('my-profile-handle-preview').innerText = '@' + (profile.username || 'user');
-    document.getElementById('my-profile-avatar-preview').src = profile.avatar_url || '';
+    
+    const avatarUrl = profile.avatar_url || '';
+    document.getElementById('my-profile-avatar-preview').src = avatarUrl;
+    document.getElementById('header-avatar-preview').src = avatarUrl;
+
     updateFollowerStatsUI();
     renderMyProfilePostsGrid();
   }
@@ -885,6 +928,7 @@
       userPoints = 9999;
       setupAdminUI();
       document.getElementById('logout-btn').classList.remove('hidden');
+      document.getElementById('header-profile-btn').classList.remove('hidden');
       initApp();
       return;
     }
@@ -894,6 +938,7 @@
     currentUserEmail = email;
     localStorage.setItem('campus_email', currentUserEmail);
     document.getElementById('logout-btn').classList.remove('hidden');
+    document.getElementById('header-profile-btn').classList.remove('hidden');
     initApp();
   }
 
