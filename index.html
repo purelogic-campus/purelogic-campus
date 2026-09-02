@@ -94,12 +94,13 @@
       padding: 5px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; cursor: pointer;
     }
     
-    /* UNTERE NAVIGATION - FIXIERT & SICHER */
+    /* UNTERE NAVIGATION - FIXIERT, SICHER & IM VORDERGRUND */
     .nav-tabs {
       display: flex; align-items: center; justify-content: space-between; gap: 4px; margin-top: 6px; flex-shrink: 0;
       background: var(--card-glass); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
       padding: 4px 6px; border-radius: 20px; border: 1px solid var(--border);
       position: relative; overflow: visible;
+      z-index: 10;
     }
     .tab-btn {
       flex: 1; background: none; border: none; color: var(--text-muted);
@@ -114,10 +115,11 @@
       width: 56px;
       height: 16px;
       margin: 0 2px;
+      z-index: 11;
     }
     .tab-btn-action {
       position: absolute;
-      bottom: -2px;
+      bottom: 2px;
       left: 50%;
       transform: translateX(-50%);
       width: 56px; 
@@ -196,7 +198,7 @@
     }
     .reel-pill.active { background: rgba(99, 102, 241, 0.15); color: #818cf8; }
 
-    .reel-card-wrapper { flex: 1; overflow-y: auto; scroll-snap-type: y mandatory; display: flex; flex-direction: column; gap: 12px; padding-bottom: 10px; min-height: 0; }
+    .reel-card-wrapper { flex: 1; overflow-y: auto; scroll-snap-type: y mandatory; display: flex; flex-direction: column; gap: 12px; padding-bottom: 25px; min-height: 0; }
     .reel-item { scroll-snap-align: start; height: 100%; min-height: 340px; max-height: 500px; background: #000; border-radius: 16px; border: 1px solid var(--border); position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; max-width: 420px; margin: 0 auto; width: 100%; box-shadow: 0 8px 24px rgba(0,0,0,0.5); flex-shrink: 0; }
     .reel-media { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
     .reel-overlay { position: relative; z-index: 2; background: linear-gradient(to top, rgba(9,13,22,0.95) 0%, rgba(9,13,22,0.5) 60%, rgba(9,13,22,0) 100%); padding: 20px 14px 12px 14px; display: flex; flex-direction: column; gap: 6px; }
