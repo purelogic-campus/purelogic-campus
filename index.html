@@ -71,17 +71,20 @@
       background: rgba(236, 72, 153, 0.1); color: var(--accent); border: 1px solid rgba(236, 72, 153, 0.25);
       padding: 6px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; cursor: pointer;
     }
+    
+    /* ANGEPASSTE UNTERE NAVIGATION (SCHRIFTGRÖSSE & PADDING ERHÖHT) */
     .nav-tabs {
-      display: flex; gap: 4px; margin-top: 10px; flex-shrink: 0;
+      display: flex; gap: 6px; margin-top: 10px; flex-shrink: 0;
       background: var(--card-glass); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
       padding: 6px; border-radius: 20px; border: 1px solid var(--border);
     }
     .tab-btn {
       flex: 1; background: none; border: none; color: var(--text-muted);
-      padding: 10px 2px; font-size: 10px; font-weight: 700; cursor: pointer;
+      padding: 10px 4px; font-size: 12px; font-weight: 700; cursor: pointer;
       border-radius: 14px; transition: all 0.25s; text-align: center; white-space: nowrap;
     }
     .tab-btn.active { background: var(--gradient-main); color: white; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4); }
+
     .tab-content-wrapper { flex: 1; overflow-y: auto; display: flex; flex-direction: column; position: relative; }
     .tab-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; }
     .hidden { display: none !important; }
@@ -114,16 +117,12 @@
     }
     .event-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
     .event-title { font-size: 16px; font-weight: 700; }
-    .event-timer { font-size: 11px; background: rgba(236, 72, 153, 0.15); color: var(--accent); padding: 4px 8px; border-radius: 8px; font-weight: 700; white-space: nowrap; }
     .event-meta { font-size: 13px; color: var(--text-muted); margin-bottom: 12px; }
     .event-footer { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); padding-top: 10px; }
     .btn-join { background: rgba(16, 185, 129, 0.15); color: var(--success); border: 1px solid rgba(16, 185, 129, 0.3); padding: 6px 14px; border-radius: 10px; font-size: 12px; font-weight: 700; cursor: pointer; }
-    .btn-delete { background: rgba(236, 72, 153, 0.15); color: var(--accent); border: 1px solid rgba(236, 72, 153, 0.3); padding: 4px 8px; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer; margin-left: 6px; }
     .chat-container { display: flex; flex-direction: column; height: 100%; }
     .messages-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 4px; margin-bottom: 12px; }
     .msg-bubble { background: var(--card); border: 1px solid var(--border); padding: 12px 14px; border-radius: 16px; font-size: 14px; max-width: 650px; }
-    .msg-bubble.mine { background: rgba(99, 102, 241, 0.15); border-color: rgba(99, 102, 241, 0.3); align-self: flex-end; }
-    .msg-header { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); margin-bottom: 4px; gap: 12px; }
     .chat-input-area { display: flex; gap: 8px; flex-shrink: 0; }
     .chat-input-area input { margin: 0; }
     .msg-box { font-size: 13px; margin-bottom: 14px; padding: 10px; border-radius: 12px; text-align: center; font-weight: 600; }
@@ -131,9 +130,6 @@
     .msg-success { background: rgba(16,185,129,0.15); color: var(--success); }
     .profile-header-card { display: flex; align-items: center; justify-content: space-between; background: var(--card); border: 1px solid var(--border); padding: 18px; border-radius: 20px; margin-bottom: 16px; max-width: 600px; }
     .profile-avatar-lg { width: 75px; height: 75px; border-radius: 50%; background: var(--border); object-fit: cover; display: flex; align-items: center; justify-content: center; font-size: 30px; color: var(--text-muted); border: 2px solid var(--primary); flex-shrink: 0; }
-    .username-link { color: #818cf8; cursor: pointer; text-decoration: none; font-weight: 700; }
-    .username-link:hover { text-decoration: underline; }
-    .interest-tag { background: rgba(99, 102, 241, 0.15); color: #818cf8; padding: 5px 12px; border-radius: 14px; font-size: 11px; font-weight: 700; display: inline-block; margin-right: 4px; margin-bottom: 6px; border: 1px solid rgba(99, 102, 241, 0.3); }
     .reels-subnav { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; flex-shrink: 0; }
     .reel-pill { background: var(--card); border: 1px solid var(--border); color: var(--text-muted); padding: 6px 14px; border-radius: 20px; font-size: 12px; cursor: pointer; font-weight: 700; white-space: nowrap; transition: all 0.2s; }
     .reel-pill.active { background: var(--gradient-main); color: white; border-color: transparent; box-shadow: 0 4px 12px rgba(99,102,241,0.3); }
@@ -141,14 +137,9 @@
     .reel-item { scroll-snap-align: start; height: 100%; min-height: 400px; max-height: 560px; background: #000; border-radius: 20px; border: 1px solid var(--border); position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; max-width: 440px; margin: 0 auto; width: 100%; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
     .reel-media { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
     .reel-overlay { position: relative; z-index: 2; background: linear-gradient(to top, rgba(9,13,22,0.95) 0%, rgba(9,13,22,0.5) 60%, rgba(9,13,22,0) 100%); padding: 24px 16px 16px 16px; display: flex; flex-direction: column; gap: 8px; }
-    .reel-sidebar-actions { position: absolute; right: 12px; bottom: 90px; z-index: 3; display: flex; flex-direction: column; gap: 14px; align-items: center; }
-    .action-btn { background: rgba(19, 28, 49, 0.7); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.15); color: white; width: 45px; height: 45px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; font-size: 17px; transition: transform 0.1s; }
-    .action-btn:active { transform: scale(0.9); }
-    .action-btn span { font-size: 10px; font-weight: 800; margin-top: 2px; }
     .footer-links { display: flex; justify-content: center; gap: 12px; padding: 6px 0 2px 0; font-size: 11px; color: var(--text-muted); flex-shrink: 0; }
     .footer-links span { cursor: pointer; transition: color 0.2s; }
     .footer-links span:hover { color: #818cf8; text-decoration: underline; }
-    /* Profil Beitrags-Raster */
     .profile-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 14px; }
     .profile-grid-item { aspect-ratio: 1; background: var(--card); border-radius: 8px; overflow: hidden; border: 1px solid var(--border); position: relative; }
     .profile-grid-item img, .profile-grid-item video { width: 100%; height: 100%; object-fit: cover; }
@@ -315,7 +306,7 @@
 
             <button class="btn" onclick="saveMyProfile()" style="margin-bottom: 20px;">Profil speichern (+10 P)</button>
 
-            <!-- NEUES BEITRAGS-RASTER IM PROFIL -->
+            <!-- BEITRAGS-RASTER IM PROFIL -->
             <h4 style="font-size: 15px; font-weight: 800; margin-top: 20px; margin-bottom: 8px;">Deine Beiträge</h4>
             <div id="my-profile-posts-grid" class="profile-grid">
               <!-- Wird dynamisch befüllt -->
@@ -334,7 +325,7 @@
       <span onclick="openAgbModal()">AGB</span>
     </div>
 
-    <!-- UNTERE NAVIGATION -->
+    <!-- UNTERE NAVIGATION (ANGEPASSTE SCHRIFTGRÖSSE 12px) -->
     <div class="nav-tabs" id="bottom-nav-bar">
       <button class="tab-btn" onclick="switchTab('live')" id="btn-tab-live">🔴 Live</button>
       <button class="tab-btn active" onclick="switchTab('reels')" id="btn-tab-reels">📱 Feed</button>
@@ -677,18 +668,6 @@
     openUserProfile(viewingProfileEmail);
   }
 
-  async function toggleFollowDirect(targetEmail) {
-    if (targetEmail === currentUserEmail) return;
-    if (followsCache.includes(targetEmail)) {
-      await _supabase.from('follows').delete().eq('follower_email', currentUserEmail).eq('following_email', targetEmail);
-    } else {
-      await _supabase.from('follows').insert([{ follower_email: currentUserEmail, following_email: targetEmail }]);
-      await addPoints(5);
-    }
-    await loadFollows();
-    renderMediaPosts();
-  }
-
   function switchTab(tabName) {
     document.querySelectorAll('#bottom-nav-bar .tab-btn').forEach(btn => btn.classList.remove('active'));
     ['live', 'reels', 'feed', 'global', 'inbox', 'profile'].forEach(t => {
@@ -813,7 +792,6 @@
     const list = document.getElementById('reels-list');
     let posts = [...mediaPostsCache];
     
-    // SOFORTIGE STANDARD-INHALTE FALLBACK, WENN KEINE POSTS VORHANDEN SIND
     if (posts.length === 0) {
       posts = [
         { id: 'mock-1', author_email: 'campus@uni.at', media_url: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=600', media_type: 'image', caption: 'Willkommen am Campus! 🎉 Starte jetzt dein Netzwerks.', likes: [], comments: [] },
