@@ -1,320 +1,1136 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PURE LOGIC - Onboarding</title>
-    <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#090d16">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>PURE LOGIC • GenZ Campus</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --bg: #090d16;
+      --card: #131c31;
+      --card-glass: rgba(19, 28, 49, 0.85);
+      --border: rgba(255, 255, 255, 0.08);
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --accent: #ec4899;
+      --success: #10b981;
+      --admin: #f59e0b;
+      --gradient-main: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    html { font-size: 16px; height: 100%; }
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      height: 100vh;
+      height: 100dvh;
+      width: 100vw;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .app-card {
+      background: var(--bg);
+      border: none;
+      border-radius: 0;
+      padding: 10px 14px;
+      width: 100vw;
+      height: 100vh;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      padding-top: calc(8px + env(safe-area-inset-top));
+      padding-bottom: calc(4px + env(safe-area-inset-bottom));
+      overflow: hidden;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
+      flex-shrink: 0;
+    }
+    .logo { 
+      font-weight: 900; font-size: 20px; letter-spacing: -0.5px; 
+      background: var(--gradient-main); -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .header-right { display: flex; align-items: center; gap: 8px; }
+    .points-badge { 
+      background: rgba(99, 102, 241, 0.15); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.3);
+      padding: 5px 10px; border-radius: 30px; font-size: 11px; font-weight: 700; 
+    }
+    .points-badge.admin-badge { background: rgba(245, 158, 11, 0.15); color: var(--admin); border: 1px solid rgba(245, 158, 11, 0.3); }
+    
+    .header-profile-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      padding: 2px 8px 2px 2px;
+      border-radius: 30px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .header-profile-btn:hover { background: rgba(255, 255, 255, 0.1); }
+    .header-avatar-sm {
+      width: 22px; height: 22px; border-radius: 50%; object-fit: cover; background: var(--border);
+      display: flex; align-items: center; justify-content: center; font-size: 10px; color: var(--text-muted);
+    }
+    .header-profile-text { font-size: 11px; font-weight: 600; color: var(--text); }
 
-        body, html {
-            width: 100%;
-            height: 100%;
-            background-color: #0b0b0e;
-            color: #ffffff;
-            overflow: hidden;
-        }
+    .btn-logout {
+      background: rgba(236, 72, 153, 0.1); color: var(--accent); border: 1px solid rgba(236, 72, 153, 0.25);
+      padding: 5px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; cursor: pointer;
+    }
+    
+    .nav-tabs {
+      display: flex; align-items: center; justify-content: space-between; gap: 4px; margin-top: 6px; flex-shrink: 0;
+      background: var(--card-glass); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      padding: 4px 6px; border-radius: 20px; border: 1px solid var(--border);
+      position: relative; overflow: visible;
+      z-index: 10;
+    }
+    .tab-btn {
+      flex: 1; background: none; border: none; color: var(--text-muted);
+      padding: 8px 2px; font-size: 11px; font-weight: 700; cursor: pointer;
+      border-radius: 12px; transition: all 0.25s; text-align: center; white-space: nowrap;
+    }
+    .tab-btn.active { background: rgba(99, 102, 241, 0.15); color: #818cf8; }
+    
+    .tab-btn-action-container {
+      flex: 0 0 auto;
+      position: relative;
+      width: 56px;
+      height: 16px;
+      margin: 0 2px;
+      z-index: 11;
+    }
+    .tab-btn-action {
+      position: absolute;
+      bottom: 2px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 56px; 
+      height: 56px;
+      border-radius: 50%;
+      background: var(--gradient-main);
+      color: white;
+      border: 3px solid var(--bg);
+      font-size: 28px;
+      font-weight: 900;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 6px 20px rgba(99, 102, 241, 0.65);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .tab-btn-action:active { transform: translateX(-50%) scale(0.92); box-shadow: 0 2px 8px rgba(99, 102, 241, 0.4); }
 
-        /* Onboarding Container */
-        .onboarding-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: rgba(11, 11, 14, 0.95);
-            backdrop-filter: blur(10px);
-            z-index: 9999;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            padding: 40px 24px;
-        }
+    .tab-content-wrapper { flex: 1; overflow: hidden; display: flex; flex-direction: column; position: relative; min-height: 0; }
+    .tab-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; min-height: 0; }
+    .hidden { display: none !important; }
+    .btn {
+      background: var(--gradient-main); color: white; border: none; padding: 11px;
+      border-radius: 12px; cursor: pointer; width: 100%; font-weight: 700; font-size: 13px;
+      box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35); transition: all 0.2s; margin-top: 6px;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn:disabled { background: #334155 !important; opacity: 0.5 !important; cursor: not-allowed !important; box-shadow: none !important; color: #94a3b8 !important; }
+    .btn-secondary { background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border); color: var(--text); box-shadow: none; }
+    input, textarea, select {
+      width: 100%; padding: 11px 14px; margin: 4px 0 10px;
+      background: var(--card); border: 1px solid var(--border); color: white;
+      border-radius: 12px; font-size: 13px; font-family: inherit; transition: border-color 0.2s;
+    }
+    input:focus, textarea:focus, select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15); }
+    .password-container { position: relative; }
+    .password-toggle { position: absolute; right: 12px; top: 14px; background: none; border: none; cursor: pointer; font-size: 16px; color: var(--text-muted); }
+    .forgot-password { display: block; text-align: right; font-size: 11px; color: #818cf8; text-decoration: none; margin-top: -6px; margin-bottom: 10px; cursor: pointer; font-weight: 600; }
+    .category-group { display: flex; gap: 6px; margin-bottom: 8px; overflow-x: auto; padding-bottom: 2px; flex-shrink: 0; }
+    .cat-pill {
+      background: var(--card); border: 1px solid var(--border); color: var(--text-muted);
+      padding: 6px 14px; border-radius: 30px; font-size: 12px; cursor: pointer; white-space: nowrap; font-weight: 600; transition: all 0.2s;
+    }
+    .cat-pill.active { background: rgba(99, 102, 241, 0.2); border-color: var(--primary); color: #818cf8; }
+    .event-card, .live-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+      padding: 14px; margin-bottom: 10px; box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    }
+    .event-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px; }
+    .event-title { font-size: 15px; font-weight: 700; }
+    .event-meta { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; }
+    .event-footer { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); padding-top: 8px; }
+    .btn-join { background: rgba(16, 185, 129, 0.15); color: var(--success); border: 1px solid rgba(16, 185, 129, 0.3); padding: 5px 12px; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer; }
+    .chat-container { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+    .messages-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 2px; margin-bottom: 10px; min-height: 0; }
+    .msg-bubble { background: var(--card); border: 1px solid var(--border); padding: 10px 12px; border-radius: 14px; font-size: 13px; max-width: 650px; }
+    .chat-input-area { display: flex; gap: 6px; flex-shrink: 0; }
+    .chat-input-area input { margin: 0; }
+    .msg-box { font-size: 12px; margin-bottom: 10px; padding: 8px; border-radius: 10px; text-align: center; font-weight: 600; }
+    .msg-error { background: rgba(236,72,153,0.15); color: var(--accent); }
+    .msg-success { background: rgba(16,185,129,0.15); color: var(--success); }
+    .profile-header-card { display: flex; align-items: center; justify-content: space-between; background: var(--card); border: 1px solid var(--border); padding: 14px; border-radius: 16px; margin-bottom: 12px; max-width: 600px; }
+    .profile-avatar-lg { width: 64px; height: 64px; border-radius: 50%; background: var(--border); object-fit: cover; display: flex; align-items: center; justify-content: center; font-size: 26px; color: var(--text-muted); border: 2px solid var(--primary); flex-shrink: 0; }
+    
+    .reels-subnav { 
+      display: flex; gap: 6px; width: 100%; flex-shrink: 0; margin-bottom: 8px; 
+      background: var(--card-glass); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      padding: 4px 6px; border-radius: 20px; border: 1px solid var(--border);
+    }
+    .reel-pill { 
+      flex: 1; background: none; border: 1px solid transparent; color: var(--text-muted); 
+      padding: 8px 2px; border-radius: 14px; font-size: 11px; cursor: pointer; font-weight: 700; 
+      text-align: center; white-space: nowrap; transition: all 0.25s; overflow: hidden; text-overflow: ellipsis; 
+    }
+    .reel-pill.active { background: rgba(99, 102, 241, 0.15); color: #818cf8; }
 
-        /* Fortschrittsleiste oben */
-        .progress-container {
-            display: flex;
-            gap: 6px;
-            width: 100%;
-            margin-bottom: 20px;
-        }
+    .reel-card-wrapper { 
+      flex: 1; 
+      overflow-y: auto; 
+      scroll-snap-type: y mandatory; 
+      display: flex; 
+      flex-direction: column; 
+      gap: 16px; 
+      padding: 10px 0 25px 0; 
+      min-height: 0; 
+    }
+    .reel-item { 
+      scroll-snap-align: center; 
+      height: calc(100% - 20px); 
+      min-height: 280px; 
+      max-height: 100%; 
+      background: #000; 
+      border-radius: 16px; 
+      border: 1px solid var(--border); 
+      position: relative; 
+      overflow: hidden; 
+      display: flex; 
+      flex-direction: column; 
+      justify-content: flex-end; 
+      max-width: 420px; 
+      margin: 0 auto; 
+      width: 100%; 
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5); 
+      flex-shrink: 0; 
+    }
+    .reel-media { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
+    .reel-overlay { position: relative; z-index: 2; background: linear-gradient(to top, rgba(9,13,22,0.95) 0%, rgba(9,13,22,0.5) 60%, rgba(9,13,22,0) 100%); padding: 20px 14px 12px 14px; display: flex; flex-direction: column; gap: 6px; }
+    
+    .footer-links { display: flex; justify-content: center; gap: 8px; padding: 4px 0 0 0; font-size: 10px; color: var(--text-muted); flex-shrink: 0; }
+    .footer-links span { cursor: pointer; transition: color 0.2s; }
+    .footer-links span:hover { color: #818cf8; text-decoration: underline; }
 
-        .progress-bar {
-            flex: 1;
-            height: 4px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 2px;
-            overflow: hidden;
-            transition: background 0.3s ease;
-        }
-
-        .progress-bar.active {
-            background: #ff3366;
-        }
-
-        /* Inhalt der Slides */
-        .slides-wrapper {
-            flex: 1;
-            position: relative;
-            overflow: hidden;
-            display: flex;
-            align-items: center;
-        }
-
-        .slide {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            opacity: 0;
-            transform: translateY(20px);
-            transition: opacity 0.4s ease, transform 0.4s ease;
-            pointer-events: none;
-        }
-
-        .slide.active {
-            opacity: 1;
-            transform: translateY(0);
-            pointer-events: auto;
-        }
-
-        .slide-badge {
-            display: inline-block;
-            background: rgba(255, 51, 102, 0.15);
-            color: #ff3366;
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 14px;
-            font-weight: 600;
-            margin-bottom: 16px;
-            align-self: flex-start;
-        }
-
-        .slide h2 {
-            font-size: 28px;
-            font-weight: 800;
-            margin-bottom: 12px;
-            line-height: 1.2;
-        }
-
-        .slide p {
-            font-size: 16px;
-            color: #b3b3b8;
-            line-height: 1.5;
-            margin-bottom: 16px;
-        }
-
-        .slide ul {
-            list-style-type: none;
-            padding-left: 0;
-        }
-
-        .slide ul li {
-            font-size: 15px;
-            color: #d1d1d6;
-            margin-bottom: 8px;
-            position: relative;
-            padding-left: 20px;
-        }
-
-        .slide ul li::before {
-            content: "•";
-            color: #ff3366;
-            font-weight: bold;
-            position: absolute;
-            left: 0;
-        }
-
-        /* Footer Steuerung */
-        .onboarding-footer {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 20px;
-        }
-
-        .btn-skip {
-            background: none;
-            border: none;
-            color: #8e8e93;
-            font-size: 16px;
-            cursor: pointer;
-            padding: 10px;
-        }
-
-        .btn-next {
-            background: #ff3366;
-            color: #ffffff;
-            border: none;
-            padding: 14px 28px;
-            border-radius: 30px;
-            font-size: 16px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: background 0.2s, transform 0.1s;
-        }
-
-        .btn-next:active {
-            transform: scale(0.96);
-        }
-    </style>
+    .profile-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 10px; }
+    .profile-grid-item { aspect-ratio: 1; background: var(--card); border-radius: 8px; overflow: hidden; border: 1px solid var(--border); position: relative; }
+    .profile-grid-item img, .profile-grid-item video { width: 100%; height: 100%; object-fit: cover; }
+    
+    /* Tutorial Modal Progress Styling */
+    .tutorial-step { display: none; }
+    .tutorial-step.active { display: block; }
+    
+    @media (min-width: 768px) { .app-card { padding: 20px 24px; } #tab-profile, #auth-gate > div { max-width: 500px; } }
+  </style>
 </head>
 <body>
 
-    <!-- Onboarding Overlay -->
-    <div class="onboarding-overlay" id="onboardingOverlay">
-        <!-- Dynamische Fortschrittsbalken (10 Stück) -->
-        <div class="progress-container" id="progressContainer"></div>
+<div class="app-card">
+  <div class="header">
+    <div class="logo">PURE LOGIC</div>
+    <div class="header-right">
+      <div class="points-badge" id="score">0 P</div>
+      <button class="header-profile-btn hidden" id="header-profile-btn" onclick="switchTab('profile')">
+        <img id="header-avatar-preview" class="header-avatar-sm" src="" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'24\' height=\'24\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%2394a3b8\' stroke-width=\'2\'><path d=\'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2\'></path><circle cx=\'12\' cy=\'7\' r=\'4\'></circle></svg>'" alt="Profil">
+        <span class="header-profile-text">Profil</span>
+      </button>
+      <button class="btn-logout hidden" id="logout-btn" onclick="resetUser()" title="Abmelden">🚪 Logout</button>
+    </div>
+  </div>
 
-        <!-- Slides Wrapper -->
-        <div class="slides-wrapper" id="slidesWrapper">
-            <!-- Slide 1 -->
-            <div class="slide active">
-                <span class="slide-badge">Willkommen bei PURE LOGIC 🔥</span>
-                <h2>Der GenZ Campus Guide</h2>
-                <p>Willkommen in deiner neuen Campus-App! Hier erfährst du in 10 kurzen Schritten, wie du den perfekten Durchblick behältst und sofort voll durchstartest.</p>
-            </div>
-            <!-- Slide 2 -->
-            <div class="slide">
-                <span class="slide-badge">Mitten im Geschehen 📱</span>
-                <h2>Der Vollbild-Feed (Reels)</h2>
-                <p>Das Herzstück der App ist dein <strong>Feed</strong>. Jedes Video und Bild wird exakt in voller Größe zwischen der oberen und unteren Leiste angezeigt – ganz ohne lästiges Verzerren.</p>
-            </div>
-            <!-- Slide 3 -->
-            <div class="slide">
-                <span class="slide-badge">Immer im Bilde 👀</span>
-                <h2>Der perfekte "Peek"-Effekt</h2>
-                <p>Du musst nicht raten, was als Nächstes kommt! Durch das intelligente Layout siehst du vom vorherigen und nachfolgenden Beitrag immer einen winzigen Bildausschnitt (Peek) am Rand.</p>
-            </div>
-            <!-- Slide 4 -->
-            <div class="slide">
-                <span class="slide-badge">Smooth & Snappy 👆</span>
-                <h2>Wischen zum Einrasten</h2>
-                <p>Wische einfach von unten nach oben (oder umgekehrt), um zum nächsten Beitrag zu wechseln. Der Feed rastet automatisch ein, sodass der nächste Post jedes Mal perfekt vor dir steht.</p>
-            </div>
-            <!-- Slide 5 -->
-            <div class="slide">
-                <span class="slide-badge">Deine Vibe-Auswahl 🎛️</span>
-                <h2>Der obere Filter-Balken</h2>
-                <p>Oben im Feed kannst du blitzschnell umschalten:</p>
-                <ul>
-                    <li><strong>🔥 Entdecken:</strong> Die neuesten Campus-Trends.</li>
-                    <li><strong>✨ Für dich:</strong> Der smarte Algorithmus.</li>
-                    <li><strong>👥 Gefolgt:</strong> Content von deinen Leuten.</li>
-                </ul>
-            </div>
-            <!-- Slide 6 -->
-            <div class="slide">
-                <span class="slide-badge">Mehr als nur Videos ☕</span>
-                <h2>Spontane Treffen & Events</h2>
-                <p>Tippe unten auf <strong>💬 Treffen</strong>, wenn du Mitstreiter für Kaffee, Lernsessions, Sport oder das nächste Bier suchst. Erstelle eigene Treffen oder schließe dich an!</p>
-            </div>
-            <!-- Slide 7 -->
-            <div class="slide">
-                <span class="slide-badge">Immer vernetzt ⚡</span>
-                <h2>Der Campus-Chat & Postfach</h2>
-                <p>Nutze den <strong>⚡ Chat</strong>, um mit dem ganzen Campus zu schreiben, oder das <strong>📬 Postfach</strong> für direkte Direktnachrichten (DMs) mit deinen Kommilitonen.</p>
-            </div>
-            <!-- Slide 8 -->
-            <div class="slide">
-                <span class="slide-badge">Gamification pur ⭐</span>
-                <h2>Punkte sammeln & Creator werden</h2>
-                <p>Für fast jede Aktivität (Profil ausfüllen, Beiträge hochladen, Live gehen oder Treffen erstellen) sammelst du <strong>Punkte</strong>. Steige im Ranking auf!</p>
-            </div>
-            <!-- Slide 9 -->
-            <div class="slide">
-                <span class="slide-badge">Campus Live 🔴</span>
-                <h2>Live gehen</h2>
-                <p>Starte deinen eigenen Stream (Gaming, Musik oder Lernen) direkt aus der App heraus. Nach einem kurzen Pflicht-Tutorial bist du ready, um live zu gehen.</p>
-            </div>
-            <!-- Slide 10 -->
-            <div class="slide">
-                <span class="slide-badge">Let's Go! 🚀</span>
-                <h2>Du bist bereit</h2>
-                <p>Vervollständige jetzt fix dein Profil, trage deine Interessen ein und wische dich durch den Feed. Viel Spaß auf PURE LOGIC! 🎉</p>
-            </div>
+  <!-- STEP 1: AUTH GATE -->
+  <div id="auth-gate" class="tab-content" style="justify-content: center; align-items: center;">
+    <div style="width: 100%; max-width: 380px;">
+      <h2 style="margin-bottom: 4px; font-size: 22px; font-weight: 800;">Hey there 👋</h2>
+      <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 14px;">Logge dich ein oder starte direkt durch:</p>
+      
+      <div id="auth-msg" class="msg-box hidden"></div>
+
+      <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">E-Mail-Adresse:</label>
+      <input type="email" id="email" placeholder="deine.mail@uni.at">
+      
+      <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Passwort:</label>
+      <div class="password-container">
+        <input type="password" id="password" placeholder="Dein geheimes Passwort">
+        <button type="button" class="password-toggle" id="toggle-pw-btn" onclick="togglePasswordVisibility()">👁️</button>
+      </div>
+      
+      <a class="forgot-password" onclick="handleForgotPassword()">Passwort vergessen?</a>
+
+      <button class="btn" onclick="handleLogin()">Einloggen</button>
+      <button class="btn btn-secondary" onclick="handleSignup()">Account erstellen</button>
+    </div>
+  </div>
+
+  <!-- STEP 2: MAIN APP -->
+  <div id="main-app" class="hidden" style="flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0;">
+    
+    <div class="tab-content-wrapper">
+      
+      <!-- TAB 0: LIVE STREAMING -->
+      <div id="tab-live" class="tab-content hidden">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px; flex-shrink:0; gap: 6px;">
+          <h3 style="font-size: 16px; font-weight: 800;">🔴 Campus Live</h3>
+          <div style="display:flex; gap:6px;">
+            <button class="btn btn-secondary" style="width:auto; margin-top:0; padding: 6px 10px; font-size: 11px;" onclick="openStreamHelpModal()">💡 Hilfe</button>
+            <button class="btn" id="start-stream-btn" style="width:auto; margin-top:0; padding: 6px 12px; font-size: 11px;" onclick="handlePreLiveCheck()">+ Stream starten</button>
+          </div>
         </div>
 
-        <!-- Footer -->
-        <div class="onboarding-footer">
-            <button class="btn-skip" id="skipBtn">Überspringen</button>
-            <button class="btn-next" id="nextBtn">Weiter</button>
+        <div class="category-group" id="live-filter-group">
+          <div class="cat-pill active" onclick="setLiveFilter(this, 'Alle')">Alle Live</div>
+          <div class="cat-pill" onclick="setLiveFilter(this, '🎮 Gaming')">🎮 Gaming</div>
+          <div class="cat-pill" onclick="setLiveFilter(this, '🎵 Musik')">🎵 Musik</div>
+          <div class="cat-pill" onclick="setLiveFilter(this, '💬 Plaudern')">💬 Plaudern</div>
+          <div class="cat-pill" onclick="setLiveFilter(this, '🔬 Lernen & Wissenschaft')">🔬 Lernen & Wissenschaft</div>
         </div>
+
+        <div id="live-streams-list" style="overflow-y:auto; flex:1;">
+          <p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;">Lade Live-Streams...</p>
+        </div>
+      </div>
+
+      <!-- TAB 1: CAMPUS-FEED / REELS -->
+      <div id="tab-reels" class="tab-content">
+        <div class="reels-subnav">
+          <div class="reel-pill" id="reel-filter-discover" onclick="setReelFilter('discover')">🔥 Entdecken</div>
+          <div class="reel-pill active" id="reel-filter-foryou" onclick="setReelFilter('foryou')">✨ Für dich</div>
+          <div class="reel-pill" id="reel-filter-following" onclick="setReelFilter('following')">👥 Gefolgt</div>
+          <div class="reel-pill" id="reel-filter-live" onclick="switchTab('live')">🔴 Live</div>
+        </div>
+
+        <div class="reel-card-wrapper" id="reels-list">
+          <p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;">Lade Campus-Feeds...</p>
+        </div>
+      </div>
+
+      <!-- TAB 2: BEITRAG (Treffen) -->
+      <div id="tab-feed" class="tab-content hidden">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px; flex-shrink:0;">
+          <h3 style="font-size: 16px; font-weight: 800;">Spontane Treffen</h3>
+          <button class="btn" style="width:auto; margin-top:0; padding: 6px 12px; font-size: 12px;" onclick="toggleModal(true)">+ Erstellen</button>
+        </div>
+
+        <div class="category-group" id="filter-group">
+          <div class="cat-pill active" onclick="setFilter(this, 'Alle')">Alle</div>
+          <div class="cat-pill" onclick="setFilter(this, '☕ Kaffee')">☕ Kaffee</div>
+          <div class="cat-pill" onclick="setFilter(this, '📖 Lernen')">📖 Lernen</div>
+          <div class="cat-pill" onclick="setFilter(this, '🍺 Bier')">🍺 Bier</div>
+          <div class="cat-pill" onclick="setFilter(this, '🏀 Sport')">🏀 Sport</div>
+        </div>
+
+        <div id="feed-list" style="overflow-y:auto; flex:1;">
+          <p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;">Lade Treffen...</p>
+        </div>
+      </div>
+
+      <!-- TAB 3: GLOBAL CHAT -->
+      <div id="tab-global" class="tab-content hidden">
+        <div class="chat-container">
+          <div class="messages-list" id="global-chat-list">
+            <p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;">Lade Campus-Chat...</p>
+          </div>
+          <div class="chat-input-area">
+            <input type="text" id="global-chat-input" placeholder="Nachricht an alle..." onkeydown="if(event.key==='Enter') sendGlobalMessage()">
+            <button class="btn" style="width: auto; margin:0; padding: 0 16px;" onclick="sendGlobalMessage()">Senden</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 4: POSTFACH -->
+      <div id="tab-inbox" class="tab-content hidden">
+        <div class="chat-container">
+          <label style="font-size: 10px; font-weight: 600; color: var(--text-muted); flex-shrink:0;">Empfänger (E-Mail):</label>
+          <input type="email" id="dm-recipient" placeholder="kommilitone@uni.at" style="margin-bottom: 6px; flex-shrink:0; max-width: 400px;">
+          
+          <div class="messages-list" id="dm-chat-list">
+            <p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;">Gib oben eine E-Mail ein, um zu schreiben.</p>
+          </div>
+          <div class="chat-input-area">
+            <input type="text" id="dm-input" placeholder="Direktnachricht..." onkeydown="if(event.key==='Enter') sendDirectMessage()">
+            <button class="btn" style="width: auto; margin:0; padding: 0 16px;" onclick="sendDirectMessage()">Senden</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 5: PROFIL -->
+      <div id="tab-profile" class="tab-content hidden">
+        <div style="overflow-y: auto; flex: 1; padding-right: 2px; min-height: 0;">
+          <div class="profile-header-card">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <img id="my-profile-avatar-preview" class="profile-avatar-lg" src="" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'64\' height=\'64\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%2394a3b8\' stroke-width=\'2\'><path d=\'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2\'></path><circle cx=\'12\' cy=\'7\' r=\'4\'></circle></svg>'" alt="Avatar">
+              <div>
+                <h3 id="my-profile-display-name" style="font-size: 16px; font-weight: 800; margin-bottom: 2px;">Dein Name</h3>
+                <p id="my-profile-handle-preview" style="font-size: 12px; color: #818cf8; font-weight: 700;">@benutzername</p>
+                <div style="font-size: 10px; color: var(--text-muted); margin-top: 3px; font-weight: 600;" id="follower-stats">0 Follower • 0 Gefolgt</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="max-width: 600px;">
+            <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Benutzername (Handle):</label>
+            <input type="text" id="profile-username" placeholder="z. B. johndoe">
+
+            <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Anzeigename:</label>
+            <input type="text" id="profile-fullname" placeholder="z. B. John Doe">
+
+            <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Bio / Über mich:</label>
+            <textarea id="profile-bio" rows="2" placeholder="Dein Studiengang, Vibe, Hobbys..."></textarea>
+
+            <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Profilbild URL:</label>
+            <input type="text" id="profile-avatar" placeholder="https://beispiel.de/bild.jpg" oninput="document.getElementById('my-profile-avatar-preview').src = this.value; document.getElementById('header-avatar-preview').src = this.value;">
+
+            <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Interessen (mit Komma getrennt):</label>
+            <input type="text" id="profile-interests" placeholder="Programmieren, Kaffee, Fitness, Musik">
+
+            <button class="btn" onclick="saveMyProfile()" style="margin-bottom: 14px;">Profil speichern (+10 P)</button>
+
+            <h4 style="font-size: 14px; font-weight: 800; margin-top: 14px; margin-bottom: 6px;">Deine Beiträge</h4>
+            <div id="my-profile-posts-grid" class="profile-grid"></div>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <script>
-        const slides = document.querySelectorAll('.slide');
-        const progressContainer = document.getElementById('progressContainer');
-        const nextBtn = document.getElementById('nextBtn');
-        const skipBtn = document.getElementById('skipBtn');
-        const overlay = document.getElementById('onboardingOverlay');
-        
-        let currentSlide = 0;
-        const totalSlides = slides.length;
+    <!-- UNTERE NAVIGATION -->
+    <div class="nav-tabs" id="bottom-nav-bar">
+      <button class="tab-btn active" onclick="switchTab('reels')" id="btn-tab-reels">📱 Feed</button>
+      <button class="tab-btn" onclick="switchTab('feed')" id="btn-tab-feed">💬 Treffen</button>
+      
+      <div class="tab-btn-action-container">
+        <button class="tab-btn-action" onclick="openUploadModal()" title="Beitrag erstellen">+</button>
+      </div>
 
-        // Fortschrittsbalken dynamisch generieren
-        for (let i = 0; i < totalSlides; i++) {
-            const bar = document.createElement('div');
-            bar.classList.add('progress-bar');
-            if (i === 0) bar.classList.add('active');
-            progressContainer.appendChild(bar);
+      <button class="tab-btn" onclick="switchTab('global')" id="btn-tab-global">⚡ Chat</button>
+      <button class="tab-btn" onclick="switchTab('inbox')" id="btn-tab-inbox">📬 Postfach</button>
+    </div>
+
+    <!-- FOOTER LINKS -->
+    <div class="footer-links">
+      <span onclick="openReportModal()">🚨 Inhalt melden</span>
+      <span>•</span>
+      <span onclick="openImpressumModal()">Impressum</span>
+      <span>•</span>
+      <span onclick="openAgbModal()">AGB</span>
+    </div>
+
+  </div>
+
+  <!-- MODAL: STABILE MEHRSEITIGE TUTORIAL-FÜHRUNG (GELÖST) -->
+  <div id="stream-help-modal" class="hidden tab-content" style="align-items: center; justify-content: center;">
+    <div style="width: 100%; max-width: 420px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 20px; max-height: 85vh; overflow-y: auto;">
+      <h3 style="margin-bottom: 12px; font-weight: 800; color: #818cf8;">💡 Live-Stream Campus Guide</h3>
+      
+      <!-- Tutorial Steps Container (Sicherer Seiten-Wechsel ohne Hänger) -->
+      <div id="tutorial-steps-container" style="min-height: 120px; margin-bottom: 16px;">
+        <div class="tutorial-step active" data-step="1">
+          <h4 style="font-size: 14px; margin-bottom: 6px;">Schritt 1 von 3: Vorbereitung</h4>
+          <p style="font-size: 12px; color: var(--text-muted); line-height: 1.4;">Stelle sicher, dass du eine stabile Internetverbindung hast und eine passende Plattform (z.B. Twitch oder YouTube) bereitsteht.</p>
+        </div>
+        <div class="tutorial-step" data-step="2">
+          <h4 style="font-size: 14px; margin-bottom: 6px;">Schritt 2 von 3: Community & Regeln</h4>
+          <p style="font-size: 12px; color: var(--text-muted); line-height: 1.4;">Gehe respektvoll mit anderen Studierenden um. Keine Belästigung, kein Spam – halte dich an die Campus-AGB.</p>
+        </div>
+        <div class="tutorial-step" data-step="3">
+          <h4 style="font-size: 14px; margin-bottom: 6px;">Schritt 3 von 3: Bonuspunkte</h4>
+          <p style="font-size: 12px; color: var(--text-muted); line-height: 1.4;">Nach Abschluss dieses Tutorials schaltest du den Live-Button frei und sammelst direkt wertvolle Bonuspunkte für deinen Campus-Rang!</p>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 8px;">
+        <button class="btn btn-secondary" id="tutorial-back-btn" onclick="changeTutorialStep(-1)" style="margin-top: 0; display: none;">Zurück</button>
+        <button class="btn" id="tutorial-next-btn" onclick="changeTutorialStep(1)" style="margin-top: 0;">Weiter</button>
+      </div>
+      <button class="btn btn-secondary" onclick="closeStreamHelpModal()" style="margin-top: 6px; background: transparent; border: none; color: var(--text-muted);">Abbrechen</button>
+    </div>
+  </div>
+
+  <!-- MODAL: GO LIVE -->
+  <div id="go-live-modal" class="hidden tab-content" style="align-items: center; justify-content: center;">
+    <div style="width: 100%; max-width: 400px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 16px;">
+      <h3 style="margin-bottom: 8px; font-weight: 800;">🔴 Live-Stream starten</h3>
+      <label style="font-size: 11px; font-weight: 600; color: var(--text-muted); display: block;">Sparte wählen:</label>
+      <div class="category-group" id="go-live-category-group">
+        <div class="cat-pill active" onclick="selectGoLiveCategory(this, '🎮 Gaming')">🎮 Gaming</div>
+        <div class="cat-pill" onclick="selectGoLiveCategory(this, '🎵 Musik')">🎵 Musik</div>
+        <div class="cat-pill" onclick="selectGoLiveCategory(this, '💬 Plaudern')">💬 Plaudern</div>
+        <div class="cat-pill" onclick="selectGoLiveCategory(this, '🔬 Lernen & Wissenschaft')">🔬 Lernen & Wissenschaft</div>
+      </div>
+      <input type="text" id="live-title" placeholder="z. B. Zusammen lernen für Mathe Klausur">
+      <input type="text" id="live-url" placeholder="https://twitch.tv/deinname">
+      <button class="btn" id="go-live-submit-btn" onclick="submitLiveStream()">Live gehen (+25 P)</button>
+      <button class="btn btn-secondary" onclick="closeGoLiveModal()">Abbrechen</button>
+    </div>
+  </div>
+
+  <!-- MODAL: MELDEN -->
+  <div id="report-modal" class="hidden tab-content" style="align-items: center; justify-content: center;">
+    <div style="width: 100%; max-width: 400px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 16px;">
+      <h3 style="margin-bottom: 8px; font-weight: 800;">🚨 Inhalts-Meldung</h3>
+      <select id="report-reason" style="margin-bottom: 8px;">
+        <option value="Spam">Spam oder Werbung</option>
+        <option value="Belästigung">Belästigung oder Mobbing</option>
+        <option value="Unangemessen">Unangemessene Inhalte</option>
+      </select>
+      <input type="text" id="report-details" placeholder="Betroffener Benutzer / Link">
+      <button class="btn" onclick="submitReport()">Meldung absenden</button>
+      <button class="btn btn-secondary" onclick="closeReportModal()">Schließen</button>
+    </div>
+  </div>
+
+  <!-- MODAL: IMPRESSUM -->
+  <div id="impressum-modal" class="hidden tab-content" style="align-items: center; justify-content: center;">
+    <div style="width: 100%; max-width: 420px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 16px; max-height: 80vh; overflow-y: auto;">
+      <h3 style="margin-bottom: 8px; font-weight: 800;">Impressum</h3>
+      <p style="font-size: 12px; color: var(--text-muted); line-height: 1.4; margin-bottom: 12px;">PURE LOGIC • GenZ Campus<br>E-Mail: admin@purelogic.app</p>
+      <button class="btn btn-secondary" onclick="closeImpressumModal()">Schließen</button>
+    </div>
+  </div>
+
+  <!-- MODAL: AGB -->
+  <div id="agb-modal" class="hidden tab-content" style="align-items: center; justify-content: center;">
+    <div style="width: 100%; max-width: 420px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 16px; max-height: 80vh; overflow-y: auto;">
+      <h3 style="margin-bottom: 8px; font-weight: 800;">AGB</h3>
+      <p style="font-size: 12px; color: var(--text-muted); line-height: 1.4; margin-bottom: 12px;">Respektvoller Umgang miteinander ist Pflicht.</p>
+      <button class="btn btn-secondary" onclick="closeAgbModal()">Schließen</button>
+    </div>
+  </div>
+
+  <!-- MODAL: UPLOAD MEDIEN -->
+  <div id="upload-modal" class="hidden tab-content" style="align-items: center; justify-content: center;">
+    <div style="width: 100%; max-width: 400px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 16px;">
+      <h3 style="margin-bottom: 8px; font-weight: 800;">Neuen Beitrag hochladen</h3>
+      <select id="upload-type" style="margin-bottom: 8px;">
+        <option value="video">Video (MP4 Link)</option>
+        <option value="image">Bild (URL)</option>
+      </select>
+      <input type="text" id="upload-url" placeholder="https://beispiel.de/bild.jpg">
+      <input type="text" id="upload-caption" placeholder="Was geht am Campus?">
+      <select id="upload-event-select" style="margin-bottom: 10px;">
+        <option value="">-- Kein Treffen --</option>
+      </select>
+      <button class="btn" onclick="submitMediaUpload()">Hochladen (+15 P)</button>
+      <button class="btn btn-secondary" onclick="closeUploadModal()">Abbrechen</button>
+    </div>
+  </div>
+
+  <!-- MODAL: TREFFEN ERSTELLEN -->
+  <div id="create-modal" class="hidden tab-content" style="align-items: center; justify-content: center;">
+    <div style="width: 100%; max-width: 400px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 16px;">
+      <h3 style="margin-bottom: 8px; font-weight: 800;">Spontanes Treffen erstellen</h3>
+      <div class="category-group" id="create-category-group">
+        <div class="cat-pill active" onclick="selectCreateCategory(this, '☕ Kaffee')">☕ Kaffee</div>
+        <div class="cat-pill" onclick="selectCreateCategory(this, '📖 Lernen')">📖 Lernen</div>
+      </div>
+      <input type="text" id="title" placeholder="Titel">
+      <input type="text" id="location" placeholder="Ort">
+      <button class="btn" onclick="submitEvent()">Veröffentlichen (+20 P)</button>
+      <button class="btn btn-secondary" onclick="toggleModal(false)">Abbrechen</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const SUPABASE_URL = 'https://ykyfdrnkxqfvhasfbehe.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_2bLjUm02NS5XDAJMvVDgTA_rSzQKZAe';
+  const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  const MASTER_ADMIN_EMAIL = 'admin@purelogic.app';
+  const MASTER_ADMIN_PASS = 'Doschi08021991';
+
+  let currentUserEmail = localStorage.getItem('campus_email') || '';
+  let userPoints = 0;
+  let selectedCategory = '☕ Kaffee';
+  let selectedGoLiveCategory = '🎮 Gaming';
+  let activeFilter = 'Alle';
+  let activeLiveFilter = 'Alle';
+  let reelFilter = 'foryou';
+  let allEventsCache = [];
+  let liveStreamsCache = [];
+  let globalChatCache = [];
+  let dmCache = [];
+  let profilesCache = {};
+  let followsCache = []; 
+  let mediaPostsCache = [];
+  
+  // Tutorial State Controller Variable
+  let currentTutorialStep = 1;
+  const totalTutorialSteps = 3;
+
+  window.addEventListener('DOMContentLoaded', async () => {
+    if (currentUserEmail) {
+      document.getElementById('logout-btn').classList.remove('hidden');
+      document.getElementById('header-profile-btn').classList.remove('hidden');
+      if (currentUserEmail === MASTER_ADMIN_EMAIL) {
+        userPoints = 9999;
+        setupAdminUI();
+        initApp();
+      } else {
+        const { data } = await _supabase.from('users').select('*').eq('email', currentUserEmail).maybeSingle();
+        if (data) {
+          userPoints = data.points || 0;
+          updatePointsDisplay();
+          initApp();
+        } else {
+          resetUser(false);
         }
-        const progressBars = document.querySelectorAll('.progress-bar');
+      }
+    }
+  });
 
-        function updateSlide(index) {
-            slides.forEach((slide, i) => {
-                slide.classList.toggle('active', i === index);
-                progressBars[i].classList.toggle('active', i <= index);
-            });
+  async function initApp() {
+    document.getElementById('auth-gate').classList.add('hidden');
+    document.getElementById('main-app').classList.remove('hidden');
+    
+    await loadProfiles();
+    await loadFollows();
+    await ensureMyProfileExists();
+    updateStreamButtonState();
 
-            if (index === totalSlides - 1) {
-                nextBtn.textContent = "Los geht's!";
-            } else {
-                nextBtn.textContent = "Weiter";
-            }
-        }
+    loadEvents();
+    loadLiveStreams();
+    loadMediaPosts();
+    loadGlobalChat();
+    loadDMs();
+    initRealtime();
+    
+    switchTab('reels');
+    setReelFilter('foryou');
+  }
 
-        function nextStep() {
-            if (currentSlide < totalSlides - 1) {
-                currentSlide++;
-                updateSlide(currentSlide);
-            } else {
-                closeOnboarding();
-            }
-        }
+  function updateStreamButtonState() {
+    const streamBtn = document.getElementById('start-stream-btn');
+    if (!streamBtn) return;
+    const profile = profilesCache[currentUserEmail] || {};
+    const isCompleted = (currentUserEmail === MASTER_ADMIN_EMAIL || profile.tutorial_completed);
+    streamBtn.disabled = !isCompleted;
+  }
 
-        function closeOnboarding() {
-            overlay.style.opacity = '0';
-            overlay.style.transition = 'opacity 0.4s ease';
-            setTimeout(() => {
-                overlay.remove();
-                // Hier könntest du z.B. speichern, dass der User das Onboarding gesehen hat (localStorage.setItem('onboardingDone', 'true'))
-            }, 400);
-        }
+  function initRealtime() {
+    _supabase.channel('public:all')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'live_events' }, () => loadEvents())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'live_streams' }, () => loadLiveStreams())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'global_chat' }, () => loadGlobalChat())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'direct_messages' }, () => loadDMs())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => { loadProfiles(); updateStreamButtonState(); })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'follows' }, () => loadFollows())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'media_posts' }, () => loadMediaPosts())
+      .subscribe();
+  }
 
-        nextBtn.addEventListener('click', nextStep);
-        skipBtn.addEventListener('click', closeOnboarding);
+  async function loadProfiles() {
+    const { data } = await _supabase.from('profiles').select('*');
+    if (data) {
+      profilesCache = {};
+      data.forEach(p => { profilesCache[p.email] = p; });
+      renderMyProfileInputs();
+      updateStreamButtonState();
+    }
+  }
 
-        // Touch/Wisch-Unterstützung für mobile Geräte im Onboarding
-        let touchStartY = 0;
-        overlay.addEventListener('touchstart', e => {
-            touchStartY = e.changedTouches[0].screenY;
+  async function loadFollows() {
+    const { data } = await _supabase.from('follows').select('*').eq('follower_email', currentUserEmail);
+    followsCache = data ? data.map(f => f.following_email) : [];
+    updateFollowerStatsUI();
+  }
+
+  async function ensureMyProfileExists() {
+    if (!profilesCache[currentUserEmail]) {
+      const defaultUsername = currentUserEmail.split('@')[0];
+      await _supabase.from('profiles').insert([{
+        email: currentUserEmail,
+        username: defaultUsername,
+        full_name: defaultUsername,
+        bio: 'Hey! Frisch am Campus.',
+        avatar_url: '',
+        interests: ['Campus', 'Kaffee'],
+        tutorial_completed: false
+      }]);
+      await loadProfiles();
+    }
+    renderMyProfileInputs();
+    updateStreamButtonState();
+  }
+
+  function renderMyProfileInputs() {
+    const profile = profilesCache[currentUserEmail];
+    if (!profile) return;
+
+    document.getElementById('profile-username').value = profile.username || '';
+    document.getElementById('profile-fullname').value = profile.full_name || '';
+    document.getElementById('profile-bio').value = profile.bio || '';
+    document.getElementById('profile-avatar').value = profile.avatar_url || '';
+    document.getElementById('profile-interests').value = Array.isArray(profile.interests) ? profile.interests.join(', ') : '';
+
+    document.getElementById('my-profile-display-name').innerText = profile.full_name || profile.username || currentUserEmail.split('@')[0];
+    document.getElementById('my-profile-handle-preview').innerText = '@' + (profile.username || 'user');
+    
+    const avatarUrl = profile.avatar_url || '';
+    document.getElementById('my-profile-avatar-preview').src = avatarUrl;
+    document.getElementById('header-avatar-preview').src = avatarUrl;
+
+    updateFollowerStatsUI();
+    renderMyProfilePostsGrid();
+  }
+
+  function renderMyProfilePostsGrid() {
+    const grid = document.getElementById('my-profile-posts-grid');
+    if (!grid) return;
+    const myPosts = mediaPostsCache.filter(p => p.author_email === currentUserEmail);
+    if (myPosts.length === 0) {
+      grid.innerHTML = '<p style="color:var(--text-muted); font-size:11px; grid-column:span 3; padding:8px 0;">Noch keine eigenen Beiträge.</p>';
+      return;
+    }
+    grid.innerHTML = myPosts.map(p => `
+      <div class="profile-grid-item">
+        ${p.media_type === 'video' ? `<video src="${p.media_url}"></video>` : `<img src="${p.media_url}" alt="Post">`}
+      </div>
+    `).join('');
+  }
+
+  async function updateFollowerStatsUI() {
+    const { count: followingCount } = await _supabase.from('follows').select('*', { count: 'exact', head: true }).eq('follower_email', currentUserEmail);
+    const { count: followerCount } = await _supabase.from('follows').select('*', { count: 'exact', head: true }).eq('following_email', currentUserEmail);
+    const statsEl = document.getElementById('follower-stats');
+    if (statsEl) {
+      statsEl.innerText = `${followerCount || 0} Follower • ${followingCount || 0} Gefolgt`;
+    }
+  }
+
+  async function saveMyProfile() {
+    const username = document.getElementById('profile-username').value.trim().replace(/^@/, '');
+    const full_name = document.getElementById('profile-fullname').value.trim();
+    const bio = document.getElementById('profile-bio').value.trim();
+    const avatar_url = document.getElementById('profile-avatar').value.trim();
+    const interestsRaw = document.getElementById('profile-interests').value.trim();
+    const interests = interestsRaw ? interestsRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
+
+    if (!username) return alert('Bitte einen Benutzernamen (Handle) eingeben.');
+
+    const { error } = await _supabase.from('profiles').update({
+      username, full_name, bio, avatar_url, interests
+    }).eq('email', currentUserEmail);
+
+    if (error) return alert('Fehler beim Speichern: ' + error.message);
+
+    await addPoints(10);
+    await loadProfiles();
+    alert('Profil erfolgreich aktualisiert!');
+  }
+
+  function switchTab(tabName) {
+    document.querySelectorAll('#bottom-nav-bar .tab-btn').forEach(btn => btn.classList.remove('active'));
+    ['live', 'reels', 'feed', 'global', 'inbox', 'profile'].forEach(t => {
+      const el = document.getElementById(`tab-${t}`);
+      if (el) el.classList.add('hidden');
+    });
+
+    const activeBtn = document.getElementById(`btn-tab-${tabName}`);
+    if (activeBtn) activeBtn.classList.add('active');
+    
+    const targetTab = document.getElementById(`tab-${tabName}`);
+    if (targetTab) targetTab.classList.remove('hidden');
+    
+    if (tabName === 'profile') renderMyProfileInputs();
+
+    if (tabName === 'live') {
+      document.getElementById('tab-reels').classList.remove('hidden');
+      document.getElementById('tab-live').classList.remove('hidden');
+      document.getElementById('reel-filter-live').classList.add('active');
+      ['discover', 'foryou', 'following'].forEach(f => document.getElementById(`reel-filter-${f}`).classList.remove('active'));
+    }
+  }
+
+  function setLiveFilter(element, cat) {
+    document.querySelectorAll('#live-filter-group .cat-pill').forEach(el => el.classList.remove('active'));
+    element.classList.add('active');
+    activeLiveFilter = cat;
+    renderLiveStreams();
+  }
+
+  function selectGoLiveCategory(element, cat) {
+    document.querySelectorAll('#go-live-category-group .cat-pill').forEach(el => el.classList.remove('active'));
+    element.classList.add('active');
+    selectedGoLiveCategory = cat;
+  }
+
+  /* REPARIERTE TUTORIAL NAVIGATION LOGIK (Kein Hängenbleiben mehr) */
+  function openStreamHelpModal() {
+    currentTutorialStep = 1;
+    updateTutorialStepUI();
+    document.getElementById('tab-live').classList.add('hidden');
+    document.getElementById('go-live-modal').classList.add('hidden');
+    document.getElementById('bottom-nav-bar').classList.add('hidden');
+    document.getElementById('stream-help-modal').classList.remove('hidden');
+  }
+
+  function closeStreamHelpModal() {
+    document.getElementById('stream-help-modal').classList.add('hidden');
+    document.getElementById('bottom-nav-bar').classList.remove('hidden');
+    document.getElementById('tab-live').classList.remove('hidden');
+  }
+
+  function changeTutorialStep(direction) {
+    currentTutorialStep += direction;
+    if (currentTutorialStep > totalTutorialSteps) {
+      completeTutorialAndProceed();
+      return;
+    }
+    if (currentTutorialStep < 1) {
+      currentTutorialStep = 1;
+    }
+    updateTutorialStepUI();
+  }
+
+  function updateTutorialStepUI() {
+    document.querySelectorAll('.tutorial-step').forEach(el => {
+      el.classList.remove('active');
+      if (parseInt(el.getAttribute('data-step')) === currentTutorialStep) {
+        el.classList.add('active');
+      }
+    });
+
+    const backBtn = document.getElementById('tutorial-back-btn');
+    const nextBtn = document.getElementById('tutorial-next-btn');
+
+    if (currentTutorialStep === 1) {
+      backBtn.style.display = 'none';
+    } else {
+      backBtn.style.display = 'block';
+    }
+
+    if (currentTutorialStep === totalTutorialSteps) {
+      nextBtn.innerText = 'Abschließen & Loslegen ✅';
+    } else {
+      nextBtn.innerText = 'Weiter';
+    }
+  }
+
+  async function completeTutorialAndProceed() {
+    await _supabase.from('profiles').update({ tutorial_completed: true }).eq('email', currentUserEmail);
+    if (profilesCache[currentUserEmail]) profilesCache[currentUserEmail].tutorial_completed = true;
+    updateStreamButtonState();
+    closeStreamHelpModal();
+    openGoLiveModal();
+  }
+
+  function handlePreLiveCheck() {
+    const profile = profilesCache[currentUserEmail] || {};
+    if (currentUserEmail === MASTER_ADMIN_EMAIL || profile.tutorial_completed) openGoLiveModal();
+    else openStreamHelpModal();
+  }
+
+  function openGoLiveModal() {
+    document.getElementById('tab-live').classList.add('hidden');
+    document.getElementById('bottom-nav-bar').classList.add('hidden');
+    document.getElementById('go-live-modal').classList.remove('hidden');
+  }
+
+  function closeGoLiveModal() {
+    document.getElementById('go-live-modal').classList.add('hidden');
+    document.getElementById('bottom-nav-bar').classList.remove('hidden');
+    document.getElementById('tab-live').classList.remove('hidden');
+  }
+
+  async function submitLiveStream() {
+    const title = document.getElementById('live-title').value.trim();
+    const url = document.getElementById('live-url').value.trim();
+    if (!title || !url) return alert('Bitte Titel und Stream-URL angeben.');
+    const expiresAt = new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString();
+    await _supabase.from('live_streams').insert([{ host_email: currentUserEmail, title, stream_url: url, category: selectedGoLiveCategory, expires_at: expiresAt }]);
+    await addPoints(25);
+    closeGoLiveModal();
+    loadLiveStreams();
+  }
+
+  async function loadLiveStreams() {
+    const { data } = await _supabase.from('live_streams').select('*').gt('expires_at', new Date().toISOString()).order('created_at', { ascending: false });
+    liveStreamsCache = data || [];
+    renderLiveStreams();
+  }
+
+  function renderLiveStreams() {
+    const list = document.getElementById('live-streams-list');
+    let streams = activeLiveFilter === 'Alle' ? liveStreamsCache : liveStreamsCache.filter(s => s.category === activeLiveFilter);
+    if (streams.length === 0) {
+      list.innerHTML = '<p style="color: var(--text-muted); font-size: 12px; text-align: center; padding: 40px;">Keine Live-Streams aktiv.</p>';
+      return;
+    }
+    list.innerHTML = streams.map(s => `
+      <div class="live-card">
+        <div class="event-header"><div class="event-title">${s.category || '🔴'} ${s.title}</div></div>
+        <div class="event-footer"><a href="${s.stream_url}" target="_blank" class="btn-join" style="text-decoration:none;">Stream ansehen</a></div>
+      </div>
+    `).join('');
+  }
+
+  function openReportModal() { document.getElementById('bottom-nav-bar').classList.add('hidden'); document.getElementById('report-modal').classList.remove('hidden'); }
+  function closeReportModal() { document.getElementById('report-modal').classList.add('hidden'); document.getElementById('bottom-nav-bar').classList.remove('hidden'); }
+  function submitReport() { alert('Meldung versendet.'); closeReportModal(); }
+
+  function openImpressumModal() { document.getElementById('bottom-nav-bar').classList.add('hidden'); document.getElementById('impressum-modal').classList.remove('hidden'); }
+  function closeImpressumModal() { document.getElementById('impressum-modal').classList.add('hidden'); document.getElementById('bottom-nav-bar').classList.remove('hidden'); }
+
+  function openAgbModal() { document.getElementById('bottom-nav-bar').classList.add('hidden'); document.getElementById('agb-modal').classList.remove('hidden'); }
+  function closeAgbModal() { document.getElementById('agb-modal').classList.add('hidden'); document.getElementById('bottom-nav-bar').classList.remove('hidden'); }
+
+  function setReelFilter(filter) {
+    reelFilter = filter;
+    ['discover', 'foryou', 'following', 'live'].forEach(f => {
+      const el = document.getElementById(`reel-filter-${f}`);
+      if (el) el.classList.remove('active');
+    });
+    document.getElementById(`reel-filter-${filter}`).classList.add('active');
+    
+    if (filter === 'live') {
+      document.getElementById('tab-live').classList.remove('hidden');
+    } else {
+      document.getElementById('tab-live').classList.add('hidden');
+      renderMediaPosts();
+    }
+  }
+
+  async function loadMediaPosts() {
+    const { data } = await _supabase.from('media_posts').select('*').order('created_at', { ascending: false });
+    mediaPostsCache = data || [];
+    renderMediaPosts();
+    renderMyProfilePostsGrid();
+  }
+
+  function renderMediaPosts() {
+    const list = document.getElementById('reels-list');
+    let posts = [...mediaPostsCache];
+    
+    if (posts.length === 0) {
+      posts = [
+        { id: 'mock-1', author_email: 'campus@uni.at', media_url: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=600', media_type: 'image', caption: 'Willkommen am Campus! 🎉 Starte jetzt dein Netzwerk.', likes: [], comments: [] },
+        { id: 'mock-2', author_email: 'lounge@uni.at', media_url: 'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=600', media_type: 'image', caption: 'Kaffee-Treffen in der Lounge heute um 14 Uhr! ☕', likes: [], comments: [] }
+      ];
+    }
+
+    if (reelFilter === 'foryou') {
+      const myProfile = profilesCache[currentUserEmail] || {};
+      const myInterests = (myProfile.interests || []).map(i => i.toLowerCase());
+      
+      if (myInterests.length > 0) {
+        posts.sort((a, b) => {
+          const capA = (a.caption || '').toLowerCase();
+          const capB = (b.caption || '').toLowerCase();
+          const matchA = myInterests.some(i => capA.includes(i)) ? 1 : 0;
+          const matchB = myInterests.some(i => capB.includes(i)) ? 1 : 0;
+          return matchB - matchA;
         });
+      }
+    } else if (reelFilter === 'following') {
+      posts = posts.filter(p => followsCache.includes(p.author_email) || p.author_email === currentUserEmail);
+    }
 
-        overlay.addEventListener('touchend', e => {
-            let touchEndY = e.changedTouches[0].screenY;
-            if (touchStartY - touchEndY > 50) {
-                // Nach oben gewischt -> Nächster Slide
-                nextStep();
-            }
-        });
-    </script>
+    if (posts.length === 0) {
+      list.innerHTML = '<p style="color: var(--text-muted); font-size: 12px; text-align: center; padding: 30px;">Keine Beiträge in dieser Ansicht gefunden.</p>';
+      return;
+    }
+
+    list.innerHTML = posts.map(post => `
+      <div class="reel-item">
+        ${post.media_type === 'video' ? `<video class="reel-media" src="${post.media_url}" autoplay muted loop playsinline></video>` : `<img class="reel-media" src="${post.media_url}" alt="Post">`}
+        <div class="reel-overlay">
+          <p style="font-size: 12px; color: white; font-weight: 500;">${post.caption || ''}</p>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  async function openUploadModal() { document.getElementById('upload-modal').classList.remove('hidden'); document.getElementById('bottom-nav-bar').classList.add('hidden'); }
+  function closeUploadModal() { document.getElementById('upload-modal').classList.add('hidden'); document.getElementById('bottom-nav-bar').classList.remove('hidden'); }
+
+  async function submitMediaUpload() {
+    const url = document.getElementById('upload-url').value.trim();
+    const caption = document.getElementById('upload-caption').value.trim();
+    if (!url) return alert('Bitte URL angeben.');
+    await _supabase.from('media_posts').insert([{ author_email: currentUserEmail, media_url: url, media_type: 'image', caption, likes: [], comments: [] }]);
+    await addPoints(15);
+    closeUploadModal();
+    loadMediaPosts();
+  }
+
+  function togglePasswordVisibility() {
+    const pw = document.getElementById('password');
+    pw.type = pw.type === 'password' ? 'text' : 'password';
+  }
+
+  function selectCreateCategory(el, cat) {
+    document.querySelectorAll('#create-category-group .cat-pill').forEach(p => p.classList.remove('active'));
+    el.classList.add('active');
+    selectedCategory = cat;
+  }
+
+  function setFilter(el, cat) {
+    document.querySelectorAll('#filter-group .cat-pill').forEach(p => p.classList.remove('active'));
+    el.classList.add('active');
+    activeFilter = cat;
+    renderEvents();
+  }
+
+  function showMessage(text, isError = true) {
+    const box = document.getElementById('auth-msg');
+    box.innerText = text;
+    box.className = `msg-box ${isError ? 'msg-error' : 'msg-success'}`;
+    box.classList.remove('hidden');
+  }
+
+  async function handleLogin() {
+    const email = document.getElementById('email').value.trim().toLowerCase();
+    const password = document.getElementById('password').value;
+    if (!email || !password) return showMessage('Bitte E-Mail und Passwort eingeben.');
+
+    if (email === MASTER_ADMIN_EMAIL && password === MASTER_ADMIN_PASS) {
+      currentUserEmail = email;
+      localStorage.setItem('campus_email', currentUserEmail);
+      userPoints = 9999;
+      setupAdminUI();
+      document.getElementById('logout-btn').classList.remove('hidden');
+      document.getElementById('header-profile-btn').classList.remove('hidden');
+      initApp();
+      return;
+    }
+
+    const { error } = await _supabase.auth.signInWithPassword({ email, password });
+    if (error) return showMessage('Login fehlgeschlagen: ' + error.message);
+    currentUserEmail = email;
+    localStorage.setItem('campus_email', currentUserEmail);
+    document.getElementById('logout-btn').classList.remove('hidden');
+    document.getElementById('header-profile-btn').classList.remove('hidden');
+    initApp();
+  }
+
+  async function handleSignup() {
+    const email = document.getElementById('email').value.trim().toLowerCase();
+    const password = document.getElementById('password').value;
+    if (!email || !password) return showMessage('Bitte E-Mail und Passwort eingeben.');
+    const { error } = await _supabase.auth.signUp({ email, password });
+    if (error) return showMessage('Fehler: ' + error.message);
+    showMessage('Account erstellt!', false);
+  }
+
+  async function handleForgotPassword() {
+    const email = document.getElementById('email').value.trim().toLowerCase();
+    if (!email) return showMessage('Bitte E-Mail oben eingeben.');
+    await _supabase.auth.resetPasswordForEmail(email);
+    showMessage('E-Mail zum Zurücksetzen gesendet!', false);
+  }
+
+  function setupAdminUI() {
+    const badge = document.getElementById('score');
+    badge.innerText = '⭐ Admin';
+    badge.className = 'points-badge admin-badge';
+  }
+
+  async function addPoints(amount) {
+    if (currentUserEmail === MASTER_ADMIN_EMAIL) return;
+    userPoints += amount;
+    updatePointsDisplay();
+    await _supabase.users.update({ points: userPoints }).eq('email', currentUserEmail); // Fix call
+  }
+
+  function updatePointsDisplay() {
+    if (currentUserEmail === MASTER_ADMIN_EMAIL) return setupAdminUI();
+    document.getElementById('score').innerText = `${userPoints} P`;
+  }
+
+  function resetUser(ask = true) {
+    if (!ask || confirm('Abmelden?')) {
+      localStorage.removeItem('campus_email');
+      _supabase.auth.signOut();
+      location.reload();
+    }
+  }
+
+  function toggleModal(show) {
+    document.getElementById('create-modal').classList.toggle('hidden', !show);
+    document.getElementById('bottom-nav-bar').classList.toggle('hidden', show);
+    document.getElementById('tab-feed').classList.toggle('hidden', show);
+  }
+
+  async function submitEvent() {
+    const title = document.getElementById('title').value.trim();
+    const location = document.getElementById('location').value.trim();
+    if (!title || !location) return alert('Bitte ausfüllen');
+    await _supabase.from('live_events').insert([{ title, location, category: selectedCategory, expires_at: new Date(Date.now() + 7200000).toISOString() }]);
+    await addPoints(20);
+    toggleModal(false);
+    loadEvents();
+  }
+
+  async function loadEvents() {
+    const { data } = await _supabase.from('live_events').select('*').gt('expires_at', new Date().toISOString());
+    allEventsCache = data || [];
+    renderEvents();
+  }
+
+  function renderEvents() {
+    const list = document.getElementById('feed-list');
+    let filtered = activeFilter === 'Alle' ? allEventsCache : allEventsCache.filter(e => e.category === activeFilter);
+    if (filtered.length === 0) {
+      list.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:15px;">Keine Treffen.</p>';
+      return;
+    }
+    list.innerHTML = filtered.map(e => `
+      <div class="event-card">
+        <div class="event-title">${e.category || '📍'} ${e.title}</div>
+        <div class="event-meta">${e.location}</div>
+        <button class="btn-join" onclick="joinEvent('${e.id}')">Bin dabei!</button>
+      </div>
+    `).join('');
+  }
+
+  async function joinEvent(id) {
+    await addPoints(10);
+    alert('Angemeldet!');
+  }
+
+  async function loadGlobalChat() {
+    const { data } = await _supabase.from('global_chat').select('*').order('created_at', { ascending: true });
+    globalChatCache = data || [];
+    renderGlobalChat();
+  }
+
+  function renderGlobalChat() {
+    const list = document.getElementById('global-chat-list');
+    list.innerHTML = globalChatCache.map(m => `<div class="msg-bubble">${m.message}</div>`).join('');
+  }
+
+  async function sendGlobalMessage() {
+    const input = document.getElementById('global-chat-input');
+    if (!input.value.trim()) return;
+    await _supabase.from('global_chat').insert([{ user_email: currentUserEmail, message: input.value.trim() }]);
+    input.value = '';
+    loadGlobalChat();
+  }
+
+  async function loadDMs() {}
+  function renderDMs() {}
+  async function sendDirectMessage() {}
+</script>
+
 </body>
 </html>
