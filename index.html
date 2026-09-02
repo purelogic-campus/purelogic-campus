@@ -46,7 +46,7 @@
       display: flex;
       flex-direction: column;
       padding-top: calc(10px + env(safe-area-inset-top));
-      padding-bottom: calc(14px + env(safe-area-inset-bottom));
+      padding-bottom: calc(10px + env(safe-area-inset-bottom));
     }
     .header {
       display: flex;
@@ -91,9 +91,9 @@
       padding: 6px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; cursor: pointer;
     }
     
-    /* GLEICHMÄSSIG VERTEILTE UNTERE NAVIGATION MIT NOCH GRÖßEREM PLUS-BUTTON */
+    /* UNTERE NAVIGATION */
     .nav-tabs {
-      display: flex; align-items: center; justify-content: space-between; gap: 4px; margin-top: 15px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: space-between; gap: 4px; margin-top: 10px; flex-shrink: 0;
       background: var(--card-glass); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
       padding: 6px 8px; border-radius: 24px; border: 1px solid var(--border);
       position: relative; overflow: visible;
@@ -105,7 +105,6 @@
     }
     .tab-btn.active { background: rgba(99, 102, 241, 0.15); color: #818cf8; }
     
-    /* NOCH ETWAS GRÖßERER PLUS-BUTTON */
     .tab-btn-action-container {
       flex: 0 0 auto;
       position: relative;
@@ -181,22 +180,29 @@
     .profile-header-card { display: flex; align-items: center; justify-content: space-between; background: var(--card); border: 1px solid var(--border); padding: 18px; border-radius: 20px; margin-bottom: 16px; max-width: 600px; }
     .profile-avatar-lg { width: 75px; height: 75px; border-radius: 50%; background: var(--border); object-fit: cover; display: flex; align-items: center; justify-content: center; font-size: 30px; color: var(--text-muted); border: 2px solid var(--primary); flex-shrink: 0; }
     
-    /* GLEICHMÄSSIG AUFGETEILTE REELS SUB-NAVIGATION (Entdecken, Für dich, Gefolgt, Live) */
-    .reels-subnav { display: flex; gap: 6px; width: 100%; flex-shrink: 0; margin-bottom: 10px; }
-    .reel-pill { 
-      flex: 1; background: var(--card); border: 1px solid var(--border); color: var(--text-muted); 
-      padding: 8px 4px; border-radius: 20px; font-size: 11px; cursor: pointer; font-weight: 700; 
-      text-align: center; white-space: nowrap; transition: all 0.2s; overflow: hidden; text-overflow: ellipsis; 
+    /* OBERE REELS SUB-NAVIGATION ALS SCHÖNER GLAS-BALKEN */
+    .reels-subnav { 
+      display: flex; gap: 6px; width: 100%; flex-shrink: 0; margin-bottom: 10px; 
+      background: var(--card-glass); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      padding: 6px 8px; border-radius: 24px; border: 1px solid var(--border);
     }
-    .reel-pill.active { background: var(--gradient-main); color: white; border-color: transparent; box-shadow: 0 4px 12px rgba(99,102,241,0.3); }
+    .reel-pill { 
+      flex: 1; background: none; border: 1px solid transparent; color: var(--text-muted); 
+      padding: 10px 4px; border-radius: 16px; font-size: 12px; cursor: pointer; font-weight: 700; 
+      text-align: center; white-space: nowrap; transition: all 0.25s; overflow: hidden; text-overflow: ellipsis; 
+    }
+    .reel-pill.active { background: rgba(99, 102, 241, 0.15); color: #818cf8; }
 
-    .reel-card-wrapper { flex: 1; overflow-y: scroll; scroll-snap-type: y mandatory; display: flex; flex-direction: column; gap: 16px; padding-bottom: 40px; }
+    .reel-card-wrapper { flex: 1; overflow-y: scroll; scroll-snap-type: y mandatory; display: flex; flex-direction: column; gap: 16px; padding-bottom: 20px; }
     .reel-item { scroll-snap-align: start; height: 100%; min-height: 400px; max-height: 560px; background: #000; border-radius: 20px; border: 1px solid var(--border); position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; max-width: 440px; margin: 0 auto; width: 100%; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
     .reel-media { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
     .reel-overlay { position: relative; z-index: 2; background: linear-gradient(to top, rgba(9,13,22,0.95) 0%, rgba(9,13,22,0.5) 60%, rgba(9,13,22,0) 100%); padding: 24px 16px 16px 16px; display: flex; flex-direction: column; gap: 8px; }
-    .footer-links { display: flex; justify-content: center; gap: 12px; padding: 6px 0 2px 0; font-size: 11px; color: var(--text-muted); flex-shrink: 0; }
+    
+    /* FOOTER LINKS UNTER DER UNTEREN LEISTE PLATZIERT */
+    .footer-links { display: flex; justify-content: center; gap: 10px; padding: 8px 0 2px 0; font-size: 11px; color: var(--text-muted); flex-shrink: 0; }
     .footer-links span { cursor: pointer; transition: color 0.2s; }
     .footer-links span:hover { color: #818cf8; text-decoration: underline; }
+
     .profile-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 14px; }
     .profile-grid-item { aspect-ratio: 1; background: var(--card); border-radius: 8px; overflow: hidden; border: 1px solid var(--border); position: relative; }
     .profile-grid-item img, .profile-grid-item video { width: 100%; height: 100%; object-fit: cover; }
@@ -247,7 +253,7 @@
     
     <div class="tab-content-wrapper">
       
-      <!-- TAB 0: LIVE STREAMING (Wenn über Unter-Nav ausgewählt) -->
+      <!-- TAB 0: LIVE STREAMING -->
       <div id="tab-live" class="tab-content hidden">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px; flex-shrink:0; gap: 8px;">
           <h3 style="font-size: 18px; font-weight: 800;">🔴 Campus Live</h3>
@@ -270,9 +276,9 @@
         </div>
       </div>
 
-      <!-- TAB 1: CAMPUS-FEED / REELS MIT GLEICHMÄSSIGER 4ER UNTER-NAV -->
+      <!-- TAB 1: CAMPUS-FEED / REELS -->
       <div id="tab-reels" class="tab-content">
-        <!-- GLEICHMÄSSIG AUFGETEILTE UNTER-NAVI (Entdecken, Für dich, Gefolgt, Live) -->
+        <!-- OBERER BALKEN MIT GLEICHMÄßIGER UNTER-NAVI (Entdecken, Für dich, Gefolgt, Live) -->
         <div class="reels-subnav">
           <div class="reel-pill active" id="reel-filter-discover" onclick="setReelFilter('discover')">🔥 Entdecken</div>
           <div class="reel-pill" id="reel-filter-foryou" onclick="setReelFilter('foryou')">✨ Für dich</div>
@@ -373,27 +379,26 @@
       </div>
     </div>
 
-    <!-- FOOTER LINKS (FIXIERT) -->
-    <div class="footer-links">
-      <span onclick="openReportModal()">🚨 Inhalts melden</span>
-      <span>•</span>
-      <span onclick="openImpressumModal()">Impressum</span>
-      <span>•</span>
-      <span onclick="openAgbModal()">AGB</span>
-    </div>
-
-    <!-- UNTERE NAVIGATION (GLEICHMÄßIG AUFGETEILT ZWISCHEN TREFFEN UND CHAT) -->
+    <!-- UNTERE NAVIGATION -->
     <div class="nav-tabs" id="bottom-nav-bar">
       <button class="tab-btn active" onclick="switchTab('reels')" id="btn-tab-reels">📱 Feed</button>
       <button class="tab-btn" onclick="switchTab('feed')" id="btn-tab-feed">💬 Treffen</button>
       
-      <!-- DER GRÖßERE, HÄLFTIG ÜBERRAGENDE HIGHLIGHT-BUTTON -->
       <div class="tab-btn-action-container">
         <button class="tab-btn-action" onclick="openUploadModal()" title="Beitrag erstellen">+</button>
       </div>
 
       <button class="tab-btn" onclick="switchTab('global')" id="btn-tab-global">⚡ Chat</button>
       <button class="tab-btn" onclick="switchTab('inbox')" id="btn-tab-inbox">📬 Postfach</button>
+    </div>
+
+    <!-- FOOTER LINKS UNTER DER UNTEREN LEISTE PLATZIERT -->
+    <div class="footer-links">
+      <span onclick="openReportModal()">🚨 Inhalts melden</span>
+      <span>•</span>
+      <span onclick="openImpressumModal()">Impressum</span>
+      <span>•</span>
+      <span onclick="openAgbModal()">AGB</span>
     </div>
 
   </div>
@@ -712,7 +717,6 @@
     
     if (tabName === 'profile') renderMyProfileInputs();
 
-    // Untere Reels-Navigaton Live-Tab Aktivierungshandhabung
     if (tabName === 'live') {
       document.getElementById('tab-reels').classList.remove('hidden');
       document.getElementById('tab-live').classList.remove('hidden');
