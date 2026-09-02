@@ -68,7 +68,6 @@
     }
     .points-badge.admin-badge { background: rgba(245, 158, 11, 0.15); color: var(--admin); border: 1px solid rgba(245, 158, 11, 0.3); }
     
-    /* HEADER PROFIL BUTTON MIT MINI-AVATAR */
     .header-profile-btn {
       background: rgba(255, 255, 255, 0.05);
       border: 1px solid var(--border);
@@ -92,9 +91,9 @@
       padding: 6px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; cursor: pointer;
     }
     
-    /* UNTERE NAVIGATION MIT HERVORSTEHENDEM PLUS-BUTTON */
+    /* GLEICHMÄSSIG VERTEILTE UNTERE NAVIGATION MIT NOCH GRÖßEREM PLUS-BUTTON */
     .nav-tabs {
-      display: flex; align-items: center; gap: 4px; margin-top: 15px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: space-between; gap: 4px; margin-top: 15px; flex-shrink: 0;
       background: var(--card-glass); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
       padding: 6px 8px; border-radius: 24px; border: 1px solid var(--border);
       position: relative; overflow: visible;
@@ -106,32 +105,32 @@
     }
     .tab-btn.active { background: rgba(99, 102, 241, 0.15); color: #818cf8; }
     
-    /* DER VERGRÖßERTE, ÜBERRAGENDE HIGHLIGHT-PLUS-BUTTON */
+    /* NOCH ETWAS GRÖßERER PLUS-BUTTON */
     .tab-btn-action-container {
       flex: 0 0 auto;
       position: relative;
-      width: 56px;
+      width: 64px;
       height: 20px;
       margin: 0 4px;
     }
     .tab-btn-action {
       position: absolute;
-      bottom: -2px;
+      bottom: -4px;
       left: 50%;
       transform: translateX(-50%);
-      width: 56px; 
-      height: 56px;
+      width: 64px; 
+      height: 64px;
       border-radius: 50%;
       background: var(--gradient-main);
       color: white;
       border: 3px solid var(--bg);
-      font-size: 28px;
+      font-size: 32px;
       font-weight: 900;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      box-shadow: 0 8px 24px rgba(99, 102, 241, 0.6);
+      box-shadow: 0 8px 26px rgba(99, 102, 241, 0.65);
       transition: transform 0.2s, box-shadow 0.2s;
     }
     .tab-btn-action:active { transform: translateX(-50%) scale(0.92); box-shadow: 0 3px 12px rgba(99, 102, 241, 0.4); }
@@ -181,9 +180,16 @@
     .msg-success { background: rgba(16,185,129,0.15); color: var(--success); }
     .profile-header-card { display: flex; align-items: center; justify-content: space-between; background: var(--card); border: 1px solid var(--border); padding: 18px; border-radius: 20px; margin-bottom: 16px; max-width: 600px; }
     .profile-avatar-lg { width: 75px; height: 75px; border-radius: 50%; background: var(--border); object-fit: cover; display: flex; align-items: center; justify-content: center; font-size: 30px; color: var(--text-muted); border: 2px solid var(--primary); flex-shrink: 0; }
-    .reels-subnav { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; flex-shrink: 0; }
-    .reel-pill { background: var(--card); border: 1px solid var(--border); color: var(--text-muted); padding: 6px 14px; border-radius: 20px; font-size: 12px; cursor: pointer; font-weight: 700; white-space: nowrap; transition: all 0.2s; }
+    
+    /* GLEICHMÄSSIG AUFGETEILTE REELS SUB-NAVIGATION (Entdecken, Für dich, Gefolgt, Live) */
+    .reels-subnav { display: flex; gap: 6px; width: 100%; flex-shrink: 0; margin-bottom: 10px; }
+    .reel-pill { 
+      flex: 1; background: var(--card); border: 1px solid var(--border); color: var(--text-muted); 
+      padding: 8px 4px; border-radius: 20px; font-size: 11px; cursor: pointer; font-weight: 700; 
+      text-align: center; white-space: nowrap; transition: all 0.2s; overflow: hidden; text-overflow: ellipsis; 
+    }
     .reel-pill.active { background: var(--gradient-main); color: white; border-color: transparent; box-shadow: 0 4px 12px rgba(99,102,241,0.3); }
+
     .reel-card-wrapper { flex: 1; overflow-y: scroll; scroll-snap-type: y mandatory; display: flex; flex-direction: column; gap: 16px; padding-bottom: 40px; }
     .reel-item { scroll-snap-align: start; height: 100%; min-height: 400px; max-height: 560px; background: #000; border-radius: 20px; border: 1px solid var(--border); position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; max-width: 440px; margin: 0 auto; width: 100%; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
     .reel-media { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
@@ -204,7 +210,6 @@
     <div class="logo">PURE LOGIC</div>
     <div class="header-right">
       <div class="points-badge" id="score">0 P</div>
-      <!-- NEU: PROFIL-BUTTON MIT MINI-AVATAR IM HEADER -->
       <button class="header-profile-btn hidden" id="header-profile-btn" onclick="switchTab('profile')">
         <img id="header-avatar-preview" class="header-avatar-sm" src="" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'24\' height=\'24\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%2394a3b8\' stroke-width=\'2\'><path d=\'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2\'></path><circle cx=\'12\' cy=\'7\' r=\'4\'></circle></svg>'" alt="Profil">
         <span class="header-profile-text">Profil</span>
@@ -242,12 +247,12 @@
     
     <div class="tab-content-wrapper">
       
-      <!-- TAB 0: LIVE STREAMING -->
+      <!-- TAB 0: LIVE STREAMING (Wenn über Unter-Nav ausgewählt) -->
       <div id="tab-live" class="tab-content hidden">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px; flex-shrink:0; gap: 8px;">
           <h3 style="font-size: 18px; font-weight: 800;">🔴 Campus Live</h3>
           <div style="display:flex; gap:6px;">
-            <button class="btn btn-secondary" style="width:auto; margin-top:0; padding: 8px 12px; font-size: 12px;" onclick="openStreamHelpModal()">💡 Hilfe & Tutorial</button>
+            <button class="btn btn-secondary" style="width:auto; margin-top:0; padding: 8px 12px; font-size: 12px;" onclick="openStreamHelpModal()">💡 Hilfe</button>
             <button class="btn" id="start-stream-btn" style="width:auto; margin-top:0; padding: 8px 14px; font-size: 12px;" onclick="handlePreLiveCheck()">+ Stream starten</button>
           </div>
         </div>
@@ -265,14 +270,14 @@
         </div>
       </div>
 
-      <!-- TAB 1: CAMPUS-FEED / REELS -->
+      <!-- TAB 1: CAMPUS-FEED / REELS MIT GLEICHMÄSSIGER 4ER UNTER-NAV -->
       <div id="tab-reels" class="tab-content">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px; flex-shrink:0; gap: 8px;">
-          <div class="reels-subnav" style="margin:0; overflow-x: auto;">
-            <div class="reel-pill active" id="reel-filter-discover" onclick="setReelFilter('discover')">🔥 Entdecken</div>
-            <div class="reel-pill" id="reel-filter-foryou" onclick="setReelFilter('foryou')">✨ Für dich</div>
-            <div class="reel-pill" id="reel-filter-following" onclick="setReelFilter('following')">👥 Gefolgt</div>
-          </div>
+        <!-- GLEICHMÄSSIG AUFGETEILTE UNTER-NAVI (Entdecken, Für dich, Gefolgt, Live) -->
+        <div class="reels-subnav">
+          <div class="reel-pill active" id="reel-filter-discover" onclick="setReelFilter('discover')">🔥 Entdecken</div>
+          <div class="reel-pill" id="reel-filter-foryou" onclick="setReelFilter('foryou')">✨ Für dich</div>
+          <div class="reel-pill" id="reel-filter-following" onclick="setReelFilter('following')">👥 Gefolgt</div>
+          <div class="reel-pill" id="reel-filter-live" onclick="switchTab('live')">🔴 Live</div>
         </div>
 
         <div class="reel-card-wrapper" id="reels-list">
@@ -356,16 +361,13 @@
             <label style="font-size: 12px; font-weight: 600; color: var(--text-muted);">Profilbild URL oder Upload:</label>
             <input type="text" id="profile-avatar" placeholder="https://beispiel.de/bild.jpg" oninput="document.getElementById('my-profile-avatar-preview').src = this.value; document.getElementById('header-avatar-preview').src = this.value;">
 
-            <label style="font-size: 12px; font-weight: 600; color: var(--text-muted);">Interessen (mit Komma getrennt für den 'Für dich'-Algorithmus):</label>
+            <label style="font-size: 12px; font-weight: 600; color: var(--text-muted);">Interessen (mit Komma getrennt):</label>
             <input type="text" id="profile-interests" placeholder="Programmieren, Kaffee, Fitness, Musik">
 
             <button class="btn" onclick="saveMyProfile()" style="margin-bottom: 20px;">Profil speichern (+10 P)</button>
 
-            <!-- BEITRAGS-RASTER IM PROFIL -->
             <h4 style="font-size: 15px; font-weight: 800; margin-top: 20px; margin-bottom: 8px;">Deine Beiträge</h4>
-            <div id="my-profile-posts-grid" class="profile-grid">
-              <!-- Wird dynamisch befüllt -->
-            </div>
+            <div id="my-profile-posts-grid" class="profile-grid"></div>
           </div>
         </div>
       </div>
@@ -380,25 +382,23 @@
       <span onclick="openAgbModal()">AGB</span>
     </div>
 
-    <!-- UNTERE NAVIGATION MIT ÜBERRAGENDEM PLUS-BUTTON -->
+    <!-- UNTERE NAVIGATION (GLEICHMÄßIG AUFGETEILT ZWISCHEN TREFFEN UND CHAT) -->
     <div class="nav-tabs" id="bottom-nav-bar">
-      <button class="tab-btn" onclick="switchTab('live')" id="btn-tab-live">🔴 Live</button>
       <button class="tab-btn active" onclick="switchTab('reels')" id="btn-tab-reels">📱 Feed</button>
+      <button class="tab-btn" onclick="switchTab('feed')" id="btn-tab-feed">💬 Treffen</button>
       
-      <!-- DER VERGRÖßERTE, HÄLFTIG ÜBERRAGENDE HIGHLIGHT-BUTTON -->
+      <!-- DER GRÖßERE, HÄLFTIG ÜBERRAGENDE HIGHLIGHT-BUTTON -->
       <div class="tab-btn-action-container">
         <button class="tab-btn-action" onclick="openUploadModal()" title="Beitrag erstellen">+</button>
       </div>
 
-      <button class="tab-btn" onclick="switchTab('feed')" id="btn-tab-feed">💬 Treffen</button>
       <button class="tab-btn" onclick="switchTab('global')" id="btn-tab-global">⚡ Chat</button>
       <button class="tab-btn" onclick="switchTab('inbox')" id="btn-tab-inbox">📬 Postfach</button>
-      <!-- HINWEIS: Profil ist jetzt im Header direkt neben dem Logout/Admin-Badge platziert -->
     </div>
 
   </div>
 
-  <!-- MODAL: STREAM HILFE & TUTORIAL PFLICHT -->
+  <!-- MODAL: STREAM HILFE -->
   <div id="stream-help-modal" class="hidden tab-content" style="align-items: center; justify-content: center;">
     <div style="width: 100%; max-width: 460px; background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 20px; max-height: 85vh; overflow-y: auto;">
       <h3 style="margin-bottom: 10px; font-weight: 800;">💡 Pflicht-Tutorial: Live gehen</h3>
@@ -697,43 +697,6 @@
     alert('Profil erfolgreich aktualisiert!');
   }
 
-  async function openUserProfile(email) {
-    viewingProfileEmail = email;
-    const profile = profilesCache[email] || { username: email.split('@')[0], full_name: email.split('@')[0], bio: 'Kein Profil.' };
-    document.getElementById('vp-avatar').src = profile.avatar_url || '';
-    document.getElementById('vp-fullname').innerText = profile.full_name || profile.username;
-    document.getElementById('vp-handle').innerText = '@' + (profile.username || 'user');
-    
-    const followBtn = document.getElementById('vp-follow-btn');
-    if (email === currentUserEmail) followBtn.classList.add('hidden');
-    else {
-      followBtn.classList.remove('hidden');
-      followBtn.innerText = followsCache.includes(email) ? 'Entfolgen' : 'Folgen';
-    }
-
-    document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-    document.getElementById('bottom-nav-bar').classList.add('hidden');
-    document.getElementById('view-profile-modal').classList.remove('hidden');
-  }
-
-  function closeViewProfileModal() {
-    document.getElementById('view-profile-modal').classList.add('hidden');
-    document.getElementById('bottom-nav-bar').classList.remove('hidden');
-    switchTab('reels');
-  }
-
-  async function toggleFollowUserFromModal() {
-    if (!viewingProfileEmail || viewingProfileEmail === currentUserEmail) return;
-    if (followsCache.includes(viewingProfileEmail)) {
-      await _supabase.from('follows').delete().eq('follower_email', currentUserEmail).eq('following_email', viewingProfileEmail);
-    } else {
-      await _supabase.from('follows').insert([{ follower_email: currentUserEmail, following_email: viewingProfileEmail }]);
-      await addPoints(5);
-    }
-    await loadFollows();
-    openUserProfile(viewingProfileEmail);
-  }
-
   function switchTab(tabName) {
     document.querySelectorAll('#bottom-nav-bar .tab-btn').forEach(btn => btn.classList.remove('active'));
     ['live', 'reels', 'feed', 'global', 'inbox', 'profile'].forEach(t => {
@@ -748,6 +711,14 @@
     if (targetTab) targetTab.classList.remove('hidden');
     
     if (tabName === 'profile') renderMyProfileInputs();
+
+    // Untere Reels-Navigaton Live-Tab Aktivierungshandhabung
+    if (tabName === 'live') {
+      document.getElementById('tab-reels').classList.remove('hidden');
+      document.getElementById('tab-live').classList.remove('hidden');
+      document.getElementById('reel-filter-live').classList.add('active');
+      ['discover', 'foryou', 'following'].forEach(f => document.getElementById(`reel-filter-${f}`).classList.remove('active'));
+    }
   }
 
   function setLiveFilter(element, cat) {
@@ -846,9 +817,18 @@
 
   function setReelFilter(filter) {
     reelFilter = filter;
-    ['discover', 'foryou', 'following'].forEach(f => document.getElementById(`reel-filter-${f}`).classList.remove('active'));
+    ['discover', 'foryou', 'following', 'live'].forEach(f => {
+      const el = document.getElementById(`reel-filter-${f}`);
+      if (el) el.classList.remove('active');
+    });
     document.getElementById(`reel-filter-${filter}`).classList.add('active');
-    renderMediaPosts();
+    
+    if (filter === 'live') {
+      document.getElementById('tab-live').classList.remove('hidden');
+    } else {
+      document.getElementById('tab-live').classList.add('hidden');
+      renderMediaPosts();
+    }
   }
 
   async function loadMediaPosts() {
