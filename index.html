@@ -182,7 +182,14 @@
     .msg-error { background: rgba(236,72,153,0.15); color: var(--accent); }
     .msg-success { background: rgba(16,185,129,0.15); color: var(--success); }
     .profile-header-card { display: flex; align-items: center; justify-content: space-between; background: var(--card); border: 1px solid var(--border); padding: 14px; border-radius: 16px; margin-bottom: 12px; max-width: 600px; }
-    .profile-avatar-lg { width: 64px; height: 64px; border-radius: 50%; background: var(--border); object-fit: cover; display: flex; align-items: center; justify-content: center; font-size: 26px; color: var(--text-muted); border: 2px solid var(--primary); flex-shrink: 0; }
+    
+    /* Anklickbarer Avatar-Kreis im Profil */
+    .profile-avatar-lg { 
+      width: 64px; height: 64px; border-radius: 50%; background: var(--border); object-fit: cover; 
+      display: flex; align-items: center; justify-content: center; font-size: 26px; color: var(--text-muted); 
+      border: 2px solid var(--primary); flex-shrink: 0; cursor: pointer; transition: transform 0.2s, opacity 0.2s; 
+    }
+    .profile-avatar-lg:hover { transform: scale(1.05); opacity: 0.9; }
     
     .reels-subnav { 
       display: flex; gap: 6px; width: 100%; flex-shrink: 0; margin-bottom: 8px; 
@@ -236,7 +243,6 @@
     .profile-grid-item { aspect-ratio: 1; background: var(--card); border-radius: 8px; overflow: hidden; border: 1px solid var(--border); position: relative; }
     .profile-grid-item img, .profile-grid-item video { width: 100%; height: 100%; object-fit: cover; }
     
-    /* Tutorial Modal Progress Styling */
     .tutorial-step { display: none; }
     .tutorial-step.active { display: block; }
     
@@ -378,7 +384,8 @@
         <div style="overflow-y: auto; flex: 1; padding-right: 2px; min-height: 0;">
           <div class="profile-header-card">
             <div style="display:flex; align-items:center; gap:12px;">
-              <img id="my-profile-avatar-preview" class="profile-avatar-lg" src="" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'64\' height=\'64\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%2394a3b8\' stroke-width=\'2\'><path d=\'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2\'></path><circle cx=\'12\' cy=\'7\' r=\'4\'></circle></svg>'" alt="Avatar">
+              <!-- ANKLICKBARER AVATAR-KREIS -->
+              <img id="my-profile-avatar-preview" class="profile-avatar-lg" src="" onclick="changeAvatarDirectly()" title="Klicken, um das Profilbild zu ändern" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'64\' height=\'64\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%2394a3b8\' stroke-width=\'2\'><path d=\'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2\'></path><circle cx=\'12\' cy=\'7\' r=\'4\'></circle></svg>'" alt="Avatar">
               <div>
                 <h3 id="my-profile-display-name" style="font-size: 16px; font-weight: 800; margin-bottom: 2px;">Dein Name</h3>
                 <p id="my-profile-handle-preview" style="font-size: 12px; color: #818cf8; font-weight: 700;">@benutzername</p>
@@ -436,12 +443,11 @@
 
   </div>
 
-  <!-- MODAL: STABILE MEHRSEITIGE TUTORIAL-FÜHRUNG (GELÖST) -->
+  <!-- MODAL: TUTORIAL-FÜHRUNG -->
   <div id="stream-help-modal" class="hidden tab-content" style="align-items: center; justify-content: center;">
     <div style="width: 100%; max-width: 420px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 20px; max-height: 85vh; overflow-y: auto;">
       <h3 style="margin-bottom: 12px; font-weight: 800; color: #818cf8;">💡 Live-Stream Campus Guide</h3>
       
-      <!-- Tutorial Steps Container (Sicherer Seiten-Wechsel ohne Hänger) -->
       <div id="tutorial-steps-container" style="min-height: 120px; margin-bottom: 16px;">
         <div class="tutorial-step active" data-step="1">
           <h4 style="font-size: 14px; margin-bottom: 6px;">Schritt 1 von 3: Vorbereitung</h4>
@@ -573,7 +579,6 @@
   let followsCache = []; 
   let mediaPostsCache = [];
   
-  // Tutorial State Controller Variable
   let currentTutorialStep = 1;
   const totalTutorialSteps = 3;
 
@@ -616,6 +621,18 @@
     
     switchTab('reels');
     setReelFilter('foryou');
+  }
+
+  // NEUE FUNKTION: Direkter Klick auf den Profil-Avatar zum Ändern der URL per Prompt
+  function changeAvatarDirectly() {
+    const currentUrl = document.getElementById('profile-avatar').value;
+    const newUrl = prompt("Gib die Bild-URL für dein neues Profilbild ein:", currentUrl);
+    
+    if (newUrl !== null) {
+      document.getElementById('profile-avatar').value = newUrl;
+      document.getElementById('my-profile-avatar-preview').src = newUrl;
+      document.getElementById('header-avatar-preview').src = newUrl;
+    }
   }
 
   function updateStreamButtonState() {
@@ -774,7 +791,6 @@
     selectedGoLiveCategory = cat;
   }
 
-  /* REPARIERTE TUTORIAL NAVIGATION LOGIK (Kein Hängenbleiben mehr) */
   function openStreamHelpModal() {
     currentTutorialStep = 1;
     updateTutorialStepUI();
@@ -1049,7 +1065,6 @@
     if (currentUserEmail === MASTER_ADMIN_EMAIL) return;
     userPoints += amount;
     updatePointsDisplay();
-    await _supabase.users.update({ points: userPoints }).eq('email', currentUserEmail); // Fix call
   }
 
   function updatePointsDisplay() {
