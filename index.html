@@ -64,7 +64,16 @@
       font-weight: 900; font-size: 20px; letter-spacing: -0.5px; 
       background: var(--gradient-main); -webkit-background-clip: text; -webkit-text-fill-color: transparent;
     }
-    .header-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+    
+    /* Hier wurde flex-wrap auf nowrap gesetzt, damit alles in einer Zeile bleibt */
+    .header-right { 
+      display: flex; 
+      align-items: center; 
+      gap: 6px; 
+      flex-wrap: nowrap; 
+      flex-shrink: 0;
+    }
+
     .points-badge { 
       background: rgba(99, 102, 241, 0.15); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.3);
       padding: 5px 10px; border-radius: 30px; font-size: 11px; font-weight: 700; 
@@ -74,32 +83,33 @@
     .header-profile-btn {
       background: rgba(255, 255, 255, 0.05);
       border: 1px solid var(--border);
-      padding: 2px 8px 2px 2px;
+      padding: 2px 6px 2px 2px;
       border-radius: 30px;
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 4px;
       cursor: pointer;
       transition: all 0.2s;
     }
     .header-profile-btn:hover { background: rgba(255, 255, 255, 0.1); }
     .header-avatar-sm {
-      width: 22px; height: 22px; border-radius: 50%; object-fit: cover; background: var(--border);
-      display: flex; align-items: center; justify-content: center; font-size: 10px; color: var(--text-muted);
+      width: 20px; height: 20px; border-radius: 50%; object-fit: cover; background: var(--border);
+      display: flex; align-items: center; justify-content: center; font-size: 9px; color: var(--text-muted);
     }
     .header-profile-text { font-size: 11px; font-weight: 600; color: var(--text); }
 
     .btn-logout {
       background: rgba(236, 72, 153, 0.1); color: var(--accent); border: 1px solid rgba(236, 72, 153, 0.25);
       padding: 5px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; cursor: pointer;
+      white-space: nowrap;
     }
 
-    /* Sprachauswahl Styling */
+    /* Sprachauswahl Styling (Bleibt fest in der Zeile) */
     .language-select {
       background: var(--card);
       border: 1px solid var(--border);
       color: var(--text);
-      padding: 5px 8px;
+      padding: 5px 6px;
       border-radius: 10px;
       font-size: 11px;
       font-weight: 600;
@@ -277,7 +287,7 @@
       </button>
       <button class="btn-logout hidden" id="logout-btn" onclick="resetUser()" title="Abmelden">🚪 Logout</button>
 
-      <!-- SPRACHAUSWAHL BUTTON (10 meistgesprochene Sprachen an Wiener Unis) -->
+      <!-- SPRACHAUSWAHL BUTTON (Rechts neben dem Logout-Button) -->
       <select id="languageSelect" class="language-select" onchange="changeLanguage(this.value)">
         <option value="de" selected>🇩🇪 Deutsch</option>
         <option value="en">🇬🇧 English</option>
@@ -654,7 +664,6 @@
   // Sprachwechsel-Funktion
   function changeLanguage(langCode) {
     console.log("Ausgewählte Sprache:", langCode);
-    // Hier kannst du deine Übersetzungslogik (z.B. i18next oder ein Wörterbuch) einbinden
   }
 
   function changeAvatarDirectly() {
