@@ -65,7 +65,6 @@
       background: var(--gradient-main); -webkit-background-clip: text; -webkit-text-fill-color: transparent;
     }
     
-    /* Hier wurde flex-wrap auf nowrap gesetzt, damit alles in einer Zeile bleibt */
     .header-right { 
       display: flex; 
       align-items: center; 
@@ -104,7 +103,7 @@
       white-space: nowrap;
     }
 
-    /* Sprachauswahl Styling (Bleibt fest in der Zeile) */
+    /* Sehr kompakter Sprachauswahl-Button (nur Flagge + Kürzel) mit Emoji-Fallback für PC */
     .language-select {
       background: var(--card);
       border: 1px solid var(--border);
@@ -116,6 +115,7 @@
       cursor: pointer;
       outline: none;
       transition: all 0.2s;
+      font-family: inherit, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
     }
     .language-select:hover { background: rgba(255, 255, 255, 0.1); }
     .language-select option { background: var(--bg); color: var(--text); }
@@ -287,18 +287,18 @@
       </button>
       <button class="btn-logout hidden" id="logout-btn" onclick="resetUser()" title="Abmelden">🚪 Logout</button>
 
-      <!-- SPRACHAUSWAHL BUTTON (Rechts neben dem Logout-Button) -->
+      <!-- EXTREM KOMPAKTER SPRACH-BUTTON (Nur Flagge + Kürzel) -->
       <select id="languageSelect" class="language-select" onchange="changeLanguage(this.value)">
-        <option value="de" selected>🇩🇪 Deutsch</option>
-        <option value="en">🇬🇧 English</option>
-        <option value="it">🇮🇹 Italiano</option>
+        <option value="de" selected>🇩🇪 DE</option>
+        <option value="en">🇬🇧 EN</option>
+        <option value="it">🇮🇹 IT</option>
         <option value="bks">🇭🇷 BKS</option>
-        <option value="tr">🇹🇷 Türkçe</option>
-        <option value="es">🇪🇸 Español</option>
-        <option value="fr">🇫🇷 Français</option>
-        <option value="pl">🇵🇱 Polski</option>
-        <option value="hu">🇭🇺 Magyar</option>
-        <option value="uk">🇺🇦 Українська</option>
+        <option value="tr">🇹🇷 TR</option>
+        <option value="es">🇪🇸 ES</option>
+        <option value="fr">🇫🇷 FR</option>
+        <option value="pl">🇵🇱 PL</option>
+        <option value="hu">🇭🇺 HU</option>
+        <option value="uk">🇺🇦 UK</option>
       </select>
     </div>
   </div>
