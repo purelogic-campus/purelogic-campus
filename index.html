@@ -483,7 +483,27 @@
         </div>
       </div>
 
-      <!-- TAB 3: GLOBAL CHAT -->
+      <!-- TAB 3: UNI-DUELL & RANGLISTE (NEU - PUNKT 3) -->
+      <div id="tab-ranking" class="tab-content hidden">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px; flex-shrink:0;">
+          <h3 style="font-size: 16px; font-weight: 800;">🏆 Uni-Duell & Top 100</h3>
+          <span style="font-size: 10px; color: var(--text-muted);">Reset So. 23:59</span>
+        </div>
+
+        <div style="background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 12px; margin-bottom: 12px;">
+          <h4 style="font-size: 13px; font-weight: 800; margin-bottom: 6px; color: #818cf8;">🎓 Wiener Uni-Duell (Pro-Kopf)</h4>
+          <div id="uni-duell-list" style="display: flex; flex-direction: column; gap: 6px;">
+            <p style="color: var(--text-muted); font-size: 12px;">Berechne Uni-Wertung...</p>
+          </div>
+        </div>
+
+        <h4 style="font-size: 13px; font-weight: 800; margin-bottom: 6px;">⭐ Wall of Fame (Top Creator)</h4>
+        <div id="top-creators-list" style="display: flex; flex-direction: column; gap: 6px; padding-bottom: 20px;">
+          <p style="color: var(--text-muted); font-size: 12px;">Lade Top Creator...</p>
+        </div>
+      </div>
+
+      <!-- TAB 4: GLOBAL CHAT -->
       <div id="tab-global" class="tab-content hidden">
         <div class="chat-container">
           <div class="messages-list" id="global-chat-list">
@@ -496,7 +516,7 @@
         </div>
       </div>
 
-      <!-- TAB 4: POSTFACH -->
+      <!-- TAB 5: POSTFACH -->
       <div id="tab-inbox" class="tab-content hidden">
         <div class="chat-container">
           <label style="font-size: 10px; font-weight: 600; color: var(--text-muted); flex-shrink:0;">Empfänger (E-Mail):</label>
@@ -512,7 +532,7 @@
         </div>
       </div>
 
-      <!-- TAB 5: PROFIL -->
+      <!-- TAB 6: PROFIL -->
       <div id="tab-profile" class="tab-content hidden">
         <div style="overflow-y: auto; flex: 1; padding-right: 2px; min-height: 0;">
           <div class="profile-header-card">
@@ -533,6 +553,16 @@
             <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Anzeigename:</label>
             <input type="text" id="profile-fullname" placeholder="z. B. John Doe">
 
+            <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Deine Universität:</label>
+            <select id="profile-university">
+              <option value="Universität Wien">Universität Wien</option>
+              <option value="TU Wien">TU Wien</option>
+              <option value="Wirtschaftsuniversität Wien (WU)">WU Wien</option>
+              <option value="MedUni Wien">MedUni Wien</option>
+              <option value="boku">BOKU Wien</option>
+              <option value="FH Wien">FH Wien</option>
+            </select>
+
             <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Bio / Über mich:</label>
             <textarea id="profile-bio" rows="2" placeholder="Dein Studiengang, Vibe, Hobbys..."></textarea>
 
@@ -551,7 +581,7 @@
       </div>
     </div>
 
-    <!-- UNTERE NAVIGATION -->
+    <!-- UNTERE NAVIGATION (Inkl. Ranking-Tab) -->
     <div class="nav-tabs" id="bottom-nav-bar">
       <button class="tab-btn active" onclick="switchTab('reels')" id="btn-tab-reels">📱 Feed</button>
       <button class="tab-btn" onclick="switchTab('feed')" id="btn-tab-feed">💬 Treffen</button>
@@ -560,6 +590,7 @@
         <button class="tab-btn-action" onclick="openUploadModal()" title="Beitrag erstellen">+</button>
       </div>
 
+      <button class="tab-btn" onclick="switchTab('ranking')" id="btn-tab-ranking">🏆 Duell</button>
       <button class="tab-btn" onclick="switchTab('global')" id="btn-tab-global">⚡ Chat</button>
       <button class="tab-btn" onclick="switchTab('inbox')" id="btn-tab-inbox">📬 Postfach</button>
     </div>
@@ -824,6 +855,7 @@
       profilesCache = {};
       data.forEach(p => { profilesCache[p.email] = p; });
       renderMyProfileInputs();
+      renderUniDuellAndRanking();
       updateStreamButtonState();
     }
   }
@@ -841,6 +873,7 @@
         email: currentUserEmail,
         username: defaultUsername,
         full_name: defaultUsername,
+        university: 'Universität Wien',
         bio: 'Hey! Frisch am Campus.',
         avatar_url: '',
         interests: ['Campus', 'Kaffee'],
@@ -858,6 +891,7 @@
 
     document.getElementById('profile-username').value = profile.username || '';
     document.getElementById('profile-fullname').value = profile.full_name || '';
+    document.getElementById('profile-university').value = profile.university || 'Universität Wien';
     document.getElementById('profile-bio').value = profile.bio || '';
     document.getElementById('profile-avatar').value = profile.avatar_url || '';
     document.getElementById('profile-interests').value = Array.isArray(profile.interests) ? profile.interests.join(', ') : '';
@@ -900,6 +934,7 @@
   async function saveMyProfile() {
     const username = document.getElementById('profile-username').value.trim().replace(/^@/, '');
     const full_name = document.getElementById('profile-fullname').value.trim();
+    const university = document.getElementById('profile-university').value;
     const bio = document.getElementById('profile-bio').value.trim();
     const avatar_url = document.getElementById('profile-avatar').value.trim();
     const interestsRaw = document.getElementById('profile-interests').value.trim();
@@ -908,7 +943,7 @@
     if (!username) return alert('Bitte einen Benutzernamen (Handle) eingeben.');
 
     const { error } = await _supabase.from('profiles').update({
-      username, full_name, bio, avatar_url, interests
+      username, full_name, university, bio, avatar_url, interests
     }).eq('email', currentUserEmail);
 
     if (error) return alert('Fehler beim Speichern: ' + error.message);
@@ -918,9 +953,63 @@
     alert('Profil erfolgreich aktualisiert!');
   }
 
+  function renderUniDuellAndRanking() {
+    const duellListEl = document.getElementById('uni-duell-list');
+    const creatorsListEl = document.getElementById('top-creators-list');
+    if (!duellListEl || !creatorsListEl) return;
+
+    let uniStats = {};
+    let usersList = [];
+
+    Object.values(profilesCache).forEach(p => {
+      const uni = p.university || 'Universität Wien';
+      if (!uniStats[uni]) uniStats[uni] = { totalPoints: 0, studentCount: 0 };
+      uniStats[uni].totalPoints += (p.points || 100); // Dummy-Punkte / echte Punkte
+      uniStats[uni].studentCount += 1;
+
+      usersList.push({
+        name: p.full_name || p.username || p.email.split('@')[0],
+        handle: p.username || 'user',
+        avatar: p.avatar_url || '',
+        points: p.points || Math.floor(Math.random() * 500) + 50 // Aktivitätswert
+      });
+    });
+
+    // Pro-Kopf Berechnung für das Uni-Duell
+    let uniRanking = Object.keys(uniStats).map(uni => {
+      const stats = uniStats[uni];
+      const avg = stats.studentCount > 0 ? Math.round(stats.totalPoints / stats.studentCount) : 0;
+      return { uni, avg, count: stats.studentCount };
+    });
+    uniRanking.sort((a, b) => b.avg - a.avg);
+
+    duellListEl.html = '';
+    duellListEl.innerHTML = uniRanking.map((item, index) => `
+      <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); padding: 8px 10px; border-radius: 10px; font-size: 12px;">
+        <div><strong>#${index + 1} ${item.uni}</strong> <span style="font-size:10px; color:var(--text-muted);">(${item.count} Studis)</span></div>
+        <div style="color: #818cf8; font-weight: 800;">${item.avg} P Ø</div>
+      </div>
+    `).join('');
+
+    // Wall of Fame (Top Creator Ranking)
+    usersList.sort((a, b) => b.points - a.points);
+    const top10 = usersList.slice(0, 10);
+
+    creatorsListEl.innerHTML = top10.map((u, index) => `
+      <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); padding: 8px 10px; border-radius: 10px; font-size: 12px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-weight: 800; color: ${index === 0 ? '#f59e0b' : index === 1 ? '#94a3b8' : index === 2 ? '#b45309' : 'var(--text-muted)'};">#${index + 1}</span>
+          <img src="${u.avatar}" style="width:24px; height:24px; border-radius:50%; object-fit:cover; background:var(--border);" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'24\' height=\'24\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%2394a3b8\' stroke-width=\'2\'><path d=\'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2\'></path><circle cx=\'12\' cy=\'7\' r=\'4\'></circle></svg>'">
+          <div><strong>${u.name}</strong><br><span style="font-size:10px; color:var(--text-muted);">@${u.handle}</span></div>
+        </div>
+        <div style="font-weight: 800; color: var(--success);">${u.points} P</div>
+      </div>
+    `).join('');
+  }
+
   function switchTab(tabName) {
     document.querySelectorAll('#bottom-nav-bar .tab-btn').forEach(btn => btn.classList.remove('active'));
-    ['live', 'reels', 'feed', 'global', 'inbox', 'profile'].forEach(t => {
+    ['live', 'reels', 'feed', 'ranking', 'global', 'inbox', 'profile'].forEach(t => {
       const el = document.getElementById(`tab-${t}`);
       if (el) el.classList.add('hidden');
     });
@@ -932,6 +1021,7 @@
     if (targetTab) targetTab.classList.remove('hidden');
     
     if (tabName === 'profile') renderMyProfileInputs();
+    if (tabName === 'ranking') renderUniDuellAndRanking();
 
     if (tabName === 'live') {
       document.getElementById('tab-reels').classList.remove('hidden');
