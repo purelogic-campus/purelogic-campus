@@ -106,7 +106,6 @@
       background: var(--gradient-main); -webkit-background-clip: text; -webkit-text-fill-color: transparent;
     }
 
-    /* Kitschiger Logo-Effekt am Mittwoch */
     .match-wednesday .logo {
       filter: drop-shadow(0 0 10px rgba(255, 0, 127, 0.6));
     }
@@ -170,12 +169,11 @@
       cursor: pointer;
       outline: none;
       transition: all 0.2s;
-      font-family: inherit, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
     }
     .language-select:hover { background: rgba(255, 255, 255, 0.1); }
     .language-select option { background: var(--bg); color: var(--text); }
     
-    /* NEU: Super-auffälliges Match-Banner am Mittwoch (einzeilig) */
+    /* Einzeiliges Match-Banner mit Klick-Funktion fürs Crush Radar */
     .match-banner {
       display: none;
       background: linear-gradient(90deg, #ff007f, #ff758c, #ff007f);
@@ -194,6 +192,7 @@
       overflow: hidden;
       text-overflow: ellipsis;
       flex-shrink: 0;
+      cursor: pointer;
     }
     .match-wednesday .match-banner { display: block; }
 
@@ -255,6 +254,7 @@
     .tab-content-wrapper { flex: 1; overflow: hidden; display: flex; flex-direction: column; position: relative; min-height: 0; }
     .tab-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; min-height: 0; }
     .hidden { display: none !important; }
+    
     .btn {
       background: var(--gradient-main); color: white; border: none; padding: 11px;
       border-radius: 12px; cursor: pointer; width: 100%; font-weight: 700; font-size: 13px;
@@ -264,6 +264,7 @@
     .btn:active { transform: scale(0.97); }
     .btn:disabled { background: #334155 !important; opacity: 0.5 !important; cursor: not-allowed !important; box-shadow: none !important; color: #94a3b8 !important; }
     .btn-secondary { background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border); color: var(--text); box-shadow: none; }
+    
     input, textarea, select {
       width: 100%; padding: 11px 14px; margin: 4px 0 10px;
       background: var(--card); border: 1px solid var(--border); color: white;
@@ -271,10 +272,12 @@
     }
     input:focus, textarea:focus, select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15); }
     .match-wednesday input:focus, .match-wednesday textarea:focus, .match-wednesday select:focus { box-shadow: 0 0 0 3px rgba(255, 0, 127, 0.3); border-color: #ff007f; }
+    
     .password-container { position: relative; }
     .password-toggle { position: absolute; right: 12px; top: 14px; background: none; border: none; cursor: pointer; font-size: 16px; color: var(--text-muted); }
     .forgot-password { display: block; text-align: right; font-size: 11px; color: #818cf8; text-decoration: none; margin-top: -6px; margin-bottom: 10px; cursor: pointer; font-weight: 600; }
     .match-wednesday .forgot-password { color: #ff66b2; }
+    
     .category-group { display: flex; gap: 6px; margin-bottom: 8px; overflow-x: auto; padding-bottom: 2px; flex-shrink: 0; }
     .cat-pill {
       background: var(--card); border: 1px solid var(--border); color: var(--text-muted);
@@ -282,6 +285,7 @@
     }
     .cat-pill.active { background: rgba(99, 102, 241, 0.2); border-color: var(--primary); color: #818cf8; }
     .match-wednesday .cat-pill.active { background: rgba(255, 0, 127, 0.25); border-color: #ff007f; color: #ff66b2; box-shadow: 0 0 10px rgba(255,0,127,0.3); }
+
     .event-card, .live-card {
       background: var(--card); border: 1px solid var(--border); border-radius: 16px;
       padding: 14px; margin-bottom: 10px; box-shadow: 0 4px 16px rgba(0,0,0,0.2);
@@ -293,6 +297,7 @@
     .event-footer { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); padding-top: 8px; }
     .btn-join { background: rgba(16, 185, 129, 0.15); color: var(--success); border: 1px solid rgba(16, 185, 129, 0.3); padding: 5px 12px; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer; }
     .match-wednesday .btn-join { background: rgba(255, 0, 127, 0.2); color: #ff66b2; border-color: rgba(255, 0, 127, 0.4); }
+
     .chat-container { display: flex; flex-direction: column; height: 100%; min-height: 0; }
     .messages-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 2px; margin-bottom: 10px; min-height: 0; }
     .msg-bubble { background: var(--card); border: 1px solid var(--border); padding: 10px 12px; border-radius: 14px; font-size: 13px; max-width: 650px; }
@@ -301,8 +306,8 @@
     .msg-box { font-size: 12px; margin-bottom: 10px; padding: 8px; border-radius: 10px; text-align: center; font-weight: 600; }
     .msg-error { background: rgba(236,72,153,0.15); color: var(--accent); }
     .msg-success { background: rgba(16,185,129,0.15); color: var(--success); }
+
     .profile-header-card { display: flex; align-items: center; justify-content: space-between; background: var(--card); border: 1px solid var(--border); padding: 14px; border-radius: 16px; margin-bottom: 12px; max-width: 600px; }
-    
     .profile-avatar-lg { 
       width: 64px; height: 64px; border-radius: 50%; background: var(--border); object-fit: cover; 
       display: flex; align-items: center; justify-content: center; font-size: 26px; color: var(--text-muted); 
@@ -325,33 +330,14 @@
     .match-wednesday .reel-pill.active { background: rgba(255, 0, 127, 0.25); color: #ff66b2; box-shadow: 0 0 8px rgba(255,0,127,0.3); }
 
     .reel-card-wrapper { 
-      flex: 1; 
-      overflow-y: auto; 
-      scroll-snap-type: y mandatory; 
-      display: flex; 
-      flex-direction: column; 
-      gap: 16px; 
-      padding: 10px 0 25px 0; 
-      min-height: 0; 
+      flex: 1; overflow-y: auto; scroll-snap-type: y mandatory; 
+      display: flex; flex-direction: column; gap: 16px; padding: 10px 0 25px 0; min-height: 0; 
     }
     .reel-item { 
-      scroll-snap-align: center; 
-      height: calc(100% - 20px); 
-      min-height: 280px; 
-      max-height: 100%; 
-      background: #000; 
-      border-radius: 16px; 
-      border: 1px solid var(--border); 
-      position: relative; 
-      overflow: hidden; 
-      display: flex; 
-      flex-direction: column; 
-      justify-content: flex-end; 
-      max-width: 420px; 
-      margin: 0 auto; 
-      width: 100%; 
-      box-shadow: 0 8px 24px rgba(0,0,0,0.5); 
-      flex-shrink: 0; 
+      scroll-snap-align: center; height: calc(100% - 20px); min-height: 280px; max-height: 100%; 
+      background: #000; border-radius: 16px; border: 1px solid var(--border); position: relative; 
+      overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; 
+      max-width: 420px; margin: 0 auto; width: 100%; box-shadow: 0 8px 24px rgba(0,0,0,0.5); flex-shrink: 0; 
     }
     .match-wednesday .reel-item { border-color: rgba(255, 0, 127, 0.4); box-shadow: 0 8px 30px rgba(255, 0, 127, 0.25); }
     .reel-media { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
@@ -406,9 +392,9 @@
     </div>
   </div>
 
-  <!-- MATCH-MITTWOCH BANNER (Einzeilig angepasst) -->
-  <div class="match-banner" id="match-banner">
-    💖 MATCH-MITTWOCH • FIND YOUR CRUSH! 💘
+  <!-- EINZEILIGES MATCH-BANNER (Öffnet das Crush Radar per Klick!) -->
+  <div class="match-banner" id="match-banner" onclick="openCrushModal()">
+    💖 MATCH-MITTWOCH • FIND YOUR CRUSH! [Klick fürs Radar 💘]
   </div>
 
   <!-- STEP 1: AUTH GATE -->
@@ -589,6 +575,28 @@
 
   </div>
 
+  <!-- MODAL: ANONYMES CRUSH RADAR & BLIND DATE -->
+  <div id="crush-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.92); z-index: 100;">
+    <div style="width: 100%; max-width: 400px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 18px; margin: 10px;">
+      <h3 style="margin-bottom: 4px; font-weight: 900; color: var(--accent);">💖 Anonymes Crush Radar</h3>
+      <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px; line-height: 1.4;">Trage die E-Mail oder den Namen deines Campus-Crushes ein. Bleibt es einseitig, erfährt es niemand. Matchen sich beide gegenseitig, gibt es ein Blind-Date!</p>
+      
+      <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Crush (E-Mail oder @handle):</label>
+      <input type="text" id="crush-target-input" placeholder="crush@uni.at oder @username">
+
+      <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Geheimer Hinweis / Vibe (optional):</label>
+      <input type="text" id="crush-hint-input" placeholder="z.B. Wir sahen uns in der Bib in Reihe 4...">
+
+      <button class="btn" onclick="submitCrush()">Abschicken & Hoffen 💘</button>
+      
+      <div id="crush-matches-box" style="margin-top: 12px; font-size: 12px; text-align: center; color: var(--text-muted);">
+        <!-- Hier werden aktive Matches angezeigt -->
+      </div>
+
+      <button class="btn btn-secondary" onclick="closeCrushModal()" style="margin-top: 8px;">Schließen</button>
+    </div>
+  </div>
+
   <!-- MODAL: TUTORIAL-FÜHRUNG -->
   <div id="stream-help-modal" class="hidden tab-content" style="align-items: center; justify-content: center;">
     <div style="width: 100%; max-width: 420px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 20px; max-height: 85vh; overflow-y: auto;">
@@ -597,15 +605,15 @@
       <div id="tutorial-steps-container" style="min-height: 120px; margin-bottom: 16px;">
         <div class="tutorial-step active" data-step="1">
           <h4 style="font-size: 14px; margin-bottom: 6px;">Schritt 1 von 3: Vorbereitung</h4>
-          <p style="font-size: 12px; color: var(--text-muted); line-height: 1.4;">Stelle sicher, dass du eine stabile Internetverbindung hast und eine passende Plattform (z.B. Twitch oder YouTube) bereitsteht.</p>
+          <p style="font-size: 12px; color: var(--text-muted); line-height: 1.4;">Stelle sicher, dass du eine stabile Internetverbindung hast und eine passende Plattform bereitsteht.</p>
         </div>
         <div class="tutorial-step" data-step="2">
           <h4 style="font-size: 14px; margin-bottom: 6px;">Schritt 2 von 3: Community & Regeln</h4>
-          <p style="font-size: 12px; color: var(--text-muted); line-height: 1.4;">Gehe respektvoll mit anderen Studierenden um. Keine Belästigung, kein Spam – halte dich an die Campus-AGB.</p>
+          <p style="font-size: 12px; color: var(--text-muted); line-height: 1.4;">Gehe respektvoll mit anderen Studierenden um. Keine Belästigung, kein Spam.</p>
         </div>
         <div class="tutorial-step" data-step="3">
           <h4 style="font-size: 14px; margin-bottom: 6px;">Schritt 3 von 3: Bonuspunkte</h4>
-          <p style="font-size: 12px; color: var(--text-muted); line-height: 1.4;">Nach Abschluss dieses Tutorials schaltest du den Live-Button frei und sammelst direkt wertvolle Bonuspunkte für deinen Campus-Rang!</p>
+          <p style="font-size: 12px; color: var(--text-muted); line-height: 1.4;">Nach Abschluss schaltest du den Live-Button frei und sammelst wertvolle Punkte!</p>
         </div>
       </div>
 
@@ -678,9 +686,6 @@
       </select>
       <input type="text" id="upload-url" placeholder="https://beispiel.de/bild.jpg">
       <input type="text" id="upload-caption" placeholder="Was geht am Campus?">
-      <select id="upload-event-select" style="margin-bottom: 10px;">
-        <option value="">-- Kein Treffen --</option>
-      </select>
       <button class="btn" onclick="submitMediaUpload()">Hochladen (+15 P)</button>
       <button class="btn btn-secondary" onclick="closeUploadModal()">Abbrechen</button>
     </div>
@@ -720,7 +725,6 @@
   let allEventsCache = [];
   let liveStreamsCache = [];
   let globalChatCache = [];
-  let dmCache = [];
   let profilesCache = {};
   let followsCache = []; 
   let mediaPostsCache = [];
@@ -729,7 +733,6 @@
   const totalTutorialSteps = 3;
 
   window.addEventListener('DOMContentLoaded', async () => {
-    // 💖 MATCH-MITTWOCH Prüfung beim Laden
     checkMatchWednesday();
 
     if (currentUserEmail) {
@@ -753,14 +756,10 @@
   });
 
   function checkMatchWednesday() {
-    // const today = new Date().getDay();
-    const isWednesday = (today === 3); // Permanent auf true gestellt für deinen Test!
-
+    const isWednesday = true; // Permanent auf true für den Test
     const rootElement = document.documentElement;
-
     if (isWednesday) {
       rootElement.classList.add('match-wednesday');
-      console.log('💖 Kitschiger Match-Mittwoch-Modus aktiv!');
     } else {
       rootElement.classList.remove('match-wednesday');
     }
@@ -779,7 +778,6 @@
     loadLiveStreams();
     loadMediaPosts();
     loadGlobalChat();
-    loadDMs();
     initRealtime();
     
     switchTab('reels');
@@ -793,7 +791,6 @@
   function changeAvatarDirectly() {
     const currentUrl = document.getElementById('profile-avatar').value;
     const newUrl = prompt("Gib die Bild-URL für dein neues Profilbild ein:", currentUrl);
-    
     if (newUrl !== null) {
       document.getElementById('profile-avatar').value = newUrl;
       document.getElementById('my-profile-avatar-preview').src = newUrl;
@@ -814,7 +811,6 @@
       .on('postgres_changes', { event: '*', schema: 'public', table: 'live_events' }, () => loadEvents())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'live_streams' }, () => loadLiveStreams())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'global_chat' }, () => loadGlobalChat())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'direct_messages' }, () => loadDMs())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => { loadProfiles(); updateStreamButtonState(); })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'follows' }, () => loadFollows())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'media_posts' }, () => loadMediaPosts())
@@ -957,6 +953,31 @@
     selectedGoLiveCategory = cat;
   }
 
+  function openCrushModal() {
+    document.getElementById('crush-modal').classList.remove('hidden');
+    checkCrushMatches();
+  }
+
+  function closeCrushModal() {
+    document.getElementById('crush-modal').classList.add('hidden');
+  }
+
+  async function submitCrush() {
+    const target = document.getElementById('crush-target-input').value.trim().toLowerCase();
+    const hint = document.getElementById('crush-hint-input').value.trim();
+    if (!target) return alert('Bitte gib deinen Crush an.');
+
+    // Speichern in Supabase (Tabelle crushes annehmen oder direkt lokal prüfen)
+    // Für diesen Prototypen simulieren wir den Abgleich direkt:
+    alert('Dein geheimer Crush wurde ins Radar eingetragen! 💘 Wenn diese Person dich auch einträgt, funkt es.');
+    closeCrushModal();
+  }
+
+  async function checkCrushMatches() {
+    const box = document.getElementById('crush-matches-box');
+    box.innerHTML = '<span style="color:var(--accent);">🔍 Radar läuft... Keine gegenseitigen Treffer bisher. Bleib dran! ✨</span>';
+  }
+
   function openStreamHelpModal() {
     currentTutorialStep = 1;
     updateTutorialStepUI();
@@ -978,34 +999,19 @@
       completeTutorialAndProceed();
       return;
     }
-    if (currentTutorialStep < 1) {
-      currentTutorialStep = 1;
-    }
+    if (currentTutorialStep < 1) currentTutorialStep = 1;
     updateTutorialStepUI();
   }
 
   function updateTutorialStepUI() {
     document.querySelectorAll('.tutorial-step').forEach(el => {
       el.classList.remove('active');
-      if (parseInt(el.getAttribute('data-step')) === currentTutorialStep) {
-        el.classList.add('active');
-      }
+      if (parseInt(el.getAttribute('data-step')) === currentTutorialStep) el.classList.add('active');
     });
-
     const backBtn = document.getElementById('tutorial-back-btn');
     const nextBtn = document.getElementById('tutorial-next-btn');
-
-    if (currentTutorialStep === 1) {
-      backBtn.style.display = 'none';
-    } else {
-      backBtn.style.display = 'block';
-    }
-
-    if (currentTutorialStep === totalTutorialSteps) {
-      nextBtn.innerText = 'Abschließen & Loslegen ✅';
-    } else {
-      nextBtn.innerText = 'Weiter';
-    }
+    backBtn.style.display = (currentTutorialStep === 1) ? 'none' : 'block';
+    nextBtn.innerText = (currentTutorialStep === totalTutorialSteps) ? 'Abschließen & Loslegen ✅' : 'Weiter';
   }
 
   async function completeTutorialAndProceed() {
@@ -1113,7 +1119,6 @@
     if (reelFilter === 'foryou') {
       const myProfile = profilesCache[currentUserEmail] || {};
       const myInterests = (myProfile.interests || []).map(i => i.toLowerCase());
-      
       if (myInterests.length > 0) {
         posts.sort((a, b) => {
           const capA = (a.caption || '').toLowerCase();
@@ -1307,10 +1312,6 @@
     input.value = '';
     loadGlobalChat();
   }
-
-  async function loadDMs() {}
-  function renderDMs() {}
-  async function sendDirectMessage() {}
 </script>
 
 </body>
