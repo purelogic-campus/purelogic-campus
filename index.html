@@ -756,7 +756,9 @@
   });
 
   function checkMatchWednesday() {
-    const isWednesday = true; // Permanent auf true für den Test
+    // Korrigiert: Überprüft nun automatisch, ob heute tatsächlich Mittwoch ist (getDay() === 3)
+    const today = new Date().getDay();
+    const isWednesday = (today === 3);
     const rootElement = document.documentElement;
     if (isWednesday) {
       rootElement.classList.add('match-wednesday');
@@ -967,8 +969,6 @@
     const hint = document.getElementById('crush-hint-input').value.trim();
     if (!target) return alert('Bitte gib deinen Crush an.');
 
-    // Speichern in Supabase (Tabelle crushes annehmen oder direkt lokal prüfen)
-    // Für diesen Prototypen simulieren wir den Abgleich direkt:
     alert('Dein geheimer Crush wurde ins Radar eingetragen! 💘 Wenn diese Person dich auch einträgt, funkt es.');
     closeCrushModal();
   }
