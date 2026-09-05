@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <meta name="theme-color" content="#090d16">
+  <meta name="theme-color" content="#1a0512">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>PURE LOGIC • GenZ Campus</title>
@@ -24,17 +24,17 @@
       --gradient-main: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
     }
 
-    /* 💖 MATCH-MITTWOCH OVERRIDES (Punkt 1) */
+    /* 💖 KITSCHIGER & AUFFÄLLIGER MATCH-MITTWOCH OVERRIDES */
     .match-wednesday {
-      --bg: #1a0512 !important;
-      --card: #2d0a22 !important;
-      --card-glass: rgba(45, 10, 34, 0.85) !important;
-      --primary: #ff2a85 !important;
-      --primary-hover: #e01b70 !important;
-      --accent: #ff2a85 !important;
-      --text: #fff0f5 !important;
-      --border: rgba(255, 42, 133, 0.25) !important;
-      --gradient-main: linear-gradient(135deg, #ff2a85 0%, #ff758c 50%, #ffeb3b 100%) !important;
+      --bg: #220217 !important;
+      --card: #3c092f !important;
+      --card-glass: rgba(60, 9, 47, 0.9) !important;
+      --primary: #ff007f !important;
+      --primary-hover: #d9006c !important;
+      --accent: #ff007f !important;
+      --text: #ffffff !important;
+      --border: rgba(255, 0, 127, 0.4) !important;
+      --gradient-main: linear-gradient(135deg, #ff007f 0%, #ff66b2 50%, #ffeb3b 100%) !important;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -51,7 +51,30 @@
       justify-content: center;
       align-items: center;
       transition: background-color 0.5s ease, color 0.5s ease;
+      position: relative;
     }
+
+    /* Schwebende Herzen im Hintergrund am Match-Mittwoch */
+    .match-wednesday::before {
+      content: "💖 💘 💕 💖 💗 💓 💞 💖 💘";
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      font-size: 24px;
+      opacity: 0.12;
+      z-index: 0;
+      pointer-events: none;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-around;
+      align-content: space-around;
+      animation: floatHearts 10s infinite alternate ease-in-out;
+    }
+
+    @keyframes floatHearts {
+      0% { transform: translateY(0) scale(1); }
+      100% { transform: translateY(-15px) scale(1.05); }
+    }
+
     .app-card {
       background: var(--bg);
       border: none;
@@ -65,7 +88,10 @@
       padding-top: calc(8px + env(safe-area-inset-top));
       padding-bottom: calc(4px + env(safe-area-inset-bottom));
       overflow: hidden;
+      position: relative;
+      z-index: 1;
     }
+
     .header {
       display: flex;
       justify-content: space-between;
@@ -80,11 +106,14 @@
       background: var(--gradient-main); -webkit-background-clip: text; -webkit-text-fill-color: transparent;
     }
 
-    /* Extra Herz-Badge Animation im Header am Mittwoch */
+    /* Kitschiger Logo-Effekt am Mittwoch */
+    .match-wednesday .logo {
+      filter: drop-shadow(0 0 10px rgba(255, 0, 127, 0.6));
+    }
     .match-wednesday .logo::after {
-      content: " 💖";
+      content: " 💖✨";
       -webkit-text-fill-color: initial;
-      animation: pulseGlow 2s infinite;
+      animation: pulseGlow 1.5s infinite;
     }
     
     .header-right { 
@@ -100,8 +129,9 @@
       padding: 5px 10px; border-radius: 30px; font-size: 11px; font-weight: 700; 
     }
     .match-wednesday .points-badge {
-      background: rgba(255, 42, 133, 0.15); color: #ff2a85; border: 1px solid rgba(255, 42, 133, 0.3);
-      box-shadow: 0 0 10px rgba(255, 42, 133, 0.4);
+      background: rgba(255, 0, 127, 0.25); color: #ff66b2; border: 1px solid rgba(255, 0, 127, 0.6);
+      box-shadow: 0 0 12px rgba(255, 0, 127, 0.7);
+      font-weight: 800;
     }
     .points-badge.admin-badge { background: rgba(245, 158, 11, 0.15); color: var(--admin); border: 1px solid rgba(245, 158, 11, 0.3); }
     
@@ -145,6 +175,30 @@
     .language-select:hover { background: rgba(255, 255, 255, 0.1); }
     .language-select option { background: var(--bg); color: var(--text); }
     
+    /* NEU: Super-auffälliges Match-Banner am Mittwoch */
+    .match-banner {
+      display: none;
+      background: linear-gradient(90deg, #ff007f, #ff758c, #ff007f);
+      background-size: 200% auto;
+      color: white;
+      text-align: center;
+      padding: 6px;
+      font-size: 11px;
+      font-weight: 900;
+      border-radius: 10px;
+      margin-bottom: 6px;
+      box-shadow: 0 0 15px rgba(255, 0, 127, 0.6);
+      animation: gradientMove 3s linear infinite, pulseGlow 2s infinite;
+      letter-spacing: 0.5px;
+      flex-shrink: 0;
+    }
+    .match-wednesday .match-banner { display: block; }
+
+    @keyframes gradientMove {
+      0% { background-position: 0% center; }
+      100% { background-position: 200% center; }
+    }
+
     .nav-tabs {
       display: flex; align-items: center; justify-content: space-between; gap: 4px; margin-top: 6px; flex-shrink: 0;
       background: var(--card-glass); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
@@ -158,7 +212,11 @@
       border-radius: 12px; transition: all 0.25s; text-align: center; white-space: nowrap;
     }
     .tab-btn.active { background: rgba(99, 102, 241, 0.15); color: #818cf8; }
-    .match-wednesday .tab-btn.active { background: rgba(255, 42, 133, 0.2); color: #ff2a85; }
+    .match-wednesday .tab-btn.active { 
+      background: rgba(255, 0, 127, 0.3); 
+      color: #ff66b2; 
+      box-shadow: inset 0 0 8px rgba(255, 0, 127, 0.4);
+    }
     
     .tab-btn-action-container {
       flex: 0 0 auto;
@@ -188,7 +246,7 @@
       box-shadow: 0 6px 20px rgba(99, 102, 241, 0.65);
       transition: transform 0.2s, box-shadow 0.2s;
     }
-    .match-wednesday .tab-btn-action { box-shadow: 0 6px 20px rgba(255, 42, 133, 0.65); }
+    .match-wednesday .tab-btn-action { box-shadow: 0 0 25px rgba(255, 0, 127, 0.9); }
     .tab-btn-action:active { transform: translateX(-50%) scale(0.92); }
 
     .tab-content-wrapper { flex: 1; overflow: hidden; display: flex; flex-direction: column; position: relative; min-height: 0; }
@@ -199,7 +257,7 @@
       border-radius: 12px; cursor: pointer; width: 100%; font-weight: 700; font-size: 13px;
       box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35); transition: all 0.2s; margin-top: 6px;
     }
-    .match-wednesday .btn { box-shadow: 0 4px 14px rgba(255, 42, 133, 0.4); }
+    .match-wednesday .btn { box-shadow: 0 4px 18px rgba(255, 0, 127, 0.6); }
     .btn:active { transform: scale(0.97); }
     .btn:disabled { background: #334155 !important; opacity: 0.5 !important; cursor: not-allowed !important; box-shadow: none !important; color: #94a3b8 !important; }
     .btn-secondary { background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border); color: var(--text); box-shadow: none; }
@@ -209,28 +267,29 @@
       border-radius: 12px; font-size: 13px; font-family: inherit; transition: border-color 0.2s;
     }
     input:focus, textarea:focus, select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15); }
-    .match-wednesday input:focus, .match-wednesday textarea:focus, .match-wednesday select:focus { box-shadow: 0 0 0 3px rgba(255, 42, 133, 0.2); }
+    .match-wednesday input:focus, .match-wednesday textarea:focus, .match-wednesday select:focus { box-shadow: 0 0 0 3px rgba(255, 0, 127, 0.3); border-color: #ff007f; }
     .password-container { position: relative; }
     .password-toggle { position: absolute; right: 12px; top: 14px; background: none; border: none; cursor: pointer; font-size: 16px; color: var(--text-muted); }
     .forgot-password { display: block; text-align: right; font-size: 11px; color: #818cf8; text-decoration: none; margin-top: -6px; margin-bottom: 10px; cursor: pointer; font-weight: 600; }
-    .match-wednesday .forgot-password { color: #ff2a85; }
+    .match-wednesday .forgot-password { color: #ff66b2; }
     .category-group { display: flex; gap: 6px; margin-bottom: 8px; overflow-x: auto; padding-bottom: 2px; flex-shrink: 0; }
     .cat-pill {
       background: var(--card); border: 1px solid var(--border); color: var(--text-muted);
       padding: 6px 14px; border-radius: 30px; font-size: 12px; cursor: pointer; white-space: nowrap; font-weight: 600; transition: all 0.2s;
     }
     .cat-pill.active { background: rgba(99, 102, 241, 0.2); border-color: var(--primary); color: #818cf8; }
-    .match-wednesday .cat-pill.active { background: rgba(255, 42, 133, 0.2); border-color: var(--primary); color: #ff2a85; }
+    .match-wednesday .cat-pill.active { background: rgba(255, 0, 127, 0.25); border-color: #ff007f; color: #ff66b2; box-shadow: 0 0 10px rgba(255,0,127,0.3); }
     .event-card, .live-card {
       background: var(--card); border: 1px solid var(--border); border-radius: 16px;
       padding: 14px; margin-bottom: 10px; box-shadow: 0 4px 16px rgba(0,0,0,0.2);
     }
-    .match-wednesday .event-card, .match-wednesday .live-card { box-shadow: 0 4px 16px rgba(255, 42, 133, 0.1); }
+    .match-wednesday .event-card, .match-wednesday .live-card { box-shadow: 0 4px 18px rgba(255, 0, 127, 0.2); border-color: rgba(255, 0, 127, 0.3); }
     .event-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px; }
     .event-title { font-size: 15px; font-weight: 700; }
     .event-meta { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; }
     .event-footer { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); padding-top: 8px; }
     .btn-join { background: rgba(16, 185, 129, 0.15); color: var(--success); border: 1px solid rgba(16, 185, 129, 0.3); padding: 5px 12px; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer; }
+    .match-wednesday .btn-join { background: rgba(255, 0, 127, 0.2); color: #ff66b2; border-color: rgba(255, 0, 127, 0.4); }
     .chat-container { display: flex; flex-direction: column; height: 100%; min-height: 0; }
     .messages-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 2px; margin-bottom: 10px; min-height: 0; }
     .msg-bubble { background: var(--card); border: 1px solid var(--border); padding: 10px 12px; border-radius: 14px; font-size: 13px; max-width: 650px; }
@@ -246,6 +305,7 @@
       display: flex; align-items: center; justify-content: center; font-size: 26px; color: var(--text-muted); 
       border: 2px solid var(--primary); flex-shrink: 0; cursor: pointer; transition: transform 0.2s, opacity 0.2s; 
     }
+    .match-wednesday .profile-avatar-lg { border-color: #ff007f; box-shadow: 0 0 12px rgba(255,0,127,0.6); }
     .profile-avatar-lg:hover { transform: scale(1.05); opacity: 0.9; }
     
     .reels-subnav { 
@@ -259,7 +319,7 @@
       text-align: center; white-space: nowrap; transition: all 0.25s; overflow: hidden; text-overflow: ellipsis; 
     }
     .reel-pill.active { background: rgba(99, 102, 241, 0.15); color: #818cf8; }
-    .match-wednesday .reel-pill.active { background: rgba(255, 42, 133, 0.2); color: #ff2a85; }
+    .match-wednesday .reel-pill.active { background: rgba(255, 0, 127, 0.25); color: #ff66b2; box-shadow: 0 0 8px rgba(255,0,127,0.3); }
 
     .reel-card-wrapper { 
       flex: 1; 
@@ -290,13 +350,14 @@
       box-shadow: 0 8px 24px rgba(0,0,0,0.5); 
       flex-shrink: 0; 
     }
+    .match-wednesday .reel-item { border-color: rgba(255, 0, 127, 0.4); box-shadow: 0 8px 30px rgba(255, 0, 127, 0.25); }
     .reel-media { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
     .reel-overlay { position: relative; z-index: 2; background: linear-gradient(to top, rgba(9,13,22,0.95) 0%, rgba(9,13,22,0.5) 60%, rgba(9,13,22,0) 100%); padding: 20px 14px 12px 14px; display: flex; flex-direction: column; gap: 6px; }
     
     .footer-links { display: flex; justify-content: center; gap: 8px; padding: 4px 0 0 0; font-size: 10px; color: var(--text-muted); flex-shrink: 0; }
     .footer-links span { cursor: pointer; transition: color 0.2s; }
     .footer-links span:hover { color: #818cf8; text-decoration: underline; }
-    .match-wednesday .footer-links span:hover { color: #ff2a85; }
+    .match-wednesday .footer-links span:hover { color: #ff66b2; }
 
     .profile-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 10px; }
     .profile-grid-item { aspect-ratio: 1; background: var(--card); border-radius: 8px; overflow: hidden; border: 1px solid var(--border); position: relative; }
@@ -306,9 +367,9 @@
     .tutorial-step.active { display: block; }
 
     @keyframes pulseGlow {
-      0% { opacity: 0.8; text-shadow: 0 0 5px rgba(255, 42, 133, 0.5); }
-      50% { opacity: 1; text-shadow: 0 0 15px rgba(255, 42, 133, 0.9); }
-      100% { opacity: 0.8; text-shadow: 0 0 5px rgba(255, 42, 133, 0.5); }
+      0% { opacity: 0.8; text-shadow: 0 0 8px rgba(255, 0, 127, 0.6); }
+      50% { opacity: 1; text-shadow: 0 0 20px rgba(255, 0, 127, 1); }
+      100% { opacity: 0.8; text-shadow: 0 0 8px rgba(255, 0, 127, 0.6); }
     }
     
     @media (min-width: 768px) { .app-card { padding: 20px 24px; } #tab-profile, #auth-gate > div { max-width: 500px; } }
@@ -340,6 +401,11 @@
         <option value="uk">🇺🇦 UK</option>
       </select>
     </div>
+  </div>
+
+  <!-- NEU: Kitschiges Match-Mittwoch Banner -->
+  <div class="match-banner" id="match-banner">
+    💖 MATCH-MITTWOCH ACTIVE • FIND YOUR CAMPUS CRUSH! 💘
   </div>
 
   <!-- STEP 1: AUTH GATE -->
@@ -660,7 +726,7 @@
   const totalTutorialSteps = 3;
 
   window.addEventListener('DOMContentLoaded', async () => {
-    // 💖 PUNKT 1: Match-Mittwoch Logik beim Start prüfen
+    // 💖 MATCH-MITTWOCH Prüfung beim Laden
     checkMatchWednesday();
 
     if (currentUserEmail) {
@@ -683,20 +749,15 @@
     }
   });
 
-  // 💖 PUNKT 1: Funktion zur automatischen Erkennung (Mittwoch = 3)
   function checkMatchWednesday() {
-    const today = new Date().getDay();
-    const isWednesday = true; // 3 steht für Mittwoch
+    // const today = new Date().getDay();
+    const isWednesday = true; // Permanent auf true gestellt für deinen Kitsch-Test!
 
-    // HINWEIS ZUM TESTEN: Setze diesen Wert testweise auf 'true', 
-    // um den Rosa-Modus direkt zu sehen, auch wenn heute nicht Mittwoch ist:
-    // const isWednesday = true; 
-
-    const rootElement = document.documentElement; // oder document.body
+    const rootElement = document.documentElement;
 
     if (isWednesday) {
       rootElement.classList.add('match-wednesday');
-      console.log('💖 Match-Mittwoch-Modus aktiv!');
+      console.log('💖 Kitschiger Match-Mittwoch-Modus aktiv!');
     } else {
       rootElement.classList.remove('match-wednesday');
     }
