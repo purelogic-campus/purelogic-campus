@@ -483,7 +483,7 @@
         </div>
       </div>
 
-      <!-- TAB 3: UNI-DUELL & RANGLISTE (NEU - PUNKT 3) -->
+      <!-- TAB 3: UNI-DUELL & RANGLISTE -->
       <div id="tab-ranking" class="tab-content hidden">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px; flex-shrink:0;">
           <h3 style="font-size: 16px; font-weight: 800;">🏆 Uni-Duell & Top 100</h3>
@@ -581,7 +581,7 @@
       </div>
     </div>
 
-    <!-- UNTERE NAVIGATION (Inkl. Ranking-Tab) -->
+    <!-- UNTERE NAVIGATION -->
     <div class="nav-tabs" id="bottom-nav-bar">
       <button class="tab-btn active" onclick="switchTab('reels')" id="btn-tab-reels">📱 Feed</button>
       <button class="tab-btn" onclick="switchTab('feed')" id="btn-tab-feed">💬 Treffen</button>
@@ -613,7 +613,7 @@
       <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px; line-height: 1.4;">Trage die E-Mail oder den Namen deines Campus-Crushes ein. Bleibt es einseitig, erfährt es niemand. Matchen sich beide gegenseitig, gibt es ein Blind-Date!</p>
       
       <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Crush (E-Mail oder @handle):</label>
-      <input type="text" id="crush-target-input" placeholder="crush@uni.at oder @username">
+      <input type="text" id="crush-target-input" placeholder="crush@uni.at atau @username">
 
       <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Geheimer Hinweis / Vibe (optional):</label>
       <input type="text" id="crush-hint-input" placeholder="z.B. Wir sahen uns in der Bib in Reihe 4...">
@@ -964,18 +964,17 @@
     Object.values(profilesCache).forEach(p => {
       const uni = p.university || 'Universität Wien';
       if (!uniStats[uni]) uniStats[uni] = { totalPoints: 0, studentCount: 0 };
-      uniStats[uni].totalPoints += (p.points || 100); // Dummy-Punkte / echte Punkte
+      uniStats[uni].totalPoints += (p.points || 100);
       uniStats[uni].studentCount += 1;
 
       usersList.push({
         name: p.full_name || p.username || p.email.split('@')[0],
         handle: p.username || 'user',
         avatar: p.avatar_url || '',
-        points: p.points || Math.floor(Math.random() * 500) + 50 // Aktivitätswert
+        points: p.points || Math.floor(Math.random() * 500) + 50
       });
     });
 
-    // Pro-Kopf Berechnung für das Uni-Duell
     let uniRanking = Object.keys(uniStats).map(uni => {
       const stats = uniStats[uni];
       const avg = stats.studentCount > 0 ? Math.round(stats.totalPoints / stats.studentCount) : 0;
@@ -983,7 +982,6 @@
     });
     uniRanking.sort((a, b) => b.avg - a.avg);
 
-    duellListEl.html = '';
     duellListEl.innerHTML = uniRanking.map((item, index) => `
       <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); padding: 8px 10px; border-radius: 10px; font-size: 12px;">
         <div><strong>#${index + 1} ${item.uni}</strong> <span style="font-size:10px; color:var(--text-muted);">(${item.count} Studis)</span></div>
@@ -991,7 +989,6 @@
       </div>
     `).join('');
 
-    // Wall of Fame (Top Creator Ranking)
     usersList.sort((a, b) => b.points - a.points);
     const top10 = usersList.slice(0, 10);
 
