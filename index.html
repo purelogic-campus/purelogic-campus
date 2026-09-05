@@ -175,7 +175,7 @@
     .language-select:hover { background: rgba(255, 255, 255, 0.1); }
     .language-select option { background: var(--bg); color: var(--text); }
     
-    /* NEU: Super-auffälliges Match-Banner am Mittwoch */
+    /* NEU: Super-auffälliges Match-Banner am Mittwoch (einzeilig) */
     .match-banner {
       display: none;
       background: linear-gradient(90deg, #ff007f, #ff758c, #ff007f);
@@ -190,6 +190,9 @@
       box-shadow: 0 0 15px rgba(255, 0, 127, 0.6);
       animation: gradientMove 3s linear infinite, pulseGlow 2s infinite;
       letter-spacing: 0.5px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
       flex-shrink: 0;
     }
     .match-wednesday .match-banner { display: block; }
@@ -403,9 +406,9 @@
     </div>
   </div>
 
-  <!-- NEU: Kitschiges Match-Mittwoch Banner -->
+  <!-- MATCH-MITTWOCH BANNER (Einzeilig angepasst) -->
   <div class="match-banner" id="match-banner">
-    💖 MATCH-MITTWOCH ACTIVE • FIND YOUR CAMPUS CRUSH! 💘
+    💖 MATCH-MITTWOCH • FIND YOUR CRUSH! 💘
   </div>
 
   <!-- STEP 1: AUTH GATE -->
@@ -751,7 +754,7 @@
 
   function checkMatchWednesday() {
     // const today = new Date().getDay();
-    const isWednesday = true; // Permanent auf true gestellt für deinen Kitsch-Test!
+    const isWednesday = true; // Permanent auf true gestellt für deinen Test!
 
     const rootElement = document.documentElement;
 
