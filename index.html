@@ -152,7 +152,7 @@
       box-shadow: 0 0 12px rgba(255, 0, 127, 0.7);
       font-weight: 800;
     }
-    .points-badge.admin-badge { background: rgba(245, 158, 11, 0.15); color: var(--admin); border: 1px solid rgba(245, 158, 11, 0.3); }
+    .points-badge.admin-badge { background: rgba(245, 158, 11, 0.15); color: var(--admin); border: 1px solid rgba(245, 158, 11, 0.3); cursor: pointer; }
     
     .header-profile-btn {
       background: rgba(255, 255, 255, 0.05);
@@ -396,7 +396,7 @@
 
     .profile-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 10px; }
     .profile-grid-item { aspect-ratio: 1; background: var(--card); border-radius: 8px; overflow: hidden; border: 1px solid var(--border); position: relative; }
-    .profile-grid-item img, .profile-grid-item video { width: 100%; height: 100%; object-ai: cover; }
+    .profile-grid-item img, .profile-grid-item video { width: 100%; height: 100%; object-fit: cover; }
     
     .tutorial-step { display: none; }
     .tutorial-step.active { display: block; }
@@ -646,7 +646,7 @@
         </div>
       </div>
 
-      <!-- TAB 7: ADMIN PANEL (Neu: Campus-Drops zeitlich steuern) -->
+      <!-- TAB 7: ADMIN PANEL (Campus-Drops zeitlich steuern) -->
       <div id="tab-admin" class="tab-content hidden">
         <div style="max-width: 600px; padding-bottom: 20px;">
           <h3 style="font-size: 16px; font-weight: 800; margin-bottom: 4px; color: var(--admin);">⚡ Admin-Interface: Campus-Drops</h3>
@@ -997,8 +997,6 @@
     const totalMinutes = hours * 60 + minutes;
 
     // Erlaubtes Zeitfenster: 04:00 Uhr (240 Min) bis 01:00 Uhr folgendes Tages (1560 Min / oder 0 bis 60 Min)
-    // 04:00 Uhr = 240 Minuten. 01:00 Uhr = 25:00 Uhr in relativen Minuten = 1500 Minuten.
-    // Das heißt: Gültig ist alles von 04:00 (240) bis 24:00 (1440) und von 00:00 (0) bis 01:00 (60).
     const isValidWindow = (totalMinutes >= 240 && totalMinutes <= 1440) || (totalMinutes >= 0 && totalMinutes <= 60);
 
     if (!isValidWindow) {
@@ -1660,9 +1658,8 @@
     const badge = document.getElementById('score');
     badge.innerText = '⭐ Admin';
     badge.className = 'points-badge admin-badge';
-
-    // Admin-Reiter im Header oder Profil freischalten bzw. Menü erweitern
-    // Hier können wir z.B. das Admin-Tab erreichbar machen, indem wir einen Button einblenden oder per switchTab('admin') steuern.
+    badge.style.cursor = 'pointer';
+    badge.onclick = () => switchTab('admin');
   }
 
   async function addPoints(amount) {
