@@ -470,13 +470,13 @@
   <!-- STEP 2: MAIN APP -->
   <div id="main-app" class="hidden" style="flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0;">
     
-    <!-- HIER: FLASH DROP BANNER (Überdeckt den Uni-Duell-Button, bis eingesammelt) -->
+    <!-- HIER: FLASH DROP BANNER -->
     <div id="campus-drop-banner" class="flash-banner-active" style="display:none; width: 100%; background: linear-gradient(135deg, #f59e0b, #ec4899); color: white; padding: 12px 14px; border-radius: 12px; margin-bottom: 8px; text-align: center; cursor: pointer; flex-shrink: 0; border: 2px solid rgba(255, 255, 255, 0.6);" onclick="claimActiveDrop()">
       <div style="font-weight: 900; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; text-shadow: 0 2px 4px rgba(0,0,0,0.2);" id="drop-title-text">⚡ FLASH DROP: 50 Extra-Punkte!</div>
       <div style="font-size: 10px; opacity: 0.95; margin-top: 3px; font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,0.2);" id="drop-timer-text">Nur für kurze Zeit verfügbar! [Jetzt tippen 🎁]</div>
     </div>
 
-    <!-- UNTERLEISTE FÜR DUELL & RANGLISTE (Wird exakt verdeckt, solange der Drop aktiv ist) -->
+    <!-- UNTERLEISTE FÜR DUELL & RANGLISTE -->
     <div id="uni-duell-container" style="display: flex; gap: 8px; margin-bottom: 8px; flex-shrink: 0;">
       <button class="btn" onclick="switchTab('ranking')" style="margin-top: 0; padding: 8px 12px; font-size: 12px; font-weight: 800; background: var(--gradient-main); display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);">
         🏆 Zum Wiener Uni-Duell & Rangliste
@@ -591,7 +591,7 @@
         </div>
       </div>
 
-      <!-- TAB 6: PROFIL (MIT UNI-EHREN-PROFIL & SOCIAL-SHARING) -->
+      <!-- TAB 6: PROFIL -->
       <div id="tab-profile" class="tab-content hidden">
         <div style="overflow-y: auto; flex: 1; padding-right: 2px; min-height: 0;">
           <div class="profile-header-card">
@@ -600,14 +600,12 @@
               <div>
                 <h3 id="my-profile-display-name" style="font-size: 16px; font-weight: 800; margin-bottom: 2px;">Dein Name</h3>
                 <p id="my-profile-handle-preview" style="font-size: 12px; color: #818cf8; font-weight: 700;">@benutzername</p>
-                <!-- Gamifizierter Rang -->
                 <div id="profile-rank-badge" style="display: inline-block; background: rgba(99,102,241,0.2); color: #818cf8; border: 1px solid rgba(99,102,241,0.4); padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 800; margin-top: 3px;">☕ Frischer Erstie</div>
                 <div style="font-size: 10px; color: var(--text-muted); margin-top: 3px; font-weight: 600;" id="follower-stats">0 Follower • 0 Gefolgt</div>
               </div>
             </div>
           </div>
 
-          <!-- Social Sharing Card für WhatsApp / Insta Stories -->
           <div style="background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(236,72,153,0.15)); border: 1px solid var(--border); border-radius: 16px; padding: 14px; margin-bottom: 12px; max-width: 600px; text-align: center;">
             <h4 style="font-size: 13px; font-weight: 800; margin-bottom: 4px; color: var(--text);">🚀 Zeig dein Campus-Level!</h4>
             <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 10px;">Teile deinen Status in deiner WhatsApp-Status oder Insta-Story und hol dir Extrapunkte!</p>
@@ -647,6 +645,32 @@
           </div>
         </div>
       </div>
+
+      <!-- TAB 7: ADMIN PANEL (Neu: Campus-Drops zeitlich steuern) -->
+      <div id="tab-admin" class="tab-content hidden">
+        <div style="max-width: 600px; padding-bottom: 20px;">
+          <h3 style="font-size: 16px; font-weight: 800; margin-bottom: 4px; color: var(--admin);">⚡ Admin-Interface: Campus-Drops</h3>
+          <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;">Erstelle neue Flash-Drops. Erlaubtes Zeitfenster: <strong>04:00 Uhr bis 01:00 Uhr</strong> (Laufzeit: automatisch 3 Stunden).</p>
+
+          <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Drop Titel / Belohnungsinfos:</label>
+          <input type="text" id="admin-drop-title" placeholder="z. B. 50 Extra-Punkte im Audimax!">
+
+          <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Belohnungs-Typ:</label>
+          <select id="admin-drop-reward-type">
+            <option value="points">Punkte (z. B. 50)</option>
+            <option value="badge">Spezial-Badge</option>
+          </select>
+
+          <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Wert (z. B. Punktzahl oder Badge-Name):</label>
+          <input type="text" id="admin-drop-reward-value" placeholder="50">
+
+          <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Startzeitpunkt (Datum & Uhrzeit):</label>
+          <input type="datetime-local" id="admin-drop-start-time">
+
+          <button class="btn" onclick="handleCreateCampusDrop()" style="background: var(--admin); color: #000; font-weight: 900;">Drop planen & freigeben 🚀</button>
+        </div>
+      </div>
+
     </div>
 
     <!-- UNTERE NAVIGATION -->
@@ -772,7 +796,7 @@
     </div>
   </div>
 
-  <!-- MODAL: UPLOAD (CONFESSION EINSATZ) -->
+  <!-- MODAL: UPLOAD -->
   <div id="upload-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.92); z-index: 100;">
     <div style="width: 100%; max-width: 400px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 18px; margin: 10px;">
       <h3 style="margin-bottom: 4px; font-weight: 900; color: var(--accent);">🤫 Anonyme Confession teilen</h3>
@@ -827,7 +851,6 @@
   let currentTutorialStep = 1;
   const totalTutorialSteps = 3;
 
-  // Cache für den aktuell geladenen Flash-Drop
   let activeDropCache = null;
 
   window.addEventListener('DOMContentLoaded', async () => {
@@ -852,11 +875,10 @@
       }
     }
     
-    // Flash Drops direkt beim Start abrufen
     loadActiveCampusDrops();
   });
 
-  // --- FLASH DROP LOGIK ---
+  // --- FLASH DROP LOGIK & ADMIN INTERFACE ---
   async function loadActiveCampusDrops() {
     try {
       const { data, error } = await _supabase.from('campus_drops')
@@ -872,7 +894,6 @@
         activeDropCache = data[0];
         const claimedKey = `claimed_drop_${activeDropCache.id}`;
         
-        // Wenn bereits eingesammelt oder abgelaufen -> Banner verstecken, Uni-Duell Button zeigen
         if (localStorage.getItem(claimedKey) || new Date().getTime() > new Date(activeDropCache.expires_at).getTime()) {
           banner.style.display = 'none';
           return;
@@ -885,7 +906,6 @@
         const timerText = document.getElementById('drop-timer-text');
         if (timerText) timerText.innerText = `Noch ${diffMins} Minuten aktiv! [Jetzt tippen 🎁]`;
         
-        // Banner anzeigen (überdeckt den Uni-Duell-Button)
         banner.style.display = 'block';
       } else {
         handleFallbackDrop();
@@ -951,11 +971,64 @@
     }
 
     localStorage.setItem(claimedKey, 'true');
-    
-    // Banner sofort ausblenden, damit der originale Uni-Duell-Button wieder nahtlos erscheint
     if (banner) banner.style.display = 'none';
   }
-  // --- ENDE FLASH DROP LOGIK ---
+
+  // --- ADMIN Kontrolle für Campus-Drops mit Zeitfenster-Validierung (04:00 bis 01:00) & 3h Laufzeit ---
+  async function handleCreateCampusDrop() {
+    if (currentUserEmail !== MASTER_ADMIN_EMAIL) {
+      alert('⚠️ Nur Administratoren können Campus-Drops erstellen!');
+      return;
+    }
+
+    const title = document.getElementById('admin-drop-title').value.trim();
+    const rewardType = document.getElementById('admin-drop-reward-type').value;
+    const rewardValue = document.getElementById('admin-drop-reward-value').value.trim();
+    const startTimeInput = document.getElementById('admin-drop-start-time').value;
+
+    if (!title || !rewardValue || !startTimeInput) {
+      alert('⚠️ Bitte fülle alle Felder für den Campus-Drop aus.');
+      return;
+    }
+
+    const startDate = new Date(startTimeInput);
+    const hours = startDate.getHours();
+    const minutes = startDate.getMinutes();
+    const totalMinutes = hours * 60 + minutes;
+
+    // Erlaubtes Zeitfenster: 04:00 Uhr (240 Min) bis 01:00 Uhr folgendes Tages (1560 Min / oder 0 bis 60 Min)
+    // 04:00 Uhr = 240 Minuten. 01:00 Uhr = 25:00 Uhr in relativen Minuten = 1500 Minuten.
+    // Das heißt: Gültig ist alles von 04:00 (240) bis 24:00 (1440) und von 00:00 (0) bis 01:00 (60).
+    const isValidWindow = (totalMinutes >= 240 && totalMinutes <= 1440) || (totalMinutes >= 0 && totalMinutes <= 60);
+
+    if (!isValidWindow) {
+      alert('❌ Ungültige Startzeit! Campus-Drops dürfen nur im Zeitfenster zwischen 04:00 Uhr morgens und 01:00 Uhr nachts gestartet werden.');
+      return;
+    }
+
+    // Automatische Berechnung der 3-Stunden-Laufzeit
+    const expiresDate = new Date(startDate.getTime() + 3 * 60 * 60 * 1000);
+
+    const { error } = await _supabase.from('campus_drops').insert([{
+      title: title,
+      reward_type: rewardType,
+      reward_value: rewardValue,
+      created_at: startDate.toISOString(),
+      expires_at: expiresDate.toISOString()
+    }]);
+
+    if (error) {
+      alert('Fehler beim Erstellen des Drops in Supabase: ' + error.message);
+      return;
+    }
+
+    alert('✅ Campus-Drop erfolgreich erstellt! (Laufzeit: 3 Stunden)');
+    document.getElementById('admin-drop-title').value = '';
+    document.getElementById('admin-drop-reward-value').value = '';
+    document.getElementById('admin-drop-start-time').value = '';
+    loadActiveCampusDrops();
+  }
+  // --- ENDE ADMIN KONTROLLE ---
 
   function checkMatchWednesday() {
     const today = new Date().getDay();
@@ -1017,6 +1090,7 @@
       .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => { loadProfiles(); updateStreamButtonState(); })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'follows' }, () => loadFollows())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'media_posts' }, () => loadMediaPosts())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'campus_drops' }, () => loadActiveCampusDrops())
       .subscribe();
   }
 
@@ -1211,7 +1285,7 @@
 
   function switchTab(tabName) {
     document.querySelectorAll('#bottom-nav-bar .tab-btn').forEach(btn => btn.classList.remove('active'));
-    ['live', 'reels', 'feed', 'ranking', 'global', 'inbox', 'profile'].forEach(t => {
+    ['live', 'reels', 'feed', 'ranking', 'global', 'inbox', 'profile', 'admin'].forEach(t => {
       const el = document.getElementById(`tab-${t}`);
       if (el) el.classList.add('hidden');
     });
@@ -1586,6 +1660,9 @@
     const badge = document.getElementById('score');
     badge.innerText = '⭐ Admin';
     badge.className = 'points-badge admin-badge';
+
+    // Admin-Reiter im Header oder Profil freischalten bzw. Menü erweitern
+    // Hier können wir z.B. das Admin-Tab erreichbar machen, indem wir einen Button einblenden oder per switchTab('admin') steuern.
   }
 
   async function addPoints(amount) {
