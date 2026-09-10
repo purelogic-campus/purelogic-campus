@@ -38,8 +38,7 @@
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-    html { font-size: 16px; height: 100%; }
-    body {
+    html, body {
       background-color: var(--bg);
       color: var(--text);
       font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -50,8 +49,7 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      transition: background-color 0.5s ease, color 0.5s ease;
-      position: relative;
+      position: fixed; /* Verhindert das unkontrollierte Mit-Scrollen des Body auf iOS */
     }
 
     /* Schwebende Herzen im Hintergrund am Match-Mittwoch */
@@ -328,9 +326,10 @@
     .reel-pill.active { background: rgba(99, 102, 241, 0.15); color: #818cf8; }
     .match-wednesday .reel-pill.active { background: rgba(255, 0, 127, 0.25); color: #ff66b2; box-shadow: 0 0 8px rgba(255,0,127,0.3); }
 
+    /* Fix für Mobilgeräte: Wichtig ist overflow-y mit auto und zwingendes snap-Verhalten */
     .reel-card-wrapper { 
       flex: 1; 
-      overflow-y: auto; 
+      overflow-y: scroll; 
       scroll-snap-type: y mandatory; 
       -webkit-overflow-scrolling: touch; 
       display: flex; 
@@ -341,8 +340,9 @@
     }
     .reel-item { 
       scroll-snap-align: center; 
+      scroll-snap-stop: always;
       height: 100%; 
-      min-height: 350px; 
+      min-height: 100%; 
       max-height: 100%; 
       background: #000; 
       border-radius: 16px; 
@@ -1541,7 +1541,7 @@
     const list = document.getElementById('dm-chat-list');
     if (!recipient) return;
 
-    const { data, error } = await _supabase.main('direct_messages').select('*') // Fallback corrected or kept
+    const { data, error } = await _supabase.from('direct_messages').select('*')
       .or(`and(sender_email.eq.${currentUserEmail},recipient_email.eq.${recipient}),and(sender_email.eq.${recipient},recipient_email.eq.${currentUserEmail})`)
       .order('created_at', { ascending: true });
 
