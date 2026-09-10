@@ -37,6 +37,28 @@
       --gradient-main: linear-gradient(135deg, #ff007f 0%, #ff66b2 50%, #ffeb3b 100%) !important;
     }
 
+    /* ⚡ GOLD-PINKER FLASH DROP ANIMATION & STYLES */
+    @keyframes goldPinkFlash {
+      0% { 
+        transform: scale(1); 
+        box-shadow: 0 4px 15px rgba(245, 158, 11, 0.6); 
+        filter: brightness(1); 
+      }
+      50% { 
+        transform: scale(1.025); 
+        box-shadow: 0 0 30px 10px rgba(236, 72, 153, 0.95), 0 0 15px 5px rgba(251, 191, 36, 0.8); 
+        filter: brightness(1.2); 
+      }
+      100% { 
+        transform: scale(1); 
+        box-shadow: 0 4px 15px rgba(245, 158, 11, 0.6); 
+        filter: brightness(1); 
+      }
+    }
+    .flash-banner-active {
+      animation: goldPinkFlash 0.9s infinite ease-in-out;
+    }
+
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
     html, body {
       background-color: var(--bg);
@@ -448,8 +470,14 @@
   <!-- STEP 2: MAIN APP -->
   <div id="main-app" class="hidden" style="flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0;">
     
-    <!-- UNTERLEISTE FÜR DUELL & RANGLISTE -->
-    <div style="display: flex; gap: 8px; margin-bottom: 8px; flex-shrink: 0;">
+    <!-- HIER: FLASH DROP BANNER (Überdeckt den Uni-Duell-Button, bis eingesammelt) -->
+    <div id="campus-drop-banner" class="flash-banner-active" style="display:none; width: 100%; background: linear-gradient(135deg, #f59e0b, #ec4899); color: white; padding: 12px 14px; border-radius: 12px; margin-bottom: 8px; text-align: center; cursor: pointer; flex-shrink: 0; border: 2px solid rgba(255, 255, 255, 0.6);" onclick="claimActiveDrop()">
+      <div style="font-weight: 900; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; text-shadow: 0 2px 4px rgba(0,0,0,0.2);" id="drop-title-text">⚡ FLASH DROP: 50 Extra-Punkte!</div>
+      <div style="font-size: 10px; opacity: 0.95; margin-top: 3px; font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,0.2);" id="drop-timer-text">Nur für kurze Zeit verfügbar! [Jetzt tippen 🎁]</div>
+    </div>
+
+    <!-- UNTERLEISTE FÜR DUELL & RANGLISTE (Wird exakt verdeckt, solange der Drop aktiv ist) -->
+    <div id="uni-duell-container" style="display: flex; gap: 8px; margin-bottom: 8px; flex-shrink: 0;">
       <button class="btn" onclick="switchTab('ranking')" style="margin-top: 0; padding: 8px 12px; font-size: 12px; font-weight: 800; background: var(--gradient-main); display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);">
         🏆 Zum Wiener Uni-Duell & Rangliste
       </button>
@@ -799,6 +827,9 @@
   let currentTutorialStep = 1;
   const totalTutorialSteps = 3;
 
+  // Cache für den aktuell geladenen Flash-Drop
+  let activeDropCache = null;
+
   window.addEventListener('DOMContentLoaded', async () => {
     checkMatchWednesday();
 
@@ -820,7 +851,111 @@
         }
       }
     }
+    
+    // Flash Drops direkt beim Start abrufen
+    loadActiveCampusDrops();
   });
+
+  // --- FLASH DROP LOGIK ---
+  async function loadActiveCampusDrops() {
+    try {
+      const { data, error } = await _supabase.from('campus_drops')
+        .select('*')
+        .gt('expires_at', new Date().toISOString())
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      const banner = document.getElementById('campus-drop-banner');
+      if (!banner) return;
+      
+      if (data && data.length > 0) {
+        activeDropCache = data[0];
+        const claimedKey = `claimed_drop_${activeDropCache.id}`;
+        
+        // Wenn bereits eingesammelt oder abgelaufen -> Banner verstecken, Uni-Duell Button zeigen
+        if (localStorage.getItem(claimedKey) || new Date().getTime() > new Date(activeDropCache.expires_at).getTime()) {
+          banner.style.display = 'none';
+          return;
+        }
+
+        document.getElementById('drop-title-text').innerText = `⚡ FLASH DROP: ${activeDropCache.title}`;
+        const expiresTime = new Date(activeDropCache.expires_at).getTime();
+        const now = new Date().getTime();
+        const diffMins = Math.max(1, Math.round((expiresTime - now) / 60000));
+        const timerText = document.getElementById('drop-timer-text');
+        if (timerText) timerText.innerText = `Noch ${diffMins} Minuten aktiv! [Jetzt tippen 🎁]`;
+        
+        // Banner anzeigen (überdeckt den Uni-Duell-Button)
+        banner.style.display = 'block';
+      } else {
+        handleFallbackDrop();
+      }
+    } catch (err) {
+      console.error("Fehler beim Laden der Drops:", err);
+      handleFallbackDrop();
+    }
+  }
+
+  function handleFallbackDrop() {
+    const banner = document.getElementById('campus-drop-banner');
+    if (!banner) return;
+
+    const fallbackKey = 'claimed_drop_fallback_test';
+    if (localStorage.getItem(fallbackKey)) {
+      banner.style.display = 'none';
+    } else {
+      document.getElementById('drop-title-text').innerText = '⚡ FLASH DROP: 50 Extra-Punkte abholen!';
+      const timerText = document.getElementById('drop-timer-text');
+      if (timerText) timerText.innerText = 'Exklusiver Campus-Drop! [Jetzt tippen 🎁]';
+      banner.style.display = 'block';
+    }
+  }
+
+  async function claimActiveDrop() {
+    const banner = document.getElementById('campus-drop-banner');
+
+    if (!activeDropCache) {
+      const fallbackKey = 'claimed_drop_fallback_test';
+      if (localStorage.getItem(fallbackKey)) {
+        alert('⚠️ Du hast diesen Drop bereits eingesammelt!');
+        if (banner) banner.style.display = 'none';
+        return;
+      }
+      
+      await addPoints(50);
+      localStorage.setItem(fallbackKey, 'true');
+      alert('🎉 Glückwunsch! Du hast dir erfolgreich 50 Hype-Punkte gesichert! 🔥');
+      if (banner) banner.style.display = 'none';
+      return;
+    }
+
+    const claimedKey = `claimed_drop_${activeDropCache.id}`;
+    if (localStorage.getItem(claimedKey)) {
+      alert('⚠️ Du hast diesen Drop bereits eingesammelt!');
+      if (banner) banner.style.display = 'none';
+      return;
+    }
+
+    if (new Date().getTime() > new Date(activeDropCache.expires_at).getTime()) {
+      alert('⏳ Dieser Drop ist leider bereits abgelaufen!');
+      if (banner) banner.style.display = 'none';
+      return;
+    }
+
+    if (activeDropCache.reward_type === 'points') {
+      const pts = parseInt(activeDropCache.reward_value) || 20;
+      await addPoints(pts);
+      alert(`🎉 Drop eingesammelt! +${pts} Punkte wurden dir gutgeschrieben! 🚀`);
+    } else {
+      alert(`🎉 Drop eingesammelt! Du hast das seltene Badge erhalten: ${activeDropCache.reward_value} 👑`);
+    }
+
+    localStorage.setItem(claimedKey, 'true');
+    
+    // Banner sofort ausblenden, damit der originale Uni-Duell-Button wieder nahtlos erscheint
+    if (banner) banner.style.display = 'none';
+  }
+  // --- ENDE FLASH DROP LOGIK ---
 
   function checkMatchWednesday() {
     const today = new Date().getDay();
