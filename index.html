@@ -173,7 +173,6 @@
     .language-select:hover { background: rgba(255, 255, 255, 0.1); }
     .language-select option { background: var(--bg); color: var(--text); }
     
-    /* Einzeiliges Match-Banner mit Klick-Funktion fürs Crush Radar */
     .match-banner {
       display: none;
       background: linear-gradient(90deg, #ff007f, #ff758c, #ff007f);
@@ -392,7 +391,7 @@
     </div>
   </div>
 
-  <!-- EINZEILIGES MATCH-BANNER (Öffnet das Crush Radar per Klick!) -->
+  <!-- MATCH-BANNER -->
   <div class="match-banner" id="match-banner" onclick="openCrushModal()">
     💖 MATCH-MITTWOCH • FIND YOUR CRUSH! [Klick fürs Radar 💘]
   </div>
@@ -424,7 +423,7 @@
   <!-- STEP 2: MAIN APP -->
   <div id="main-app" class="hidden" style="flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0;">
     
-    <!-- EIGENE UNTERLEISTE FÜR DAS DUELL (Direkt unter der Hauptleiste) -->
+    <!-- UNTERLEISTE FÜR DUELL & RANGLISTE -->
     <div style="display: flex; gap: 8px; margin-bottom: 8px; flex-shrink: 0;">
       <button class="btn" onclick="switchTab('ranking')" style="margin-top: 0; padding: 8px 12px; font-size: 12px; font-weight: 800; background: var(--gradient-main); display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);">
         🏆 Zum Wiener Uni-Duell & Rangliste
@@ -539,7 +538,7 @@
         </div>
       </div>
 
-      <!-- TAB 6: PROFIL -->
+      <!-- TAB 6: PROFIL (MIT UNI-EHREN-PROFIL & SOCIAL-SHARING) -->
       <div id="tab-profile" class="tab-content hidden">
         <div style="overflow-y: auto; flex: 1; padding-right: 2px; min-height: 0;">
           <div class="profile-header-card">
@@ -548,9 +547,18 @@
               <div>
                 <h3 id="my-profile-display-name" style="font-size: 16px; font-weight: 800; margin-bottom: 2px;">Dein Name</h3>
                 <p id="my-profile-handle-preview" style="font-size: 12px; color: #818cf8; font-weight: 700;">@benutzername</p>
+                <!-- Gamifizierter Rang -->
+                <div id="profile-rank-badge" style="display: inline-block; background: rgba(99,102,241,0.2); color: #818cf8; border: 1px solid rgba(99,102,241,0.4); padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 800; margin-top: 3px;">☕ Frischer Erstie</div>
                 <div style="font-size: 10px; color: var(--text-muted); margin-top: 3px; font-weight: 600;" id="follower-stats">0 Follower • 0 Gefolgt</div>
               </div>
             </div>
+          </div>
+
+          <!-- Social Sharing Card für WhatsApp / Insta Stories -->
+          <div style="background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(236,72,153,0.15)); border: 1px solid var(--border); border-radius: 16px; padding: 14px; margin-bottom: 12px; max-width: 600px; text-align: center;">
+            <h4 style="font-size: 13px; font-weight: 800; margin-bottom: 4px; color: var(--text);">🚀 Zeig dein Campus-Level!</h4>
+            <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 10px;">Teile deinen Status in deiner WhatsApp-Status oder Insta-Story und hol dir Extrapunkte!</p>
+            <button class="btn" onclick="shareProfileCard()" style="margin-top: 0; background: var(--gradient-main); font-size: 12px; padding: 8px 14px;">📲 Profil in WhatsApp / Insta teilen</button>
           </div>
 
           <div style="max-width: 600px;">
@@ -588,7 +596,7 @@
       </div>
     </div>
 
-    <!-- UNTERE NAVIGATION (OHNE DUELL-BUTTON) -->
+    <!-- UNTERE NAVIGATION -->
     <div class="nav-tabs" id="bottom-nav-bar">
       <button class="tab-btn active" onclick="switchTab('reels')" id="btn-tab-reels">📱 Feed</button>
       <button class="tab-btn" onclick="switchTab('feed')" id="btn-tab-feed">💬 Treffen</button>
@@ -612,7 +620,7 @@
 
   </div>
 
-  <!-- MODAL: ANONYMES CRUSH RADAR & BLIND DATE -->
+  <!-- MODAL: CRUSH RADAR -->
   <div id="crush-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.92); z-index: 100;">
     <div style="width: 100%; max-width: 400px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 18px; margin: 10px;">
       <h3 style="margin-bottom: 4px; font-weight: 900; color: var(--accent);">💖 Anonymes Crush Radar</h3>
@@ -626,15 +634,13 @@
 
       <button class="btn" onclick="submitCrush()">Abschicken & Hoffen 💘</button>
       
-      <div id="crush-matches-box" style="margin-top: 12px; font-size: 12px; text-align: center; color: var(--text-muted);">
-        <!-- Hier werden aktive Matches angezeigt -->
-      </div>
+      <div id="crush-matches-box" style="margin-top: 12px; font-size: 12px; text-align: center; color: var(--text-muted);"></div>
 
       <button class="btn btn-secondary" onclick="closeCrushModal()" style="margin-top: 8px;">Schließen</button>
     </div>
   </div>
 
-  <!-- MODAL: TUTORIAL-FÜHRUNG -->
+  <!-- MODAL: TUTORIAL -->
   <div id="stream-help-modal" class="hidden tab-content" style="align-items: center; justify-content: center;">
     <div style="width: 100%; max-width: 420px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 20px; max-height: 85vh; overflow-y: auto;">
       <h3 style="margin-bottom: 12px; font-weight: 800; color: #818cf8;">💡 Live-Stream Campus Guide</h3>
@@ -713,7 +719,7 @@
     </div>
   </div>
 
-  <!-- MODAL: UPLOAD MEDIEN -->
+  <!-- MODAL: UPLOAD -->
   <div id="upload-modal" class="hidden tab-content" style="align-items: center; justify-content: center;">
     <div style="width: 100%; max-width: 400px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 16px;">
       <h3 style="margin-bottom: 8px; font-weight: 800;">Neuen Beitrag hochladen</h3>
@@ -891,6 +897,14 @@
     updateStreamButtonState();
   }
 
+  // Gamifizierte Ränge basierend auf Punkten ermitteln
+  function getCampusRank(points) {
+    if (points >= 600) return { title: '👑 Absolute Campus-Legende', color: '#ec4899' };
+    if (points >= 300) return { title: '🔥 Campus Insider', color: '#f59e0b' };
+    if (points >= 100) return { title: '🍕 Aktiver Fachschaftler', color: '#10b981' };
+    return { title: '☕ Frischer Erstie', color: '#818cf8' };
+  }
+
   function renderMyProfileInputs() {
     const profile = profilesCache[currentUserEmail];
     if (!profile) return;
@@ -905,12 +919,41 @@
     document.getElementById('my-profile-display-name').innerText = profile.full_name || profile.username || currentUserEmail.split('@')[0];
     document.getElementById('my-profile-handle-preview').innerText = '@' + (profile.username || 'user');
     
+    // Rang UI aktualisieren
+    const rankInfo = getCampusRank(userPoints);
+    const rankBadge = document.getElementById('profile-rank-badge');
+    if (rankBadge) {
+      rankBadge.innerText = rankInfo.title;
+      rankBadge.style.color = rankInfo.color;
+      rankBadge.style.borderColor = rankInfo.color;
+      rankBadge.style.background = rankInfo.color + '22';
+    }
+
     const avatarUrl = profile.avatar_url || '';
     document.getElementById('my-profile-avatar-preview').src = avatarUrl;
     document.getElementById('header-avatar-preview').src = avatarUrl;
 
     updateFollowerStatsUI();
     renderMyProfilePostsGrid();
+  }
+
+  // Social Sharing Funktion für WhatsApp & Insta
+  function shareProfileCard() {
+    const profile = profilesCache[currentUserEmail] || {};
+    const handle = profile.username || currentUserEmail.split('@')[0];
+    const rankInfo = getCampusRank(userPoints);
+    const shareText = `🎓 Hey! Check mein PURE LOGIC Campus-Profil aus:\n\n👤 @${handle}\n🏆 Rang: ${rankInfo.title}\n⭐ Punkte: ${userPoints} P\n\nSei auch dabei beim Wiener Uni-Duell! 🚀`;
+
+    if (navigator.share) {
+      navigator.share({
+        title: 'PURE LOGIC • Campus Profil',
+        text: shareText,
+        url: window.location.href
+      }).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(shareText);
+      alert('📋 Profil-Text in die Zwischenablage kopiert! Füge ihn jetzt in deinen WhatsApp-Status oder deine Insta-Story ein! 🚀');
+    }
   }
 
   function renderMyProfilePostsGrid() {
@@ -1370,6 +1413,7 @@
     if (currentUserEmail === MASTER_ADMIN_EMAIL) return;
     userPoints += amount;
     updatePointsDisplay();
+    renderMyProfileInputs(); // Rang bei Punkteupdate direkt mitaktualisieren
   }
 
   function updatePointsDisplay() {
