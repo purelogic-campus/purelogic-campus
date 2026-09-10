@@ -49,7 +49,7 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      position: fixed; /* Verhindert das unkontrollierte Mit-Scrollen des Body auf iOS */
+      position: fixed;
     }
 
     /* Schwebende Herzen im Hintergrund am Match-Mittwoch */
@@ -326,7 +326,6 @@
     .reel-pill.active { background: rgba(99, 102, 241, 0.15); color: #818cf8; }
     .match-wednesday .reel-pill.active { background: rgba(255, 0, 127, 0.25); color: #ff66b2; box-shadow: 0 0 8px rgba(255,0,127,0.3); }
 
-    /* Fix für Mobilgeräte: Wichtig ist overflow-y mit auto und zwingendes snap-Verhalten */
     .reel-card-wrapper { 
       flex: 1; 
       overflow-y: scroll; 
@@ -341,9 +340,9 @@
     .reel-item { 
       scroll-snap-align: center; 
       scroll-snap-stop: always;
-      height: 100%; 
-      min-height: 100%; 
-      max-height: 100%; 
+      height: calc(100% - 50px); 
+      min-height: 320px; 
+      max-height: calc(100% - 50px); 
       background: #000; 
       border-radius: 16px; 
       border: 1px solid var(--border); 
@@ -357,7 +356,7 @@
       margin: 0 auto; 
       width: 100%; 
       box-shadow: 0 8px 24px rgba(0,0,0,0.5); 
-      flex: 0 0 100%; 
+      flex: 0 0 calc(100% - 50px); 
     }
     .match-wednesday .reel-item { border-color: rgba(255, 0, 127, 0.4); box-shadow: 0 8px 30px rgba(255, 0, 127, 0.25); }
     .reel-media { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
@@ -375,7 +374,7 @@
 
     .profile-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 10px; }
     .profile-grid-item { aspect-ratio: 1; background: var(--card); border-radius: 8px; overflow: hidden; border: 1px solid var(--border); position: relative; }
-    .profile-grid-item img, .profile-grid-item video { width: 100%; height: 100%; object-fit: cover; }
+    .profile-grid-item img, .profile-grid-item video { width: 100%; height: 100%; object-ai: cover; }
     
     .tutorial-step { display: none; }
     .tutorial-step.active { display: block; }
