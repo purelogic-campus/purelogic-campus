@@ -424,6 +424,13 @@
   <!-- STEP 2: MAIN APP -->
   <div id="main-app" class="hidden" style="flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0;">
     
+    <!-- EIGENE UNTERLEISTE FÜR DAS DUELL (Direkt unter der Hauptleiste) -->
+    <div style="display: flex; gap: 8px; margin-bottom: 8px; flex-shrink: 0;">
+      <button class="btn" onclick="switchTab('ranking')" style="margin-top: 0; padding: 8px 12px; font-size: 12px; font-weight: 800; background: var(--gradient-main); display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);">
+        🏆 Zum Wiener Uni-Duell & Rangliste
+      </button>
+    </div>
+
     <div class="tab-content-wrapper">
       
       <!-- TAB 0: LIVE STREAMING -->
@@ -581,7 +588,7 @@
       </div>
     </div>
 
-    <!-- UNTERE NAVIGATION -->
+    <!-- UNTERE NAVIGATION (OHNE DUELL-BUTTON) -->
     <div class="nav-tabs" id="bottom-nav-bar">
       <button class="tab-btn active" onclick="switchTab('reels')" id="btn-tab-reels">📱 Feed</button>
       <button class="tab-btn" onclick="switchTab('feed')" id="btn-tab-feed">💬 Treffen</button>
@@ -590,7 +597,6 @@
         <button class="tab-btn-action" onclick="openUploadModal()" title="Beitrag erstellen">+</button>
       </div>
 
-      <button class="tab-btn" onclick="switchTab('ranking')" id="btn-tab-ranking">🏆 Duell</button>
       <button class="tab-btn" onclick="switchTab('global')" id="btn-tab-global">⚡ Chat</button>
       <button class="tab-btn" onclick="switchTab('inbox')" id="btn-tab-inbox">📬 Postfach</button>
     </div>
@@ -613,7 +619,7 @@
       <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px; line-height: 1.4;">Trage die E-Mail oder den Namen deines Campus-Crushes ein. Bleibt es einseitig, erfährt es niemand. Matchen sich beide gegenseitig, gibt es ein Blind-Date!</p>
       
       <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Crush (E-Mail oder @handle):</label>
-      <input type="text" id="crush-target-input" placeholder="crush@uni.at atau @username">
+      <input type="text" id="crush-target-input" placeholder="crush@uni.at oder @username">
 
       <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Geheimer Hinweis / Vibe (optional):</label>
       <input type="text" id="crush-hint-input" placeholder="z.B. Wir sahen uns in der Bib in Reihe 4...">
