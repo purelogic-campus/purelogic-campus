@@ -719,18 +719,17 @@
     </div>
   </div>
 
-  <!-- MODAL: UPLOAD -->
-  <div id="upload-modal" class="hidden tab-content" style="align-items: center; justify-content: center;">
-    <div style="width: 100%; max-width: 400px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 16px;">
-      <h3 style="margin-bottom: 8px; font-weight: 800;">Neuen Beitrag hochladen</h3>
-      <select id="upload-type" style="margin-bottom: 8px;">
-        <option value="video">Video (MP4 Link)</option>
-        <option value="image">Bild (URL)</option>
-      </select>
-      <input type="text" id="upload-url" placeholder="https://beispiel.de/bild.jpg">
-      <input type="text" id="upload-caption" placeholder="Was geht am Campus?">
-      <button class="btn" onclick="submitMediaUpload()">Hochladen (+15 P)</button>
-      <button class="btn btn-secondary" onclick="closeUploadModal()">Abbrechen</button>
+  <!-- MODAL: UPLOAD (CONFESSION EINSATZ) -->
+  <div id="upload-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.92); z-index: 100;">
+    <div style="width: 100%; max-width: 400px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 18px; margin: 10px;">
+      <h3 style="margin-bottom: 4px; font-weight: 900; color: var(--accent);">🤫 Anonyme Confession teilen</h3>
+      <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px; line-height: 1.4;">Teile deinen Campus-Gossip oder Beichte 100% anonym im Feed. Keine Namen, keine Spuren[cite: 1].</p>
+      
+      <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Deine Confession:</label>
+      <textarea id="confession-text-input" rows="4" placeholder="Was wollte schon immer alle Welt über den Campus wissen...?" style="resize: none;"></textarea>
+
+      <button class="btn" onclick="submitConfessionPost()">Anonym posten (+15 P) 🚀</button>
+      <button class="btn btn-secondary" onclick="closeUploadModal()" style="margin-top: 8px;">Abbrechen</button>
     </div>
   </div>
 
@@ -897,7 +896,6 @@
     updateStreamButtonState();
   }
 
-  // Gamifizierte Ränge basierend auf Punkten ermitteln
   function getCampusRank(points) {
     if (points >= 600) return { title: '👑 Absolute Campus-Legende', color: '#ec4899' };
     if (points >= 300) return { title: '🔥 Campus Insider', color: '#f59e0b' };
@@ -919,7 +917,6 @@
     document.getElementById('my-profile-display-name').innerText = profile.full_name || profile.username || currentUserEmail.split('@')[0];
     document.getElementById('my-profile-handle-preview').innerText = '@' + (profile.username || 'user');
     
-    // Rang UI aktualisieren
     const rankInfo = getCampusRank(userPoints);
     const rankBadge = document.getElementById('profile-rank-badge');
     if (rankBadge) {
@@ -937,7 +934,6 @@
     renderMyProfilePostsGrid();
   }
 
-  // Social Sharing Funktion für WhatsApp & Insta
   function shareProfileCard() {
     const profile = profilesCache[currentUserEmail] || {};
     const handle = profile.username || currentUserEmail.split('@')[0];
@@ -1326,15 +1322,38 @@
   async function openUploadModal() { document.getElementById('upload-modal').classList.remove('hidden'); document.getElementById('bottom-nav-bar').classList.add('hidden'); }
   function closeUploadModal() { document.getElementById('upload-modal').classList.add('hidden'); document.getElementById('bottom-nav-bar').classList.remove('hidden'); }
 
-  async function submitMediaUpload() {
-    const url = document.getElementById('upload-url').value.trim();
-    const caption = document.getElementById('upload-caption').value.trim();
-    const type = document.getElementById('upload-type').value;
-    if (!url) return alert('Bitte URL angeben.');
-    await _supabase.from('media_posts').insert([{ author_email: currentUserEmail, media_url: url, media_type: type, caption, likes: [], comments: [] }]);
+  async function submitConfessionPost() {
+    const text = document.getElementById('confession-text-input').value.trim();
+    if (!text) return alert('Bitte gib einen Text für deine Confession ein.');
+
+    const bgImages = [
+      "https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=600",
+      "https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=600",
+      "https://images.unsplash.com/photo-1498243691581-b145c3f54a5a?w=600",
+      "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=600",
+      "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=600"
+    ];
+    const randomImg = bgImages[Math.floor(Math.random() * bgImages.length)];
+
+    const { error } = await _supabase.from('media_posts').insert([{
+      author_email: 'anonymous@campus.at',
+      media_url: randomImg,
+      media_type: 'image',
+      caption: text,
+      likes: {},
+      comments: []
+    }]);
+
+    if (error) {
+      alert('Fehler beim Posten: ' + error.message);
+      return;
+    }
+
+    document.getElementById('confession-text-input').value = '';
     await addPoints(15);
     closeUploadModal();
     loadMediaPosts();
+    alert('Deine Confession wurde anonym im Feed veröffentlicht! 🤫✨');
   }
 
   function togglePasswordVisibility() {
@@ -1413,7 +1432,7 @@
     if (currentUserEmail === MASTER_ADMIN_EMAIL) return;
     userPoints += amount;
     updatePointsDisplay();
-    renderMyProfileInputs(); // Rang bei Punkteupdate direkt mitaktualisieren
+    renderMyProfileInputs();
   }
 
   function updatePointsDisplay() {
