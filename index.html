@@ -329,19 +329,38 @@
     .match-wednesday .reel-pill.active { background: rgba(255, 0, 127, 0.25); color: #ff66b2; box-shadow: 0 0 8px rgba(255,0,127,0.3); }
 
     .reel-card-wrapper { 
-      flex: 1; overflow-y: auto; scroll-snap-type: y mandatory; 
-      display: flex; flex-direction: column; gap: 16px; padding: 10px 0 25px 0; min-height: 0; 
+      flex: 1; 
+      overflow-y: auto; 
+      scroll-snap-type: y mandatory; 
+      -webkit-overflow-scrolling: touch; 
+      display: flex; 
+      flex-direction: column; 
+      gap: 16px; 
+      padding: 10px 0; 
+      min-height: 0; 
     }
     .reel-item { 
-      scroll-snap-align: center; height: calc(100% - 20px); min-height: 280px; max-height: 100%; 
-      background: #000; border-radius: 16px; border: 1px solid var(--border); position: relative; 
-      overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; 
-      max-width: 420px; margin: 0 auto; width: 100%; box-shadow: 0 8px 24px rgba(0,0,0,0.5); flex-shrink: 0; 
+      scroll-snap-align: center; 
+      height: 100%; 
+      min-height: 350px; 
+      max-height: 100%; 
+      background: #000; 
+      border-radius: 16px; 
+      border: 1px solid var(--border); 
+      position: relative; 
+      overflow: hidden; 
+      display: flex; 
+      flex-direction: column; 
+      justify-content: center; 
+      align-items: center; 
+      max-width: 420px; 
+      margin: 0 auto; 
+      width: 100%; 
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5); 
+      flex: 0 0 100%; 
     }
     .match-wednesday .reel-item { border-color: rgba(255, 0, 127, 0.4); box-shadow: 0 8px 30px rgba(255, 0, 127, 0.25); }
     .reel-media { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
-    
-    /* 🎯 ZENTRIERTER & GROSSER TEXT AUF DEM HINTERGRUNDBILD */
     .reel-overlay { 
       position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
       z-index: 2; background: rgba(9, 13, 22, 0.75); 
@@ -1439,7 +1458,7 @@
     if (currentUserEmail === MASTER_ADMIN_EMAIL) return;
     userPoints += amount;
     updatePointsDisplay();
-    renderMyProfileInputs();
+    renderMyProfilePostsGrid();
   }
 
   function updatePointsDisplay() {
@@ -1522,7 +1541,7 @@
     const list = document.getElementById('dm-chat-list');
     if (!recipient) return;
 
-    const { data, error } = await _supabase.from('direct_messages').select('*')
+    const { data, error } = await _supabase.main('direct_messages').select('*') // Fallback corrected or kept
       .or(`and(sender_email.eq.${currentUserEmail},recipient_email.eq.${recipient}),and(sender_email.eq.${recipient},recipient_email.eq.${currentUserEmail})`)
       .order('created_at', { ascending: true });
 
