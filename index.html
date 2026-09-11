@@ -646,14 +646,14 @@
         </div>
       </div>
 
-      <!-- TAB 7: ADMIN PANEL (Campus-Drops zeitlich steuern) -->
+      <!-- TAB 7: ADMIN PANEL (Neu: Campus-Drops zeitlich & GPS gesteuert) -->
       <div id="tab-admin" class="tab-content hidden">
         <div style="max-width: 600px; padding-bottom: 20px;">
-          <h3 style="font-size: 16px; font-weight: 800; margin-bottom: 4px; color: var(--admin);">⚡ Admin-Interface: Campus-Drops</h3>
-          <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;">Erstelle neue Flash-Drops. Erlaubtes Zeitfenster: <strong>04:00 Uhr bis 01:00 Uhr</strong> (Laufzeit: automatisch 3 Stunden).</p>
+          <h3 style="font-size: 16px; font-weight: 800; margin-bottom: 4px; color: var(--admin);">⚡ Admin-Interface: Campus-Drops & GPS</h3>
+          <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;">Erstelle standortgebundene Flash-Drops. Zeitfenster: <strong>04:00 bis 01:00 Uhr</strong> (Laufzeit: 3h).</p>
 
-          <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Drop Titel / Belohnungsinfos:</label>
-          <input type="text" id="admin-drop-title" placeholder="z. B. 50 Extra-Punkte im Audimax!">
+          <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Drop Titel / Info:</label>
+          <input type="text" id="admin-drop-title" placeholder="z. B. 50 Punkte im Lokal X!">
 
           <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Belohnungs-Typ:</label>
           <select id="admin-drop-reward-type">
@@ -661,13 +661,27 @@
             <option value="badge">Spezial-Badge</option>
           </select>
 
-          <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Wert (z. B. Punktzahl oder Badge-Name):</label>
+          <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Wert (Punktzahl oder Badge-Name):</label>
           <input type="text" id="admin-drop-reward-value" placeholder="50">
 
           <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Startzeitpunkt (Datum & Uhrzeit):</label>
           <input type="datetime-local" id="admin-drop-start-time">
 
-          <button class="btn" onclick="handleCreateCampusDrop()" style="background: var(--admin); color: #000; font-weight: 900;">Drop planen & freigeben 🚀</button>
+          <div style="display: flex; gap: 8px;">
+            <div style="flex: 1;">
+              <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Latitude (Breitengrad):</label>
+              <input type="number" step="any" id="admin-drop-lat" placeholder="48.2082">
+            </div>
+            <div style="flex: 1;">
+              <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Longitude (Längengrad):</label>
+              <input type="number" step="any" id="admin-drop-lng" placeholder="16.3738">
+            </div>
+          </div>
+
+          <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Radius in Metern (z. B. 100m vor Ort):</label>
+          <input type="number" id="admin-drop-radius" placeholder="100" value="100">
+
+          <button class="btn" onclick="handleCreateCampusDrop()" style="background: var(--admin); color: #000; font-weight: 900;">Drop mit GPS-Bindung freigeben 🚀</button>
         </div>
       </div>
 
@@ -878,7 +892,7 @@
     loadActiveCampusDrops();
   });
 
-  // --- FLASH DROP LOGIK & ADMIN INTERFACE ---
+  // --- FLASH DROP LOGIK & ADMIN INTERFACE MIT GPS ---
   async function loadActiveCampusDrops() {
     try {
       const { data, error } = await _supabase.from('campus_drops')
@@ -899,7 +913,8 @@
           return;
         }
 
-        document.getElementById('drop-title-text').innerText = `⚡ FLASH DROP: ${activeDropCache.title}`;
+        let locationInfo = activeDropCache.latitude ? " 📍 [Vor Ort Spot]" : "";
+        document.getElementById('drop-title-text').innerText = `⚡ FLASH DROP: ${activeDropCache.title}${locationInfo}`;
         const expiresTime = new Date(activeDropCache.expires_at).getTime();
         const now = new Date().getTime();
         const diffMins = Math.max(1, Math.round((expiresTime - now) / 60000));
@@ -929,6 +944,18 @@
       if (timerText) timerText.innerText = 'Exklusiver Campus-Drop! [Jetzt tippen 🎁]';
       banner.style.display = 'block';
     }
+  }
+
+  // Hilfsfunktion zur Entfernungsberechnung (Haversine-Formel) in Metern
+  function calculateDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371e3; // Meter
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
   }
 
   async function claimActiveDrop() {
@@ -962,19 +989,48 @@
       return;
     }
 
+    // GPS GEOFENCING PRÜFUNG (Falls Koordinaten hinterlegt sind)
+    if (activeDropCache.latitude && activeDropCache.longitude) {
+      if (!navigator.geolocation) {
+        alert('❌ Dein Browser unterstützt keine Standortabfrage für diesen Spot.');
+        return;
+      }
+
+      alert('📍 Standort wird geprüft, um zu verifizieren, dass du vor Ort bist...');
+
+      try {
+        const position = await new Promise((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 10000 });
+        });
+
+        const userLat = position.coords.latitude;
+        const userLng = position.coords.longitude;
+        const distance = calculateDistance(userLat, userLng, activeDropCache.latitude, activeDropCache.longitude);
+        const allowedRadius = activeDropCache.radius || 100;
+
+        if (distance > allowedRadius) {
+          alert(`❌ Du bist zu weit entfernt! Du bist ca. ${Math.round(distance)} Meter vom Spot entfernt (Erlaubt: ${allowedRadius}m). Bewege dich vor Ort zum Partner-Lokal oder Campus-Spot! 📍`);
+          return;
+        }
+      } catch (err) {
+        alert('❌ Standort konnte nicht ermittelt werden. Bitte erlaube den GPS-Zugriff in deinen Browsereinstellungen.');
+        return;
+      }
+    }
+
     if (activeDropCache.reward_type === 'points') {
       const pts = parseInt(activeDropCache.reward_value) || 20;
       await addPoints(pts);
-      alert(`🎉 Drop eingesammelt! +${pts} Punkte wurden dir gutgeschrieben! 🚀`);
+      alert(`🎉 Drop vor Ort erfolgreich eingesammelt! +${pts} Punkte! 🚀`);
     } else {
-      alert(`🎉 Drop eingesammelt! Du hast das seltene Badge erhalten: ${activeDropCache.reward_value} 👑`);
+      alert(`🎉 Drop vor Ort eingesammelt! Du hast das seltene Badge erhalten: ${activeDropCache.reward_value} 👑`);
     }
 
     localStorage.setItem(claimedKey, 'true');
     if (banner) banner.style.display = 'none';
   }
 
-  // --- ADMIN Kontrolle für Campus-Drops mit Zeitfenster-Validierung (04:00 bis 01:00) & 3h Laufzeit ---
+  // --- ADMIN Kontrolle für Campus-Drops mit Zeitfenster & GPS Koordinaten ---
   async function handleCreateCampusDrop() {
     if (currentUserEmail !== MASTER_ADMIN_EMAIL) {
       alert('⚠️ Nur Administratoren können Campus-Drops erstellen!');
@@ -985,9 +1041,12 @@
     const rewardType = document.getElementById('admin-drop-reward-type').value;
     const rewardValue = document.getElementById('admin-drop-reward-value').value.trim();
     const startTimeInput = document.getElementById('admin-drop-start-time').value;
+    const lat = parseFloat(document.getElementById('admin-drop-lat').value) || null;
+    const lng = parseFloat(document.getElementById('admin-drop-lng').value) || null;
+    const radius = parseInt(document.getElementById('admin-drop-radius').value) || 100;
 
     if (!title || !rewardValue || !startTimeInput) {
-      alert('⚠️ Bitte fülle alle Felder für den Campus-Drop aus.');
+      alert('⚠️ Bitte fülle alle Pflichtfelder für den Campus-Drop aus.');
       return;
     }
 
@@ -1012,7 +1071,10 @@
       reward_type: rewardType,
       reward_value: rewardValue,
       created_at: startDate.toISOString(),
-      expires_at: expiresDate.toISOString()
+      expires_at: expiresDate.toISOString(),
+      latitude: lat,
+      longitude: lng,
+      radius: radius
     }]);
 
     if (error) {
@@ -1020,10 +1082,12 @@
       return;
     }
 
-    alert('✅ Campus-Drop erfolgreich erstellt! (Laufzeit: 3 Stunden)');
+    alert('✅ GPS-gebundener Campus-Drop erfolgreich erstellt! (Laufzeit: 3 Stunden)');
     document.getElementById('admin-drop-title').value = '';
     document.getElementById('admin-drop-reward-value').value = '';
     document.getElementById('admin-drop-start-time').value = '';
+    document.getElementById('admin-drop-lat').value = '';
+    document.getElementById('admin-drop-lng').value = '';
     loadActiveCampusDrops();
   }
   // --- ENDE ADMIN KONTROLLE ---
