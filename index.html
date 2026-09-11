@@ -148,14 +148,15 @@
 
     .points-badge { 
       background: rgba(99, 102, 241, 0.15); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.3);
-      padding: 5px 10px; border-radius: 30px; font-size: 11px; font-weight: 700; 
+      padding: 5px 10px; border-radius: 30px; font-size: 11px; font-weight: 700; cursor: pointer; transition: transform 0.2s;
     }
+    .points-badge:hover { transform: scale(1.05); }
     .match-wednesday .points-badge {
       background: rgba(255, 0, 127, 0.25); color: #ff66b2; border: 1px solid rgba(255, 0, 127, 0.6);
       box-shadow: 0 0 12px rgba(255, 0, 127, 0.7);
       font-weight: 800;
     }
-    .points-badge.admin-badge { background: rgba(245, 158, 11, 0.15); color: var(--admin); border: 1px solid rgba(245, 158, 11, 0.3); cursor: pointer; }
+    .points-badge.admin-badge { background: rgba(245, 158, 11, 0.15); color: var(--admin); border: 1px solid rgba(245, 158, 11, 0.3); }
     
     .header-profile-btn {
       background: rgba(255, 255, 255, 0.05);
@@ -419,7 +420,8 @@
   <div class="header">
     <div class="logo">PURE LOGIC</div>
     <div class="header-right">
-      <div class="points-badge" id="score">0 P</div>
+      <!-- Klick auf die Punkte-Anzeige öffnet die aktiven Spots & Partner-Aktionen -->
+      <div class="points-badge" id="score" onclick="openActiveSpotsModal()" title="Klicken für aktuelle Campus-Spots">0 P</div>
       <button class="header-profile-btn hidden" id="header-profile-btn" onclick="switchTab('profile')">
         <img id="header-avatar-preview" class="header-avatar-sm" src="" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'24\' height=\'24\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%2394a3b8\' stroke-width=\'2\'><path d=\'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2\'></path><circle cx=\'12\' cy=\'7\' r=\'4\'></circle></svg>'" alt="Profil">
         <span class="header-profile-text">Profil</span>
@@ -473,25 +475,14 @@
   <!-- STEP 2: MAIN APP -->
   <div id="main-app" class="hidden" style="flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0;">
     
-    <!-- HIER: FLASH DROP BANNER -->
-    <div id="campus-drop-banner" class="flash-banner-active" style="display:none; width: 100%; background: linear-gradient(135deg, #f59e0b, #ec4899); color: white; padding: 12px 14px; border-radius: 12px; margin-bottom: 8px; text-align: center; cursor: pointer; flex-shrink: 0; border: 2px solid rgba(255, 255, 255, 0.6);" onclick="claimActiveDrop()">
-      <div style="font-weight: 900; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; text-shadow: 0 2px 4px rgba(0,0,0,0.2);" id="drop-title-text">⚡ FLASH DROP: 50 Extra-Punkte!</div>
-      <div style="font-size: 10px; opacity: 0.95; margin-top: 3px; font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,0.2);" id="drop-timer-text">Nur für kurze Zeit verfügbar! [Jetzt tippen 🎁]</div>
-    </div>
-
-    <!-- NEU: AKTUELLE SPOTS & PARTNER-AKTIONEN -->
-    <div id="active-spots-container" style="background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 10px 12px; margin-bottom: 8px; flex-shrink: 0; max-height: 120px; overflow-y: auto;">
-      <div style="font-size: 11px; font-weight: 800; color: #f59e0b; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center;">
-        <span>📍 Aktuelle Campus- & Partner-Spots</span>
-        <span style="font-size: 9px; color: var(--text-muted); font-weight: 600;">GPS-verifiziert</span>
-      </div>
-      <div id="active-spots-list" style="display: flex; flex-direction: column; gap: 4px;">
-        <span style="font-size: 11px; color: var(--text-muted);">Lade aktive Partner-Spots...</span>
-      </div>
+    <!-- HIER: FLASH DROP BANNER (Kompakt oben) -->
+    <div id="campus-drop-banner" class="flash-banner-active" style="display:none; width: 100%; background: linear-gradient(135deg, #f59e0b, #ec4899); color: white; padding: 10px 14px; border-radius: 12px; margin-bottom: 6px; text-align: center; cursor: pointer; flex-shrink: 0; border: 2px solid rgba(255, 255, 255, 0.6);" onclick="claimActiveDrop()">
+      <div style="font-weight: 900; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; text-shadow: 0 2px 4px rgba(0,0,0,0.2);" id="drop-title-text">⚡ FLASH DROP: 50 Extra-Punkte!</div>
+      <div style="font-size: 10px; opacity: 0.95; margin-top: 2px; font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,0.2);" id="drop-timer-text">Nur für kurze Zeit verfügbar! [Jetzt tippen 🎁]</div>
     </div>
 
     <!-- UNTERLEISTE FÜR DUELL & RANGLISTE -->
-    <div id="uni-duell-container" style="display: flex; gap: 8px; margin-bottom: 8px; flex-shrink: 0;">
+    <div id="uni-duell-container" style="display: flex; gap: 8px; margin-bottom: 6px; flex-shrink: 0;">
       <button class="btn" onclick="switchTab('ranking')" style="margin-top: 0; padding: 8px 12px; font-size: 12px; font-weight: 800; background: var(--gradient-main); display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);">
         🏆 Zum Wiener Uni-Duell & Rangliste
       </button>
@@ -729,6 +720,20 @@
 
   </div>
 
+  <!-- MODAL: AKTUELLE SPOTS & PARTNER-AKTIONEN (Öffnet beim Klick auf Punkte) -->
+  <div id="active-spots-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.92); z-index: 100;">
+    <div style="width: 100%; max-width: 400px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 18px; margin: 10px; max-height: 80vh; display: flex; flex-direction: column;">
+      <h3 style="margin-bottom: 4px; font-weight: 900; color: var(--admin);">📍 Aktuelle Campus- & Partner-Spots</h3>
+      <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px; line-height: 1.4;">Hier siehst du alle aktiven Drops in Wien. Gehe zum Spot vor Ort, um die Punkte einzusammeln!</p>
+      
+      <div id="modal-active-spots-list" style="overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;">
+        <p style="font-size: 11px; color: var(--text-muted); text-align: center; padding: 20px;">Lade aktive Spots...</p>
+      </div>
+
+      <button class="btn btn-secondary" onclick="closeActiveSpotsModal()">Schließen</button>
+    </div>
+  </div>
+
   <!-- MODAL: CRUSH RADAR -->
   <div id="crush-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.92); z-index: 100;">
     <div style="width: 100%; max-width: 400px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 18px; margin: 10px;">
@@ -947,7 +952,41 @@
     });
   }
 
-  // --- FLASH DROP LOGIK & AKTIVE SPOTS LISTE ---
+  // --- FLASH DROP LOGIK & AKTIVE SPOTS MODAL ---
+  function openActiveSpotsModal() {
+    document.getElementById('active-spots-modal').classList.remove('hidden');
+    renderActiveSpotsInModal();
+  }
+
+  function closeActiveSpotsModal() {
+    document.getElementById('active-spots-modal').classList.add('hidden');
+  }
+
+  function renderActiveSpotsInModal() {
+    const listEl = document.getElementById('modal-active-spots-list');
+    if (!listEl) return;
+
+    if (allActiveDropsCache.length === 0) {
+      listEl.innerHTML = '<p style="font-size: 12px; color: var(--text-muted); text-align: center; padding: 20px;">Aktuell sind keine Partner-Spots aktiv.</p>';
+      return;
+    }
+
+    listEl.innerHTML = allActiveDropsCache.map(drop => {
+      const isClaimed = localStorage.getItem(`claimed_drop_${drop.id}`);
+      return `
+        <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.04); padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border);">
+          <div>
+            <strong style="font-size: 13px; color: var(--text);">📍 ${drop.title}</strong><br>
+            <span style="font-size: 11px; color: var(--text-muted);">Belohnung: <strong>${drop.reward_value} ${drop.reward_type === 'points' ? 'Punkte' : 'Badge'}</strong></span>
+          </div>
+          <div>
+            ${isClaimed ? '<span style="color: var(--success); font-weight: 800; font-size: 11px;">Eingesammelt ✅</span>' : `<button class="btn-join" onclick="claimSpecificDrop('${drop.id}')">Einlösen 🎯</button>`}
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
   async function loadActiveCampusDrops() {
     try {
       const { data, error } = await _supabase.from('campus_drops')
@@ -957,7 +996,6 @@
 
       allActiveDropsCache = data || [];
       const banner = document.getElementById('campus-drop-banner');
-      const spotsListEl = document.getElementById('active-spots-list');
 
       if (allActiveDropsCache.length > 0) {
         activeDropCache = allActiveDropsCache[0];
@@ -973,31 +1011,12 @@
             const now = new Date().getTime();
             const diffMins = Math.max(1, Math.round((expiresTime - now) / 60000));
             const timerText = document.getElementById('drop-timer-text');
-            if (timerText) timerText.innerText = `Noch ${diffMins} Minuten aktiv! [Jetzt tippen 🎁]`;
+            if (timerText) timerText.innerText = `Noch ${diffMins} Minuten aktiv! [Klick auf Punkte für Alle 🎁]`;
             banner.style.display = 'block';
           }
         }
-
-        // Render Liste aktueller Spots
-        if (spotsListEl) {
-          spotsListEl.innerHTML = allActiveDropsCache.map(drop => {
-            const isClaimed = localStorage.getItem(`claimed_drop_${drop.id}`);
-            return `
-              <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.04); padding: 6px 8px; border-radius: 8px; font-size: 11px;">
-                <div>
-                  <strong>📍 ${drop.title}</strong><br>
-                  <span style="font-size: 10px; color: var(--text-muted);">Belohnung: ${drop.reward_value} ${drop.reward_type === 'points' ? 'Punkte' : 'Badge'}</span>
-                </div>
-                <div>
-                  ${isClaimed ? '<span style="color: var(--success); font-weight: 700;">Eingesammelt ✅</span>' : `<button class="btn-join" onclick="claimSpecificDrop('${drop.id}')">Einlösen 🎯</button>`}
-                </div>
-              </div>
-            `;
-          }).join('');
-        }
       } else {
         if (banner) banner.style.display = 'none';
-        if (spotsListEl) spotsListEl.innerHTML = '<span style="font-size: 11px; color: var(--text-muted);">Aktuell keine Partner-Spots aktiv.</span>';
         handleFallbackDrop();
       }
     } catch (err) {
@@ -1016,7 +1035,7 @@
     } else {
       document.getElementById('drop-title-text').innerText = '⚡ FLASH DROP: 50 Extra-Punkte abholen!';
       const timerText = document.getElementById('drop-timer-text');
-      if (timerText) timerText.innerText = 'Exklusiver Campus-Drop! [Jetzt tippen 🎁]';
+      if (timerText) timerText.innerText = 'Exklusiver Campus-Drop! [Klick auf Punkte für Alle 🎁]';
       banner.style.display = 'block';
     }
   }
@@ -1096,6 +1115,7 @@
     if (existingClaim) {
       localStorage.setItem(claimedKey, 'true');
       loadActiveCampusDrops();
+      renderActiveSpotsInModal();
       return alert('⚠️ Du hast diesen Drop laut Server bereits beansprucht!');
     }
 
@@ -1111,6 +1131,7 @@
 
     localStorage.setItem(claimedKey, 'true');
     loadActiveCampusDrops();
+    renderActiveSpotsInModal();
   }
 
   // --- ADMIN Kontrolle für Campus-Drops mit Zeitfenster & GPS Koordinaten ---
@@ -1138,7 +1159,6 @@
     const minutes = startDate.getMinutes();
     const totalMinutes = hours * 60 + minutes;
 
-    // Erlaubtes Zeitfenster: 04:00 Uhr (240 Min) bis 01:00 Uhr folgendes Tages (1560 Min / oder 0 bis 60 Min)
     const isValidWindow = (totalMinutes >= 240 && totalMinutes <= 1440) || (totalMinutes >= 0 && totalMinutes <= 60);
 
     if (!isValidWindow) {
@@ -1146,7 +1166,6 @@
       return;
     }
 
-    // Automatische Berechnung der 3-Stunden-Laufzeit
     const expiresDate = new Date(startDate.getTime() + 3 * 60 * 60 * 1000);
 
     const { error } = await _supabase.from('campus_drops').insert([{
@@ -1813,7 +1832,6 @@
     const badge = document.getElementById('score');
     badge.innerText = '⭐ Admin';
     badge.className = 'points-badge admin-badge';
-    badge.style.cursor = 'pointer';
     badge.onclick = () => switchTab('admin');
   }
 
