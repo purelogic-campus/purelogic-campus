@@ -800,17 +800,17 @@
     </div>
   </div>
 
-  <!-- MODAL: CAMPUS & ALLGEMEIN QUIZ (MIT 15 SEKUNDEN TIMER) -->
+  <!-- MODAL: CAMPUS & ALLGEMEIN QUIZ (MIT SICHERER BACKEND-ANBINDUNG & 15s TIMER) -->
   <div id="quiz-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.95); z-index: 110;">
     <div style="width: 100%; max-width: 400px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 18px; margin: 10px;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
         <h3 style="font-weight: 900; color: #818cf8; font-size: 15px;" id="quiz-title">🧠 Campus & Allgemein Quiz</h3>
         <span id="quiz-timer-badge" style="background: rgba(236,72,153,0.2); color: var(--accent); border: 1px solid rgba(236,72,153,0.4); padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 800;">⏱️ 15s</span>
       </div>
-      <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;" id="quiz-subtitle">Frage 1 von 3 • +25 Punkte möglich</p>
+      <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;" id="quiz-subtitle">Frage laden...</p>
       
       <div id="quiz-question-container" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 12px; font-size: 13px; font-weight: 700; line-height: 1.4;">
-        Lade Frage...
+        Lade Fragen aus der Datenbank...
       </div>
 
       <div id="quiz-options-container" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px;">
@@ -992,31 +992,10 @@
   let activeDropCache = null;
   let allActiveDropsCache = [];
 
-  // Quiz Variablen (Punkt 7) mit 15 Sek. Timer
-  const campusQuizQuestions = [
-    {
-      q: "Was ist das universelle Lebenselixier im Hörsaal vor einer 8-Uhr-Klausur?",
-      options: ["Energy-Drink & billiger Kaffee", "Champagner und Kaviar", "Frische Bergluft", "Kaltes Leitungswasser"],
-      correct: 0
-    },
-    {
-      q: "Welche Wiener Universität hat den berühmten Arkadenhof im Hauptgebäude?",
-      options: ["TU Wien", "Universität Wien (Uni Hauptgebäude)", "WU Wien", "BOKU"],
-      correct: 1
-    },
-    {
-      q: "Wie nennt man im Studentenjargon die Kunst, eine Vorleistung oder Prüfung auf den allerletzten Drücker zu erledigen?",
-      options: ["Vorbereitung", "Prokrastination & Deadline-Panic", "Masterplan", "Vortrags-Modus"],
-      correct: 1
-    },
-    {
-      q: "Welche Stadt ist der Hauptstandort unseres Campus-Netzwerks PURE LOGIC?",
-      options: ["Salzburg", "Graz", "Wien", "Innsbruck"],
-      correct: 2
-    }
-  ];
+  // Quiz State (Punkt 7 mit Backend-Validierung & 15 Sek. Timer)
+  let activeQuizQuestions = [];
   let currentQuizIndex = 0;
-  let quizScoreGained = 0;
+  let userQuizAnswers = [];
   let quizTimerInterval = null;
   let quizSecondsLeft = 15;
 
@@ -1066,7 +1045,7 @@
     userPoints = val;
     const badge = document.getElementById('score');
     badge.innerText = `${userPoints} P`;
-    badge.className = 'points-badge'; // Auf normalen Badge-Style umschalten zum Testen
+    badge.className = 'points-badge'; 
     badge.onclick = (e) => togglePointsDropdown(e);
     alert(`✅ Test-Punktzahl auf ${userPoints} P gesetzt! Du kannst das Menü jetzt testen.`);
   }
@@ -1086,17 +1065,26 @@
     document.getElementById('more-points-modal').classList.add('hidden');
   }
 
-  // --- CAMPUS QUIZ LOGIK (MIT 15s TIMER) ---
-  function openCampusQuizModal() {
-    const lastPlayedKey = `quiz_played_${currentUserEmail}_${new Date().toDateString()}`;
-    if (currentUserEmail !== MASTER_ADMIN_EMAIL && localStorage.getItem(lastPlayedKey)) {
-      alert('⏳ Du hast das tägliche Quiz heute bereits gespielt! Komm morgen für neue Punkte vorbei. 🚀');
+  // --- SICHERES BACKEND-QUIZ (MIT 15s TIMER & EDGE FUNCTION) ---
+  async function openCampusQuizModal() {
+    document.getElementById('quiz-modal').classList.remove('hidden');
+    document.getElementById('quiz-question-container').innerText = 'Lade Fragen aus der Datenbank... ⏳';
+    document.getElementById('quiz-options-container').innerHTML = '';
+
+    // Fragen aus Supabase laden (Tabelle 'quiz_questions')
+    const { data, error } = await _supabase
+      .from('quiz_questions')
+      .select('id, question_text, options')
+      .limit(5);
+
+    if (error || !data || data.length === 0) {
+      document.getElementById('quiz-question-container').innerText = '⚠️ Keine Quiz-Fragen in der Datenbank gefunden oder Fehler beim Laden.';
       return;
     }
 
+    activeQuizQuestions = data;
     currentQuizIndex = 0;
-    quizScoreGained = 0;
-    document.getElementById('quiz-modal').classList.remove('hidden');
+    userQuizAnswers = [];
     startQuizQuestion();
   }
 
@@ -1106,8 +1094,8 @@
   }
 
   function startQuizQuestion() {
-    if (currentQuizIndex >= campusQuizQuestions.length) {
-      finishQuiz();
+    if (currentQuizIndex >= activeQuizQuestions.length) {
+      submitQuizToBackend();
       return;
     }
 
@@ -1120,19 +1108,26 @@
       updateQuizTimerDisplay();
       if (quizSecondsLeft <= 0) {
         clearInterval(quizTimerInterval);
+        // Bei Ablauf der Zeit wird automatisch null eingetragen (keine Punkte für diese Frage)
+        userQuizAnswers.push({ questionId: activeQuizQuestions[currentQuizIndex].id, selectedOptionId: null });
         currentQuizIndex++;
         startQuizQuestion();
       }
     }, 1000);
 
-    const qData = campusQuizQuestions[currentQuizIndex];
-    document.getElementById('quiz-subtitle').innerText = `Frage ${currentQuizIndex + 1} von ${campusQuizQuestions.length}`;
-    document.getElementById('quiz-question-container').innerText = qData.q;
+    const q = activeQuizQuestions[currentQuizIndex];
+    document.getElementById('quiz-subtitle').innerText = `Frage ${currentQuizIndex + 1} von ${activeQuizQuestions.length}`;
+    document.getElementById('quiz-question-container').innerText = q.question_text;
 
     const optContainer = document.getElementById('quiz-options-container');
-    optContainer.innerHTML = qData.options.map((opt, idx) => `
-      <button class="btn btn-secondary" style="text-align: left; margin-top: 0; padding: 10px 14px; font-size: 12px;" onclick="answerQuiz(${idx})">${opt}</button>
-    `).join('');
+    // Angenommen q.options ist ein JSON-Array von Objekten [{id: 1, text: '...'}, ...] oder Strings
+    const optionsList = Array.isArray(q.options) ? q.options : [];
+
+    optContainer.innerHTML = optionsList.map((opt, idx) => {
+      const optId = opt.id !== undefined ? opt.id : idx;
+      const optText = typeof opt === 'string' ? opt : (opt.text || opt);
+      return `<button class="btn btn-secondary" style="text-align: left; margin-top: 0; padding: 10px 14px; font-size: 12px;" onclick="selectQuizAnswer('${q.id}', ${optId})">${optText}</button>`;
+    }).join('');
   }
 
   function updateQuizTimerDisplay() {
@@ -1142,27 +1137,46 @@
     }
   }
 
-  async function answerQuiz(selectedIndex) {
+  function selectQuizAnswer(questionId, selectedOptionId) {
     if (quizTimerInterval) clearInterval(quizTimerInterval);
-
-    const qData = campusQuizQuestions[currentQuizIndex];
-    if (selectedIndex === qData.correct) {
-      quizScoreGained += 8; 
-    }
+    userQuizAnswers.push({ questionId: questionId, selectedOptionId: selectedOptionId });
     currentQuizIndex++;
     startQuizQuestion();
   }
 
-  async function finishQuiz() {
+  async function submitQuizToBackend() {
     if (quizTimerInterval) clearInterval(quizTimerInterval);
-    const lastPlayedKey = `quiz_played_${currentUserEmail}_${new Date().toDateString()}`;
-    if (currentUserEmail !== MASTER_ADMIN_EMAIL) {
-      localStorage.setItem(lastPlayedKey, 'true');
-    }
+    document.getElementById('quiz-question-container').innerText = 'Wertet Antworten serverseitig aus... ⏳';
+    document.getElementById('quiz-options-container').innerHTML = '';
+    document.getElementById('quiz-subtitle').innerText = 'Sichere Validierung';
 
-    await addPoints(quizScoreGained);
-    alert(`🎉 Quiz beendet! Du hast ${quizScoreGained} Extrapunkte gesammelt! 🚀`);
-    closeCampusQuizModal();
+    try {
+      const { data, error } = await _supabase.functions.invoke('submit-quiz', {
+        body: { answers: userQuizAnswers }
+      });
+
+      if (error) {
+        throw new Error(error.message || 'Fehler beim Aufruf der Edge Function');
+      }
+
+      if (data && data.success) {
+        await addPoints(data.earnedPoints || 0);
+        document.getElementById('quiz-question-container').innerHTML = `
+          <h3 style="color: var(--success); margin-bottom: 6px;">🎉 Quiz erfolgreich beendet!</h3>
+          <p>Deine Antworten wurden sicher im Backend ausgewertet.</p>
+          <p style="margin-top: 6px; font-size: 15px; color: #818cf8;">Erhaltene Punkte: <strong>+${data.earnedPoints} P</strong> 🚀</p>
+        `;
+        document.getElementById('quiz-options-container').innerHTML = `<button class="btn" onclick="closeCampusQuizModal()">Fertig</button>`;
+      } else {
+        throw new Error(data.error || 'Unbekannter Serverfehler');
+      }
+    } catch (err) {
+      document.getElementById('quiz-question-container').innerHTML = `
+        <h3 style="color: var(--accent); margin-bottom: 6px;">⚠️ Hinweis</h3>
+        <p>${err.message}</p>
+      `;
+      document.getElementById('quiz-options-container').innerHTML = `<button class="btn btn-secondary" onclick="closeCampusQuizModal()">Schließen</button>`;
+    }
   }
 
   // --- LEAFLET KARTE INITIALISIEREN ---
@@ -2072,7 +2086,6 @@
     const badge = document.getElementById('score');
     badge.innerText = '⭐ Admin';
     badge.className = 'points-badge admin-badge';
-    // Admin kann nun auch aufs Menü zugreifen, wenn er testen möchte
     badge.onclick = (e) => togglePointsDropdown(e);
   }
 
