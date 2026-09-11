@@ -8,6 +8,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>PURE LOGIC • GenZ Campus</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Leaflet CSS & JS für die interaktive Admin-Karte -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
     :root {
       --bg: #090d16;
@@ -646,11 +649,11 @@
         </div>
       </div>
 
-      <!-- TAB 7: ADMIN PANEL (Neu: Campus-Drops zeitlich & GPS gesteuert) -->
+      <!-- TAB 7: ADMIN PANEL (Mit interaktiver Leaflet Karte) -->
       <div id="tab-admin" class="tab-content hidden">
         <div style="max-width: 600px; padding-bottom: 20px;">
           <h3 style="font-size: 16px; font-weight: 800; margin-bottom: 4px; color: var(--admin);">⚡ Admin-Interface: Campus-Drops & GPS</h3>
-          <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;">Erstelle standortgebundene Flash-Drops. Zeitfenster: <strong>04:00 bis 01:00 Uhr</strong> (Laufzeit: 3h).</p>
+          <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;">Klicke auf die Karte, um den genauen Punkt für den Flash-Drop auszuwählen. Zeitfenster: <strong>04:00 bis 01:00 Uhr</strong> (Laufzeit: 3h).</p>
 
           <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Drop Titel / Info:</label>
           <input type="text" id="admin-drop-title" placeholder="z. B. 50 Punkte im Lokal X!">
@@ -666,6 +669,10 @@
 
           <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Startzeitpunkt (Datum & Uhrzeit):</label>
           <input type="datetime-local" id="admin-drop-start-time">
+
+          <!-- INTERAKTIVE LEAFLET KARTE -->
+          <label style="font-size: 11px; font-weight: 600; color: var(--text-muted); display: block; margin-top: 6px;">📍 Spot auf Karte auswählen (Klick setzt Marker):</label>
+          <div id="admin-map" style="width: 100%; height: 220px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 8px; z-index: 1;"></div>
 
           <div style="display: flex; gap: 8px;">
             <div style="flex: 1;">
@@ -867,6 +874,10 @@
 
   let activeDropCache = null;
 
+  // Globale Variablen für die Admin-Karte
+  let adminMap = null;
+  let adminMarker = null;
+
   window.addEventListener('DOMContentLoaded', async () => {
     checkMatchWednesday();
 
@@ -891,6 +902,39 @@
     
     loadActiveCampusDrops();
   });
+
+  // --- LEAFLET KARTE INITIALISIEREN ---
+  function initAdminMap() {
+    if (adminMap) {
+      adminMap.invalidateSize();
+      return;
+    }
+
+    // Wien als Standardzentrum (Universitätsring / Uni Wien)
+    const defaultLat = 48.2128;
+    const defaultLng = 16.3598;
+
+    adminMap = L.map('admin-map').setView([defaultLat, defaultLng], 14);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(adminMap);
+
+    adminMap.on('click', function(e) {
+      const lat = e.latlng.lat;
+      const lng = e.latlng.lng;
+
+      document.getElementById('admin-drop-lat').value = lat.toFixed(6);
+      document.getElementById('admin-drop-lng').value = lng.toFixed(6);
+
+      if (adminMarker) {
+        adminMarker.setLatLng([lat, lng]);
+      } else {
+        adminMarker = L.marker([lat, lng]).addTo(adminMap);
+      }
+    });
+  }
 
   // --- FLASH DROP LOGIK & ADMIN INTERFACE MIT GPS ---
   async function loadActiveCampusDrops() {
@@ -1088,6 +1132,10 @@
     document.getElementById('admin-drop-start-time').value = '';
     document.getElementById('admin-drop-lat').value = '';
     document.getElementById('admin-drop-lng').value = '';
+    if (adminMarker && adminMap) {
+      adminMap.removeLayer(adminMarker);
+      adminMarker = null;
+    }
     loadActiveCampusDrops();
   }
   // --- ENDE ADMIN KONTROLLE ---
@@ -1360,6 +1408,11 @@
     
     if (tabName === 'profile') renderMyProfileInputs();
     if (tabName === 'ranking') renderUniDuellAndRanking();
+    
+    // Wenn Admin-Tab geöffnet wird, Karte initialisieren / Größe anpassen
+    if (tabName === 'admin') {
+      setTimeout(initAdminMap, 200);
+    }
 
     if (tabName === 'live') {
       document.getElementById('tab-reels').classList.remove('hidden');
