@@ -123,6 +123,7 @@
       border-bottom: 1px solid var(--border);
       padding-bottom: 8px;
       flex-shrink: 0;
+      position: relative;
     }
     .logo { 
       font-weight: 900; font-size: 20px; letter-spacing: -0.5px; 
@@ -144,6 +145,7 @@
       gap: 6px; 
       flex-wrap: nowrap; 
       flex-shrink: 0;
+      position: relative;
     }
 
     .points-badge { 
@@ -157,6 +159,39 @@
       font-weight: 800;
     }
     .points-badge.admin-badge { background: rgba(245, 158, 11, 0.15); color: var(--admin); border: 1px solid rgba(245, 158, 11, 0.3); }
+
+    /* UNTERMENÜ FÜR PUNKTE / MEHR PUNKTE SAMMELN */
+    .points-dropdown {
+      position: absolute;
+      top: 36px;
+      right: 0;
+      width: 220px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      padding: 6px;
+      gap: 4px;
+    }
+    .points-dropdown-item {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 10px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      text-align: left;
+      transition: background 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .points-dropdown-item:hover { background: rgba(99, 102, 241, 0.2); color: #818cf8; }
     
     .header-profile-btn {
       background: rgba(255, 255, 255, 0.05);
@@ -419,9 +454,16 @@
 <div class="app-card">
   <div class="header">
     <div class="logo">PURE LOGIC</div>
-    <div class="header-right">
-      <!-- Klick auf die Punkte-Anzeige öffnet die aktiven Spots & Partner-Aktionen -->
-      <div class="points-badge" id="score" onclick="openActiveSpotsModal()" title="Klicken für aktuelle Campus-Spots">0 P</div>
+    <div class="header-right" id="header-right-container">
+      <!-- Punkte-Anzeige mit Klick-Untermenü -->
+      <div style="position: relative;">
+        <div class="points-badge" id="score" onclick="togglePointsDropdown(event)">0 P</div>
+        <div id="points-dropdown-menu" class="points-dropdown hidden">
+          <div class="points-dropdown-item" onclick="openActiveSpotsModal()">📍 Aktuelle Partner-Spots</div>
+          <div class="points-dropdown-item" onclick="openMorePointsModal()">🎁 Mehr Punkte sammeln</div>
+        </div>
+      </div>
+
       <button class="header-profile-btn hidden" id="header-profile-btn" onclick="switchTab('profile')">
         <img id="header-avatar-preview" class="header-avatar-sm" src="" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'24\' height=\'24\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%2394a3b8\' stroke-width=\'2\'><path d=\'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2\'></path><circle cx=\'12\' cy=\'7\' r=\'4\'></circle></svg>'" alt="Profil">
         <span class="header-profile-text">Profil</span>
@@ -475,7 +517,7 @@
   <!-- STEP 2: MAIN APP -->
   <div id="main-app" class="hidden" style="flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0;">
     
-    <!-- HIER: FLASH DROP BANNER (Kompakt oben) -->
+    <!-- FLASH DROP BANNER -->
     <div id="campus-drop-banner" class="flash-banner-active" style="display:none; width: 100%; background: linear-gradient(135deg, #f59e0b, #ec4899); color: white; padding: 10px 14px; border-radius: 12px; margin-bottom: 6px; text-align: center; cursor: pointer; flex-shrink: 0; border: 2px solid rgba(255, 255, 255, 0.6);" onclick="claimActiveDrop()">
       <div style="font-weight: 900; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; text-shadow: 0 2px 4px rgba(0,0,0,0.2);" id="drop-title-text">⚡ FLASH DROP: 50 Extra-Punkte!</div>
       <div style="font-size: 10px; opacity: 0.95; margin-top: 2px; font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,0.2);" id="drop-timer-text">Nur für kurze Zeit verfügbar! [Jetzt tippen 🎁]</div>
@@ -651,12 +693,23 @@
         </div>
       </div>
 
-      <!-- TAB 7: ADMIN PANEL (Mit interaktiver Leaflet Karte) -->
+      <!-- TAB 7: ADMIN PANEL (Mit interaktiver Leaflet Karte & Punkte-Simulator) -->
       <div id="tab-admin" class="tab-content hidden">
         <div style="max-width: 600px; padding-bottom: 20px;">
-          <h3 style="font-size: 16px; font-weight: 800; margin-bottom: 4px; color: var(--admin);">⚡ Admin-Interface: Campus-Drops & GPS</h3>
-          <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;">Klicke auf die Karte, um den genauen Punkt für den Flash-Drop auszuwählen. Zeitfenster: <strong>04:00 bis 01:00 Uhr</strong> (Laufzeit: 3h).</p>
+          <h3 style="font-size: 16px; font-weight: 800; margin-bottom: 4px; color: var(--admin);">⚡ Admin-Interface: Campus-Drops & Test-Tools</h3>
+          <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;">Verwalte hier Drops und teste dein Punktekonto im Admin-Modus.</p>
 
+          <!-- NEU: ADMIN PUNKTE-TEST-SIMULATOR -->
+          <div style="background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); border-radius: 12px; padding: 12px; margin-bottom: 14px;">
+            <h4 style="font-size: 13px; font-weight: 800; color: var(--admin); margin-bottom: 4px;">🧪 Admin Test-Modus: Punkte simulieren</h4>
+            <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">Da du als Admin bist, kannst du hier deinen Test-Punktestand direkt anpassen:</p>
+            <div style="display: flex; gap: 8px;">
+              <input type="number" id="admin-test-points-input" placeholder="z. B. 45" style="margin: 0; flex: 1;">
+              <button class="btn" onclick="adminSetTestPoints()" style="margin: 0; width: auto; background: var(--admin); color: #000; font-weight: 800; padding: 0 14px;">Punkte setzen</button>
+            </div>
+          </div>
+
+          <h4 style="font-size: 14px; font-weight: 800; margin-bottom: 6px; color: var(--admin);">📍 Neuen Campus-Drop erstellen</h4>
           <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Drop Titel / Info:</label>
           <input type="text" id="admin-drop-title" placeholder="z. B. 50 Punkte im Lokal X!">
 
@@ -720,7 +773,55 @@
 
   </div>
 
-  <!-- MODAL: AKTUELLE SPOTS & PARTNER-AKTIONEN (Öffnet beim Klick auf Punkte) -->
+  <!-- MODAL: MEHR PUNKTE SAMMELN (Auswahlmenü) -->
+  <div id="more-points-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.92); z-index: 100;">
+    <div style="width: 100%; max-width: 400px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 18px; margin: 10px;">
+      <h3 style="margin-bottom: 4px; font-weight: 900; color: var(--primary);">🎁 Mehr Punkte sammeln</h3>
+      <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 14px; line-height: 1.4;">Wähle eine Methode, um deinen Punktestand und dein Uni-Ranking zu pushen:</p>
+      
+      <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px;">
+        <div onclick="closeMorePointsModal(); openCampusQuizModal();" style="background: rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.3); padding: 12px; border-radius: 12px; cursor: pointer; transition: transform 0.2s;">
+          <div style="font-weight: 800; font-size: 13px; color: #818cf8; margin-bottom: 2px;">🧠 Tägliches Campus- & Allgemein-Quiz</div>
+          <div style="font-size: 11px; color: var(--text-muted);">Teste dein Wissen in 15 Sek. pro Frage & hol dir Bonuspunkte!</div>
+        </div>
+
+        <div onclick="closeMorePointsModal(); openActiveSpotsModal();" style="background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.3); padding: 12px; border-radius: 12px; cursor: pointer; transition: transform 0.2s;">
+          <div style="font-weight: 800; font-size: 13px; color: var(--admin); margin-bottom: 2px;">📍 Vor-Ort Campus-Drops</div>
+          <div style="font-size: 11px; color: var(--text-muted);">Checke aktive Partner-Spots in Wien ab.</div>
+        </div>
+
+        <div onclick="closeMorePointsModal(); switchTab('profile');" style="background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); padding: 12px; border-radius: 12px; cursor: pointer; transition: transform 0.2s;">
+          <div style="font-weight: 800; font-size: 13px; color: var(--success); margin-bottom: 2px;">📲 Profil & Social Sharing</div>
+          <div style="font-size: 11px; color: var(--text-muted);">Teile deine Erfolge in WhatsApp / Insta für Hype-Punkte.</div>
+        </div>
+      </div>
+
+      <button class="btn btn-secondary" onclick="closeMorePointsModal()">Schließen</button>
+    </div>
+  </div>
+
+  <!-- MODAL: CAMPUS & ALLGEMEIN QUIZ (MIT 15 SEKUNDEN TIMER) -->
+  <div id="quiz-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.95); z-index: 110;">
+    <div style="width: 100%; max-width: 400px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 18px; margin: 10px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+        <h3 style="font-weight: 900; color: #818cf8; font-size: 15px;" id="quiz-title">🧠 Campus & Allgemein Quiz</h3>
+        <span id="quiz-timer-badge" style="background: rgba(236,72,153,0.2); color: var(--accent); border: 1px solid rgba(236,72,153,0.4); padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 800;">⏱️ 15s</span>
+      </div>
+      <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;" id="quiz-subtitle">Frage 1 von 3 • +25 Punkte möglich</p>
+      
+      <div id="quiz-question-container" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 12px; font-size: 13px; font-weight: 700; line-height: 1.4;">
+        Lade Frage...
+      </div>
+
+      <div id="quiz-options-container" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px;">
+        <!-- Dynamische Antwort-Buttons -->
+      </div>
+
+      <button class="btn btn-secondary" onclick="closeCampusQuizModal()">Abbrechen</button>
+    </div>
+  </div>
+
+  <!-- MODAL: AKTUELLE SPOTS & PARTNER-AKTIONEN -->
   <div id="active-spots-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.92); z-index: 100;">
     <div style="width: 100%; max-width: 400px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 18px; margin: 10px; max-height: 80vh; display: flex; flex-direction: column;">
       <h3 style="margin-bottom: 4px; font-weight: 900; color: var(--admin);">📍 Aktuelle Campus- & Partner-Spots</h3>
@@ -891,6 +992,34 @@
   let activeDropCache = null;
   let allActiveDropsCache = [];
 
+  // Quiz Variablen (Punkt 7) mit 15 Sek. Timer
+  const campusQuizQuestions = [
+    {
+      q: "Was ist das universelle Lebenselixier im Hörsaal vor einer 8-Uhr-Klausur?",
+      options: ["Energy-Drink & billiger Kaffee", "Champagner und Kaviar", "Frische Bergluft", "Kaltes Leitungswasser"],
+      correct: 0
+    },
+    {
+      q: "Welche Wiener Universität hat den berühmten Arkadenhof im Hauptgebäude?",
+      options: ["TU Wien", "Universität Wien (Uni Hauptgebäude)", "WU Wien", "BOKU"],
+      correct: 1
+    },
+    {
+      q: "Wie nennt man im Studentenjargon die Kunst, eine Vorleistung oder Prüfung auf den allerletzten Drücker zu erledigen?",
+      options: ["Vorbereitung", "Prokrastination & Deadline-Panic", "Masterplan", "Vortrags-Modus"],
+      correct: 1
+    },
+    {
+      q: "Welche Stadt ist der Hauptstandort unseres Campus-Netzwerks PURE LOGIC?",
+      options: ["Salzburg", "Graz", "Wien", "Innsbruck"],
+      correct: 2
+    }
+  ];
+  let currentQuizIndex = 0;
+  let quizScoreGained = 0;
+  let quizTimerInterval = null;
+  let quizSecondsLeft = 15;
+
   // Globale Variablen für die Admin-Karte
   let adminMap = null;
   let adminMarker = null;
@@ -918,7 +1047,123 @@
     }
     
     loadActiveCampusDrops();
+
+    window.addEventListener('click', (e) => {
+      const dropdown = document.getElementById('points-dropdown-menu');
+      const scoreBadge = document.getElementById('score');
+      if (dropdown && !dropdown.classList.contains('hidden') && !scoreBadge.contains(e.target)) {
+        dropdown.classList.add('hidden');
+      }
+    });
   });
+
+  // --- ADMIN TEST-MODUS PUNKTE SETZEN ---
+  function adminSetTestPoints() {
+    const input = document.getElementById('admin-test-points-input');
+    const val = parseInt(input.value);
+    if (isNaN(val)) return alert('Bitte eine gültige Zahl eingeben.');
+
+    userPoints = val;
+    const badge = document.getElementById('score');
+    badge.innerText = `${userPoints} P`;
+    badge.className = 'points-badge'; // Auf normalen Badge-Style umschalten zum Testen
+    badge.onclick = (e) => togglePointsDropdown(e);
+    alert(`✅ Test-Punktzahl auf ${userPoints} P gesetzt! Du kannst das Menü jetzt testen.`);
+  }
+
+  // --- UNTERMENÜ & PUNKTE LOGIK ---
+  function togglePointsDropdown(event) {
+    event.stopPropagation();
+    const dropdown = document.getElementById('points-dropdown-menu');
+    dropdown.classList.toggle('hidden');
+  }
+
+  function openMorePointsModal() {
+    document.getElementById('more-points-modal').classList.remove('hidden');
+  }
+
+  function closeMorePointsModal() {
+    document.getElementById('more-points-modal').classList.add('hidden');
+  }
+
+  // --- CAMPUS QUIZ LOGIK (MIT 15s TIMER) ---
+  function openCampusQuizModal() {
+    const lastPlayedKey = `quiz_played_${currentUserEmail}_${new Date().toDateString()}`;
+    if (currentUserEmail !== MASTER_ADMIN_EMAIL && localStorage.getItem(lastPlayedKey)) {
+      alert('⏳ Du hast das tägliche Quiz heute bereits gespielt! Komm morgen für neue Punkte vorbei. 🚀');
+      return;
+    }
+
+    currentQuizIndex = 0;
+    quizScoreGained = 0;
+    document.getElementById('quiz-modal').classList.remove('hidden');
+    startQuizQuestion();
+  }
+
+  function closeCampusQuizModal() {
+    if (quizTimerInterval) clearInterval(quizTimerInterval);
+    document.getElementById('quiz-modal').classList.add('hidden');
+  }
+
+  function startQuizQuestion() {
+    if (currentQuizIndex >= campusQuizQuestions.length) {
+      finishQuiz();
+      return;
+    }
+
+    quizSecondsLeft = 15;
+    updateQuizTimerDisplay();
+
+    if (quizTimerInterval) clearInterval(quizTimerInterval);
+    quizTimerInterval = setInterval(() => {
+      quizSecondsLeft--;
+      updateQuizTimerDisplay();
+      if (quizSecondsLeft <= 0) {
+        clearInterval(quizTimerInterval);
+        currentQuizIndex++;
+        startQuizQuestion();
+      }
+    }, 1000);
+
+    const qData = campusQuizQuestions[currentQuizIndex];
+    document.getElementById('quiz-subtitle').innerText = `Frage ${currentQuizIndex + 1} von ${campusQuizQuestions.length}`;
+    document.getElementById('quiz-question-container').innerText = qData.q;
+
+    const optContainer = document.getElementById('quiz-options-container');
+    optContainer.innerHTML = qData.options.map((opt, idx) => `
+      <button class="btn btn-secondary" style="text-align: left; margin-top: 0; padding: 10px 14px; font-size: 12px;" onclick="answerQuiz(${idx})">${opt}</button>
+    `).join('');
+  }
+
+  function updateQuizTimerDisplay() {
+    const timerBadge = document.getElementById('quiz-timer-badge');
+    if (timerBadge) {
+      timerBadge.innerText = `⏱️ ${quizSecondsLeft}s`;
+    }
+  }
+
+  async function answerQuiz(selectedIndex) {
+    if (quizTimerInterval) clearInterval(quizTimerInterval);
+
+    const qData = campusQuizQuestions[currentQuizIndex];
+    if (selectedIndex === qData.correct) {
+      quizScoreGained += 8; 
+    }
+    currentQuizIndex++;
+    startQuizQuestion();
+  }
+
+  async function finishQuiz() {
+    if (quizTimerInterval) clearInterval(quizTimerInterval);
+    const lastPlayedKey = `quiz_played_${currentUserEmail}_${new Date().toDateString()}`;
+    if (currentUserEmail !== MASTER_ADMIN_EMAIL) {
+      localStorage.setItem(lastPlayedKey, 'true');
+    }
+
+    await addPoints(quizScoreGained);
+    alert(`🎉 Quiz beendet! Du hast ${quizScoreGained} Extrapunkte gesammelt! 🚀`);
+    closeCampusQuizModal();
+  }
 
   // --- LEAFLET KARTE INITIALISIEREN ---
   function initAdminMap() {
@@ -1040,9 +1285,8 @@
     }
   }
 
-  // Hilfsfunktion zur Entfernungsberechnung (Haversine-Formel) in Metern
   function calculateDistance(lat1, lon1, lat2, lon2) {
-    const R = 6371e3; // Meter
+    const R = 6371e3;
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
     const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
@@ -1084,7 +1328,6 @@
       return alert('⏳ Dieser Drop ist leider bereits abgelaufen!');
     }
 
-    // Backend- & GPS-Sicherheitsprüfung
     if (drop.latitude && drop.longitude) {
       if (!navigator.geolocation) {
         return alert('❌ Dein Browser unterstützt keine Standortabfrage.');
@@ -1110,7 +1353,6 @@
       }
     }
 
-    // Serverseitige / Supabase Absicherung gegen Mehrfacheinlösung
     const { data: existingClaim } = await _supabase.from('drop_claims').select('*').eq('drop_id', drop.id).eq('user_email', currentUserEmail).maybeSingle();
     if (existingClaim) {
       localStorage.setItem(claimedKey, 'true');
@@ -1134,7 +1376,6 @@
     renderActiveSpotsInModal();
   }
 
-  // --- ADMIN Kontrolle für Campus-Drops mit Zeitfenster & GPS Koordinaten ---
   async function handleCreateCampusDrop() {
     if (currentUserEmail !== MASTER_ADMIN_EMAIL) {
       alert('⚠️ Nur Administratoren können Campus-Drops erstellen!');
@@ -1196,7 +1437,6 @@
     }
     loadActiveCampusDrops();
   }
-  // --- ENDE ADMIN KONTROLLE ---
 
   function checkMatchWednesday() {
     const today = new Date().getDay();
@@ -1780,7 +2020,7 @@
     renderEvents();
   }
 
-  function showMessage(text, isError = true) {
+  function showMessage(text, isError = type = true) {
     const box = document.getElementById('auth-msg');
     box.innerText = text;
     box.className = `msg-box ${isError ? 'msg-error' : 'msg-success'}`;
@@ -1832,18 +2072,23 @@
     const badge = document.getElementById('score');
     badge.innerText = '⭐ Admin';
     badge.className = 'points-badge admin-badge';
-    badge.onclick = () => switchTab('admin');
+    // Admin kann nun auch aufs Menü zugreifen, wenn er testen möchte
+    badge.onclick = (e) => togglePointsDropdown(e);
   }
 
   async function addPoints(amount) {
-    if (currentUserEmail === MASTER_ADMIN_EMAIL) return;
+    if (currentUserEmail === MASTER_ADMIN_EMAIL) {
+      userPoints += amount;
+      document.getElementById('score').innerText = `${userPoints} P`;
+      return;
+    }
     userPoints += amount;
     updatePointsDisplay();
     renderMyProfilePostsGrid();
   }
 
   function updatePointsDisplay() {
-    if (currentUserEmail === MASTER_ADMIN_EMAIL) return setupAdminUI();
+    if (currentUserEmail === MASTER_ADMIN_EMAIL) return;
     document.getElementById('score').innerText = `${userPoints} P`;
   }
 
