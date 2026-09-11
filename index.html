@@ -479,6 +479,17 @@
       <div style="font-size: 10px; opacity: 0.95; margin-top: 3px; font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,0.2);" id="drop-timer-text">Nur für kurze Zeit verfügbar! [Jetzt tippen 🎁]</div>
     </div>
 
+    <!-- NEU: AKTUELLE SPOTS & PARTNER-AKTIONEN -->
+    <div id="active-spots-container" style="background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 10px 12px; margin-bottom: 8px; flex-shrink: 0; max-height: 120px; overflow-y: auto;">
+      <div style="font-size: 11px; font-weight: 800; color: #f59e0b; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center;">
+        <span>📍 Aktuelle Campus- & Partner-Spots</span>
+        <span style="font-size: 9px; color: var(--text-muted); font-weight: 600;">GPS-verifiziert</span>
+      </div>
+      <div id="active-spots-list" style="display: flex; flex-direction: column; gap: 4px;">
+        <span style="font-size: 11px; color: var(--text-muted);">Lade aktive Partner-Spots...</span>
+      </div>
+    </div>
+
     <!-- UNTERLEISTE FÜR DUELL & RANGLISTE -->
     <div id="uni-duell-container" style="display: flex; gap: 8px; margin-bottom: 8px; flex-shrink: 0;">
       <button class="btn" onclick="switchTab('ranking')" style="margin-top: 0; padding: 8px 12px; font-size: 12px; font-weight: 800; background: var(--gradient-main); display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);">
@@ -873,6 +884,7 @@
   const totalTutorialSteps = 3;
 
   let activeDropCache = null;
+  let allActiveDropsCache = [];
 
   // Globale Variablen für die Admin-Karte
   let adminMap = null;
@@ -910,7 +922,6 @@
       return;
     }
 
-    // Wien als Standardzentrum (Universitätsring / Uni Wien)
     const defaultLat = 48.2128;
     const defaultLng = 16.3598;
 
@@ -936,37 +947,57 @@
     });
   }
 
-  // --- FLASH DROP LOGIK & ADMIN INTERFACE MIT GPS ---
+  // --- FLASH DROP LOGIK & AKTIVE SPOTS LISTE ---
   async function loadActiveCampusDrops() {
     try {
       const { data, error } = await _supabase.from('campus_drops')
         .select('*')
         .gt('expires_at', new Date().toISOString())
-        .order('created_at', { ascending: false })
-        .limit(1);
+        .order('created_at', { ascending: false });
 
+      allActiveDropsCache = data || [];
       const banner = document.getElementById('campus-drop-banner');
-      if (!banner) return;
-      
-      if (data && data.length > 0) {
-        activeDropCache = data[0];
+      const spotsListEl = document.getElementById('active-spots-list');
+
+      if (allActiveDropsCache.length > 0) {
+        activeDropCache = allActiveDropsCache[0];
         const claimedKey = `claimed_drop_${activeDropCache.id}`;
         
         if (localStorage.getItem(claimedKey) || new Date().getTime() > new Date(activeDropCache.expires_at).getTime()) {
-          banner.style.display = 'none';
-          return;
+          if (banner) banner.style.display = 'none';
+        } else {
+          let locationInfo = activeDropCache.latitude ? " 📍 [Vor Ort Spot]" : "";
+          if (banner) {
+            document.getElementById('drop-title-text').innerText = `⚡ FLASH DROP: ${activeDropCache.title}${locationInfo}`;
+            const expiresTime = new Date(activeDropCache.expires_at).getTime();
+            const now = new Date().getTime();
+            const diffMins = Math.max(1, Math.round((expiresTime - now) / 60000));
+            const timerText = document.getElementById('drop-timer-text');
+            if (timerText) timerText.innerText = `Noch ${diffMins} Minuten aktiv! [Jetzt tippen 🎁]`;
+            banner.style.display = 'block';
+          }
         }
 
-        let locationInfo = activeDropCache.latitude ? " 📍 [Vor Ort Spot]" : "";
-        document.getElementById('drop-title-text').innerText = `⚡ FLASH DROP: ${activeDropCache.title}${locationInfo}`;
-        const expiresTime = new Date(activeDropCache.expires_at).getTime();
-        const now = new Date().getTime();
-        const diffMins = Math.max(1, Math.round((expiresTime - now) / 60000));
-        const timerText = document.getElementById('drop-timer-text');
-        if (timerText) timerText.innerText = `Noch ${diffMins} Minuten aktiv! [Jetzt tippen 🎁]`;
-        
-        banner.style.display = 'block';
+        // Render Liste aktueller Spots
+        if (spotsListEl) {
+          spotsListEl.innerHTML = allActiveDropsCache.map(drop => {
+            const isClaimed = localStorage.getItem(`claimed_drop_${drop.id}`);
+            return `
+              <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.04); padding: 6px 8px; border-radius: 8px; font-size: 11px;">
+                <div>
+                  <strong>📍 ${drop.title}</strong><br>
+                  <span style="font-size: 10px; color: var(--text-muted);">Belohnung: ${drop.reward_value} ${drop.reward_type === 'points' ? 'Punkte' : 'Badge'}</span>
+                </div>
+                <div>
+                  ${isClaimed ? '<span style="color: var(--success); font-weight: 700;">Eingesammelt ✅</span>' : `<button class="btn-join" onclick="claimSpecificDrop('${drop.id}')">Einlösen 🎯</button>`}
+                </div>
+              </div>
+            `;
+          }).join('');
+        }
       } else {
+        if (banner) banner.style.display = 'none';
+        if (spotsListEl) spotsListEl.innerHTML = '<span style="font-size: 11px; color: var(--text-muted);">Aktuell keine Partner-Spots aktiv.</span>';
         handleFallbackDrop();
       }
     } catch (err) {
@@ -1003,9 +1034,10 @@
   }
 
   async function claimActiveDrop() {
-    const banner = document.getElementById('campus-drop-banner');
-
-    if (!activeDropCache) {
+    if (activeDropCache) {
+      await claimSpecificDrop(activeDropCache.id);
+    } else {
+      const banner = document.getElementById('campus-drop-banner');
       const fallbackKey = 'claimed_drop_fallback_test';
       if (localStorage.getItem(fallbackKey)) {
         alert('⚠️ Du hast diesen Drop bereits eingesammelt!');
@@ -1017,27 +1049,26 @@
       localStorage.setItem(fallbackKey, 'true');
       alert('🎉 Glückwunsch! Du hast dir erfolgreich 50 Hype-Punkte gesichert! 🔥');
       if (banner) banner.style.display = 'none';
-      return;
     }
+  }
 
-    const claimedKey = `claimed_drop_${activeDropCache.id}`;
+  async function claimSpecificDrop(dropId) {
+    const drop = allActiveDropsCache.find(d => d.id === dropId);
+    if (!drop) return alert('⚠️ Drop nicht gefunden oder bereits abgelaufen.');
+
+    const claimedKey = `claimed_drop_${drop.id}`;
     if (localStorage.getItem(claimedKey)) {
-      alert('⚠️ Du hast diesen Drop bereits eingesammelt!');
-      if (banner) banner.style.display = 'none';
-      return;
+      return alert('⚠️ Du hast diesen Drop bereits eingesammelt!');
     }
 
-    if (new Date().getTime() > new Date(activeDropCache.expires_at).getTime()) {
-      alert('⏳ Dieser Drop ist leider bereits abgelaufen!');
-      if (banner) banner.style.display = 'none';
-      return;
+    if (new Date().getTime() > new Date(drop.expires_at).getTime()) {
+      return alert('⏳ Dieser Drop ist leider bereits abgelaufen!');
     }
 
-    // GPS GEOFENCING PRÜFUNG (Falls Koordinaten hinterlegt sind)
-    if (activeDropCache.latitude && activeDropCache.longitude) {
+    // Backend- & GPS-Sicherheitsprüfung
+    if (drop.latitude && drop.longitude) {
       if (!navigator.geolocation) {
-        alert('❌ Dein Browser unterstützt keine Standortabfrage für diesen Spot.');
-        return;
+        return alert('❌ Dein Browser unterstützt keine Standortabfrage.');
       }
 
       alert('📍 Standort wird geprüft, um zu verifizieren, dass du vor Ort bist...');
@@ -1049,29 +1080,37 @@
 
         const userLat = position.coords.latitude;
         const userLng = position.coords.longitude;
-        const distance = calculateDistance(userLat, userLng, activeDropCache.latitude, activeDropCache.longitude);
-        const allowedRadius = activeDropCache.radius || 100;
+        const distance = calculateDistance(userLat, userLng, drop.latitude, drop.longitude);
+        const allowedRadius = drop.radius || 100;
 
         if (distance > allowedRadius) {
-          alert(`❌ Du bist zu weit entfernt! Du bist ca. ${Math.round(distance)} Meter vom Spot entfernt (Erlaubt: ${allowedRadius}m). Bewege dich vor Ort zum Partner-Lokal oder Campus-Spot! 📍`);
-          return;
+          return alert(`❌ Du bist zu weit entfernt! Du bist ca. ${Math.round(distance)} Meter vom Spot entfernt (Erlaubt: ${allowedRadius}m). Bewege dich vor Ort zum Partner-Lokal! 📍`);
         }
       } catch (err) {
-        alert('❌ Standort konnte nicht ermittelt werden. Bitte erlaube den GPS-Zugriff in deinen Browsereinstellungen.');
-        return;
+        return alert('❌ Standort konnte nicht ermittelt werden. Bitte erlaube den GPS-Zugriff in deinen Browsereinstellungen.');
       }
     }
 
-    if (activeDropCache.reward_type === 'points') {
-      const pts = parseInt(activeDropCache.reward_value) || 20;
+    // Serverseitige / Supabase Absicherung gegen Mehrfacheinlösung
+    const { data: existingClaim } = await _supabase.from('drop_claims').select('*').eq('drop_id', drop.id).eq('user_email', currentUserEmail).maybeSingle();
+    if (existingClaim) {
+      localStorage.setItem(claimedKey, 'true');
+      loadActiveCampusDrops();
+      return alert('⚠️ Du hast diesen Drop laut Server bereits beansprucht!');
+    }
+
+    await _supabase.from('drop_claims').insert([{ drop_id: drop.id, user_email: currentUserEmail }]);
+
+    if (drop.reward_type === 'points') {
+      const pts = parseInt(drop.reward_value) || 20;
       await addPoints(pts);
       alert(`🎉 Drop vor Ort erfolgreich eingesammelt! +${pts} Punkte! 🚀`);
     } else {
-      alert(`🎉 Drop vor Ort eingesammelt! Du hast das seltene Badge erhalten: ${activeDropCache.reward_value} 👑`);
+      alert(`🎉 Drop vor Ort eingesammelt! Du hast das seltene Badge erhalten: ${drop.reward_value} 👑`);
     }
 
     localStorage.setItem(claimedKey, 'true');
-    if (banner) banner.style.display = 'none';
+    loadActiveCampusDrops();
   }
 
   // --- ADMIN Kontrolle für Campus-Drops mit Zeitfenster & GPS Koordinaten ---
@@ -1409,7 +1448,6 @@
     if (tabName === 'profile') renderMyProfileInputs();
     if (tabName === 'ranking') renderUniDuellAndRanking();
     
-    // Wenn Admin-Tab geöffnet wird, Karte initialisieren / Größe anpassen
     if (tabName === 'admin') {
       setTimeout(initAdminMap, 200);
     }
