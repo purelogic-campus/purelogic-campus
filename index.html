@@ -11,8 +11,6 @@
   <!-- Leaflet CSS & JS für die interaktive Admin-Karte -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <!-- jsPDF Bibliothek für den PDF-Download im Lecture Mode -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
     :root {
       --bg: #090d16;
@@ -579,7 +577,7 @@
 
     <div class="tab-content-wrapper">
       
-      <!-- LECTURE MODE ANSICHT (MIT FORMAT-AUSWAHL FÜR .TXT ODER .PDF) -->
+      <!-- LECTURE MODE ANSICHT (MIT EXPORT / SPEICHERN FUNKTION) -->
       <div id="tab-lecture-mode" class="lecture-mode-view">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
           <div>
@@ -591,22 +589,13 @@
 
         <textarea id="lecture-notes-input" class="lecture-notepad" placeholder="Schreibe hier deine Vorlesungsnotizen mit... (Werden automatisch im Browser gespeichert)"></textarea>
 
-        <!-- SPEICHERN & EXPORT BEREICH MIT FORMAT-AUSWAHL (.TXT ODER .PDF) -->
+        <!-- SPEICHERN & EXPORT BEREICH -->
         <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; padding: 10px; margin-top: 4px; flex-shrink: 0;">
           <div style="font-size: 11px; font-weight: 700; color: #cbd5e1; margin-bottom: 6px;">💾 Notiz auf Gerät speichern:</div>
           <div style="display: flex; gap: 6px; margin-bottom: 6px;">
             <input type="text" id="lecture-file-name" placeholder="Dateiname (z.B. Vorlesung_Mathe)" style="margin: 0; flex: 2; font-size: 11px; padding: 8px 10px;">
             <input type="date" id="lecture-file-date" style="margin: 0; flex: 1; font-size: 11px; padding: 8px 10px; background: var(--card); color: white; border: 1px solid var(--border); border-radius: 12px;">
           </div>
-          
-          <div style="display: flex; gap: 6px; margin-bottom: 6px; align-items: center;">
-            <label style="font-size: 11px; font-weight: 600; color: var(--text-muted); white-space: nowrap;">Format:</label>
-            <select id="lecture-file-format" style="margin: 0; font-size: 11px; padding: 8px 10px; background: var(--card); color: white; border: 1px solid var(--border); border-radius: 12px;">
-              <option value="txt">.txt (Textdatei)</option>
-              <option value="pdf">.pdf (Dokument)</option>
-            </select>
-          </div>
-
           <button class="btn" onclick="saveLectureNotesToFile()" style="margin: 0; padding: 9px; font-size: 11px; font-weight: 800;">📥 Als Datei herunterladen (Laptop / Smartphone)</button>
         </div>
       </div>
@@ -1199,7 +1188,7 @@
     });
   });
 
-  // --- LECTURE MODE & SPEICHERN LOGIK (.TXT ODER .PDF) ---
+  // --- LECTURE MODE & SPEICHERN LOGIK (PUNKT 9) ---
   function toggleLectureMode() {
     const appCard = document.querySelector('.app-card');
     const dropdown = document.getElementById('points-dropdown-menu');
@@ -1225,59 +1214,23 @@
 
     const customName = document.getElementById('lecture-file-name').value.trim() || 'Vorlesung_Notizen';
     const customDate = document.getElementById('lecture-file-date').value || new Date().toISOString().split('T')[0];
-    const formatChoice = document.getElementById('lecture-file-format').value;
+    
+    // Dateiinhalte aufbereiten
+    const fileContent = `=== PURE LOGIC CAMPUS NOTIZ ===\nDatum: ${customDate}\nTitel: ${customName}\n=================================\n\n${notesContent}`;
 
-    if (formatChoice === 'txt') {
-      // Als .txt herunterladen
-      const fileContent = `=== PURE LOGIC CAMPUS NOTIZ ===\nDatum: ${customDate}\nTitel: ${customName}\n=================================\n\n${notesContent}`;
-      const blob = new Blob([fileContent], { type: 'text/plain;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${customName}_${customDate}.txt`;
-      
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+    // Blob erstellen und Download-Link triggern (funktioniert auf PC & Smartphone)
+    const blob = new Blob([fileContent], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${customName}_${customDate}.txt`;
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
 
-      alert(`✅ Notiz erfolgreich als "${customName}_${customDate}.txt" heruntergeladen!`);
-    } else if (formatChoice === 'pdf') {
-      // Als .pdf herunterladen mit jsPDF
-      try {
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
-
-        // Header / Titel
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(16);
-        doc.setTextColor(99, 102, 241); // Indigo Primary
-        doc.text("PURE LOGIC • Campus Vorlesungsnotiz", 14, 20);
-
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(10);
-        doc.setTextColor(100, 116, 139); // Muted text
-        doc.text(`Titel: ${customName} | Datum: ${customDate}`, 14, 27);
-
-        doc.setLineWidth(0.5);
-        doc.setStrokeColor(200, 200, 200);
-        doc.line(14, 32, 196, 32);
-
-        // Notizinhalt mit automatischem Zeilenumbruch (splitTextToSize)
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(11);
-        doc.setTextColor(30, 41, 59);
-
-        const splitText = doc.splitTextToSize(notesContent, 180);
-        doc.text(splitText, 14, 42);
-
-        doc.save(`${customName}_${customDate}.pdf`);
-        alert(`✅ Notiz erfolgreich als "${customName}_${customDate}.pdf" heruntergeladen! 📄`);
-      } catch (err) {
-        console.error("PDF Generierungsfehler:", err);
-        alert('❌ Fehler beim Erstellen der PDF-Datei. Bitte versuche es erneut.');
-      }
-    }
+    alert(`✅ Notiz erfolgreich als "${customName}_${customDate}.txt" heruntergeladen!`);
   }
 
   // --- PROF-RATING & SURVIVAL GUIDE LOGIK (PUNKT 8) ---
