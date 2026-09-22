@@ -460,6 +460,7 @@
         <div class="points-badge" id="score" onclick="togglePointsDropdown(event)">0 P</div>
         <div id="points-dropdown-menu" class="points-dropdown hidden">
           <div class="points-dropdown-item" onclick="openActiveSpotsModal()">📍 Aktuelle Partner-Spots</div>
+          <div class="points-dropdown-item" onclick="openProfGuideModal()">📚 Prof-Rating & Survival Guide</div>
           <div class="points-dropdown-item" onclick="openMorePointsModal()">🎁 Mehr Punkte sammeln</div>
         </div>
       </div>
@@ -800,6 +801,65 @@
     </div>
   </div>
 
+  <!-- MODAL: PROF-RATING & SURVIVAL GUIDE (PUNKT 8) -->
+  <div id="prof-guide-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.95); z-index: 120;">
+    <div style="width: 100%; max-width: 480px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 18px; margin: 10px; max-height: 85vh; display: flex; flex-direction: column;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <h3 style="font-weight: 900; color: #818cf8; font-size: 16px;">📚 Prof-Rating & Survival Guide</h3>
+        <button class="btn btn-secondary" style="width: auto; padding: 4px 10px; font-size: 11px; margin-top: 0;" onclick="toggleProfForm()">+ Review schreiben</button>
+      </div>
+      <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;">Altklausuren-Tipps, Prof-Erfahrungen und Schwierigkeitsgrade.</p>
+      
+      <!-- Eingabeformular für neue Reviews (standardmäßig eingeklappt) -->
+      <div id="prof-review-form-container" class="hidden" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 12px;">
+        <h4 style="font-size: 13px; font-weight: 800; margin-bottom: 6px; color: var(--text);">✍️ Neue Erfahrung teilen</h4>
+        
+        <input type="text" id="prof-name-input" placeholder="Name des Professors (z. B. Prof. Müller)" style="margin-bottom: 6px;">
+        <input type="text" id="prof-subject-input" placeholder="Modul / Vorlesung (z. B. Analysis 1)" style="margin-bottom: 6px;">
+        
+        <div style="display: flex; gap: 8px; margin-bottom: 6px;">
+          <div style="flex: 1;">
+            <label style="font-size: 10px; color: var(--text-muted);">Bewertung (1-5 Sterne):</label>
+            <select id="prof-rating-select" style="margin: 2px 0 6px 0;">
+              <option value="5">⭐⭐⭐⭐⭐ (Top)</option>
+              <option value="4">⭐⭐⭐⭐ (Gut)</option>
+              <option value="3">⭐⭐⭐ (Okay)</option>
+              <option value="2">⭐⭐ (Schwer)</option>
+              <option value="1">⭐ (Vorsicht!)</option>
+            </select>
+          </div>
+          <div style="flex: 1;">
+            <label style="font-size: 10px; color: var(--text-muted);">Schwierigkeit (1-5):</label>
+            <select id="prof-difficulty-select" style="margin: 2px 0 6px 0;">
+              <option value="1">1 - Chillig</option>
+              <option value="2">2 - Machbar</option>
+              <option value="3">3 - Mittel</option>
+              <option value="4">4 - Anspruchsvoll</option>
+              <option value="5">5 - Killer-Klausur</option>
+            </select>
+          </div>
+        </div>
+
+        <textarea id="prof-comment-input" rows="3" placeholder="Insider-Tipps, Altklausuren-Hinweise, Vorlesungsstil..." style="margin-bottom: 8px; resize: none;"></textarea>
+        
+        <div style="display: flex; gap: 6px;">
+          <button class="btn" onclick="submitProfReview()" style="margin-top: 0; padding: 8px;">Abschicken (+15 P) 🚀</button>
+          <button class="btn btn-secondary" onclick="toggleProfForm()" style="margin-top: 0; padding: 8px; width: auto;">Abbrechen</button>
+        </div>
+      </div>
+
+      <!-- Suchfeld für Filter -->
+      <input type="text" id="prof-search-input" placeholder="🔍 Nach Prof oder Fach suchen..." oninput="filterProfReviews()" style="margin-bottom: 10px;">
+
+      <!-- Liste der Reviews -->
+      <div id="prof-reviews-list" style="overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;">
+        <p style="font-size: 12px; color: var(--text-muted); text-align: center; padding: 20px;">Lade Bewertungen...</p>
+      </div>
+
+      <button class="btn btn-secondary" onclick="closeProfGuideModal()">Schließen</button>
+    </div>
+  </div>
+
   <!-- MODAL: CAMPUS & ALLGEMEIN QUIZ (MIT SICHERER BACKEND-ANBINDUNG & 15s TIMER) -->
   <div id="quiz-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.95); z-index: 110;">
     <div style="width: 100%; max-width: 400px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 18px; margin: 10px;">
@@ -991,6 +1051,7 @@
 
   let activeDropCache = null;
   let allActiveDropsCache = [];
+  let profReviewsCache = [];
 
   // Quiz State (Punkt 7 mit Backend-Validierung & 15 Sek. Timer)
   let activeQuizQuestions = [];
@@ -1026,6 +1087,7 @@
     }
     
     loadActiveCampusDrops();
+    loadProfReviews();
 
     window.addEventListener('click', (e) => {
       const dropdown = document.getElementById('points-dropdown-menu');
@@ -1035,6 +1097,106 @@
       }
     });
   });
+
+  // --- PROF-RATING & SURVIVAL GUIDE LOGIK (PUNKT 8) ---
+  function openProfGuideModal() {
+    document.getElementById('prof-guide-modal').classList.remove('hidden');
+    loadProfReviews();
+  }
+
+  function closeProfGuideModal() {
+    document.getElementById('prof-guide-modal').classList.add('hidden');
+  }
+
+  function toggleProfForm() {
+    const form = document.getElementById('prof-review-form-container');
+    form.classList.toggle('hidden');
+  }
+
+  async function loadProfReviews() {
+    const { data, error } = await _supabase.from('prof_reviews').select('*').order('created_at', { ascending: false });
+    if (!error && data) {
+      profReviewsCache = data;
+      renderProfReviews(profReviewsCache);
+    }
+  }
+
+  function renderProfReviews(reviews) {
+    const listEl = document.getElementById('prof-reviews-list');
+    if (!listEl) return;
+
+    if (reviews.length === 0) {
+      listEl.innerHTML = '<p style="font-size: 12px; color: var(--text-muted); text-align: center; padding: 20px;">Noch keine Bewertungen vorhanden. Sei der Erste! 🎓</p>';
+      return;
+    }
+
+    listEl.innerHTML = reviews.map(r => {
+      const stars = '⭐'.repeat(r.rating);
+      const diffText = ['Chillig', 'Machbar', 'Mittel', 'Anspruchsvoll', 'Killer-Klausur'][r.difficulty - 1] || 'Mittel';
+      return `
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; padding: 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
+            <div>
+              <strong style="font-size: 13px; color: var(--text);">👨‍🏫 ${r.prof_name}</strong><br>
+              <span style="font-size: 11px; color: #818cf8; font-weight: 700;">📖 ${r.subject_code}</span>
+            </div>
+            <div style="text-align: right;">
+              <span style="font-size: 11px;">${stars}</span><br>
+              <span style="font-size: 10px; color: var(--text-muted);">Schwierigkeit: ${diffText}</span>
+            </div>
+          </div>
+          <p style="font-size: 12px; color: var(--text-muted); margin-top: 6px; line-height: 1.4;">💬 ${r.comment}</p>
+          <div style="font-size: 9px; color: var(--text-muted); margin-top: 6px; text-align: right;">Von: ${r.author_email ? r.author_email.split('@')[0] : 'Anonym'}</div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function filterProfReviews() {
+    const query = document.getElementById('prof-search-input').value.toLowerCase();
+    const filtered = profReviewsCache.filter(r => 
+      r.prof_name.toLowerCase().includes(query) || 
+      r.subject_code.toLowerCase().includes(query) ||
+      r.comment.toLowerCase().includes(query)
+    );
+    renderProfReviews(filtered);
+  }
+
+  async function submitProfReview() {
+    const profName = document.getElementById('prof-name-input').value.trim();
+    const subject = document.getElementById('prof-subject-input').value.trim();
+    const rating = parseInt(document.getElementById('prof-rating-select').value);
+    const difficulty = parseInt(document.getElementById('prof-difficulty-select').value);
+    const comment = document.getElementById('prof-comment-input').value.trim();
+
+    if (!profName || !subject || !comment) {
+      alert('⚠️ Bitte fülle alle Felder aus.');
+      return;
+    }
+
+    const { error } = await _supabase.from('prof_reviews').insert([{
+      prof_name: profName,
+      subject_code: subject,
+      rating: rating,
+      difficulty: difficulty,
+      comment: comment,
+      author_email: currentUserEmail || 'student@uni.at'
+    }]);
+
+    if (error) {
+      alert('Fehler beim Speichern der Review: ' + error.message);
+      return;
+    }
+
+    document.getElementById('prof-name-input').value = '';
+    document.getElementById('prof-subject-input').value = '';
+    document.getElementById('prof-comment-input').value = '';
+    toggleProfForm();
+
+    await addPoints(15);
+    loadProfReviews();
+    alert('🎉 Review erfolgreich veröffentlicht! +15 Punkte gutgeschrieben. 🚀');
+  }
 
   // --- ADMIN TEST-MODUS PUNKTE SETZEN ---
   function adminSetTestPoints() {
@@ -1120,7 +1282,6 @@
     document.getElementById('quiz-question-container').innerText = q.question_text;
 
     const optContainer = document.getElementById('quiz-options-container');
-    // Angenommen q.options ist ein JSON-Array von Objekten [{id: 1, text: '...'}, ...] oder Strings
     const optionsList = Array.isArray(q.options) ? q.options : [];
 
     optContainer.innerHTML = optionsList.map((opt, idx) => {
@@ -1513,6 +1674,7 @@
       .on('postgres_changes', { event: '*', schema: 'public', table: 'follows' }, () => loadFollows())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'media_posts' }, () => loadMediaPosts())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'campus_drops' }, () => loadActiveCampusDrops())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'prof_reviews' }, () => loadProfReviews())
       .subscribe();
   }
 
