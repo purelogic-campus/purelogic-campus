@@ -7,490 +7,15 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>PURE LOGIC • GenZ Campus</title>
+  
+  <!-- Supabase & Leaflet & jsPDF -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <!-- Leaflet CSS & JS für die interaktive Admin-Karte -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <style>
-    :root {
-      --bg: #090d16;
-      --card: #131c31;
-      --card-glass: rgba(19, 28, 49, 0.85);
-      --border: rgba(255, 255, 255, 0.08);
-      --text: #f1f5f9;
-      --text-muted: #94a3b8;
-      --primary: #6366f1;
-      --primary-hover: #4f46e5;
-      --accent: #ec4899;
-      --success: #10b981;
-      --admin: #f59e0b;
-      --gradient-main: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
-    }
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-    /* 💖 KITSCHIGER & AUFFÄLLIGER MATCH-MITTWOCH OVERRIDES */
-    .match-wednesday {
-      --bg: #220217 !important;
-      --card: #3c092f !important;
-      --card-glass: rgba(60, 9, 47, 0.9) !important;
-      --primary: #ff007f !important;
-      --primary-hover: #d9006c !important;
-      --accent: #ff007f !important;
-      --text: #ffffff !important;
-      --border: rgba(255, 0, 127, 0.4) !important;
-      --gradient-main: linear-gradient(135deg, #ff007f 0%, #ff66b2 50%, #ffeb3b 100%) !important;
-    }
-
-    /* ⚡ GOLD-PINKER FLASH DROP ANIMATION & STYLES */
-    @keyframes goldPinkFlash {
-      0% { 
-        transform: scale(1); 
-        box-shadow: 0 4px 15px rgba(245, 158, 11, 0.6); 
-        filter: brightness(1); 
-      }
-      50% { 
-        transform: scale(1.025); 
-        box-shadow: 0 0 30px 10px rgba(236, 72, 153, 0.95), 0 0 15px 5px rgba(251, 191, 36, 0.8); 
-        filter: brightness(1.2); 
-      }
-      100% { 
-        transform: scale(1); 
-        box-shadow: 0 4px 15px rgba(245, 158, 11, 0.6); 
-        filter: brightness(1); 
-      }
-    }
-    .flash-banner-active {
-      animation: goldPinkFlash 0.9s infinite ease-in-out;
-    }
-
-    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-    html, body {
-      background-color: var(--bg);
-      color: var(--text);
-      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      height: 100vh;
-      height: 100dvh;
-      width: 100vw;
-      overflow: hidden;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      position: fixed;
-    }
-
-    /* Schwebende Herzen im Hintergrund am Match-Mittwoch */
-    .match-wednesday::before {
-      content: "💖 💘 💕 💖 💗 💓 💞 💖 💘";
-      position: absolute;
-      top: 0; left: 0; width: 100%; height: 100%;
-      font-size: 24px;
-      opacity: 0.12;
-      z-index: 0;
-      pointer-events: none;
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: space-around;
-      align-content: space-around;
-      animation: floatHearts 10s infinite alternate ease-in-out;
-    }
-
-    @keyframes floatHearts {
-      0% { transform: translateY(0) scale(1); }
-      100% { transform: translateY(-15px) scale(1.05); }
-    }
-
-    .app-card {
-      background: var(--bg);
-      border: none;
-      border-radius: 0;
-      padding: 10px 14px;
-      width: 100vw;
-      height: 100vh;
-      height: 100dvh;
-      display: flex;
-      flex-direction: column;
-      padding-top: calc(8px + env(safe-area-inset-top));
-      padding-bottom: calc(4px + env(safe-area-inset-bottom));
-      overflow: hidden;
-      position: relative;
-      z-index: 1;
-    }
-
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 8px;
-      border-bottom: 1px solid var(--border);
-      padding-bottom: 8px;
-      flex-shrink: 0;
-      position: relative;
-    }
-    .logo { 
-      font-weight: 900; font-size: 20px; letter-spacing: -0.5px; 
-      background: var(--gradient-main); -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-    }
-
-    .match-wednesday .logo {
-      filter: drop-shadow(0 0 10px rgba(255, 0, 127, 0.6));
-    }
-    .match-wednesday .logo::after {
-      content: " 💖✨";
-      -webkit-text-fill-color: initial;
-      animation: pulseGlow 1.5s infinite;
-    }
-    
-    .header-right { 
-      display: flex; 
-      align-items: center; 
-      gap: 6px; 
-      flex-wrap: nowrap; 
-      flex-shrink: 0;
-      position: relative;
-    }
-
-    .points-badge { 
-      background: rgba(99, 102, 241, 0.15); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.3);
-      padding: 5px 10px; border-radius: 30px; font-size: 11px; font-weight: 700; cursor: pointer; transition: transform 0.2s;
-    }
-    .points-badge:hover { transform: scale(1.05); }
-    .match-wednesday .points-badge {
-      background: rgba(255, 0, 127, 0.25); color: #ff66b2; border: 1px solid rgba(255, 0, 127, 0.6);
-      box-shadow: 0 0 12px rgba(255, 0, 127, 0.7);
-      font-weight: 800;
-    }
-    .points-badge.admin-badge { background: rgba(245, 158, 11, 0.15); color: var(--admin); border: 1px solid rgba(245, 158, 11, 0.3); }
-
-    /* UNTERMENÜ FÜR PUNKTE / MEHR PUNKTE SAMMELN */
-    .points-dropdown {
-      position: absolute;
-      top: 36px;
-      right: 0;
-      width: 230px;
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
-      z-index: 1000;
-      display: flex;
-      flex-direction: column;
-      padding: 6px;
-      gap: 4px;
-    }
-    .points-dropdown-item {
-      background: rgba(255,255,255,0.03);
-      border: 1px solid var(--border);
-      color: var(--text);
-      padding: 8px 10px;
-      border-radius: 10px;
-      font-size: 11px;
-      font-weight: 700;
-      cursor: pointer;
-      text-align: left;
-      transition: background 0.2s;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .points-dropdown-item:hover { background: rgba(99, 102, 241, 0.2); color: #818cf8; }
-    
-    .header-profile-btn {
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid var(--border);
-      padding: 2px 6px 2px 2px;
-      border-radius: 30px;
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .header-profile-btn:hover { background: rgba(255, 255, 255, 0.1); }
-    .header-avatar-sm {
-      width: 20px; height: 20px; border-radius: 50%; object-fit: cover; background: var(--border);
-      display: flex; align-items: center; justify-content: center; font-size: 9px; color: var(--text-muted);
-    }
-    .header-profile-text { font-size: 11px; font-weight: 600; color: var(--text); }
-
-    .btn-logout {
-      background: rgba(236, 72, 153, 0.1); color: var(--accent); border: 1px solid rgba(236, 72, 153, 0.25);
-      padding: 5px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; cursor: pointer;
-      white-space: nowrap;
-    }
-
-    .language-select {
-      background: var(--card);
-      border: 1px solid var(--border);
-      color: var(--text);
-      padding: 5px 6px;
-      border-radius: 10px;
-      font-size: 11px;
-      font-weight: 600;
-      cursor: pointer;
-      outline: none;
-      transition: all 0.2s;
-    }
-    .language-select:hover { background: rgba(255, 255, 255, 0.1); }
-    .language-select option { background: var(--bg); color: var(--text); }
-    
-    .match-banner {
-      display: none;
-      background: linear-gradient(90deg, #ff007f, #ff758c, #ff007f);
-      background-size: 200% auto;
-      color: white;
-      text-align: center;
-      padding: 6px;
-      font-size: 11px;
-      font-weight: 900;
-      border-radius: 10px;
-      margin-bottom: 6px;
-      box-shadow: 0 0 15px rgba(255, 0, 127, 0.6);
-      animation: gradientMove 3s linear infinite, pulseGlow 2s infinite;
-      letter-spacing: 0.5px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      flex-shrink: 0;
-      cursor: pointer;
-    }
-    .match-wednesday .match-banner { display: block; }
-
-    @keyframes gradientMove {
-      0% { background-position: 0% center; }
-      100% { background-position: 200% center; }
-    }
-
-    .nav-tabs {
-      display: flex; align-items: center; justify-content: space-between; gap: 4px; margin-top: 6px; flex-shrink: 0;
-      background: var(--card-glass); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-      padding: 4px 6px; border-radius: 20px; border: 1px solid var(--border);
-      position: relative; overflow: visible;
-      z-index: 10;
-    }
-    .tab-btn {
-      flex: 1; background: none; border: none; color: var(--text-muted);
-      padding: 8px 2px; font-size: 11px; font-weight: 700; cursor: pointer;
-      border-radius: 12px; transition: all 0.25s; text-align: center; white-space: nowrap;
-    }
-    .tab-btn.active { background: rgba(99, 102, 241, 0.15); color: #818cf8; }
-    .match-wednesday .tab-btn.active { 
-      background: rgba(255, 0, 127, 0.3); 
-      color: #ff66b2; 
-      box-shadow: inset 0 0 8px rgba(255, 0, 127, 0.4);
-    }
-    
-    .tab-btn-action-container {
-      flex: 0 0 auto;
-      position: relative;
-      width: 56px;
-      height: 16px;
-      margin: 0 2px;
-      z-index: 11;
-    }
-    .tab-btn-action {
-      position: absolute;
-      bottom: 2px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 56px; 
-      height: 56px;
-      border-radius: 50%;
-      background: var(--gradient-main);
-      color: white;
-      border: 3px solid var(--bg);
-      font-size: 28px;
-      font-weight: 900;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      box-shadow: 0 6px 20px rgba(99, 102, 241, 0.65);
-      transition: transform 0.2s, box-shadow 0.2s;
-    }
-    .match-wednesday .tab-btn-action { box-shadow: 0 0 25px rgba(255, 0, 127, 0.9); }
-    .tab-btn-action:active { transform: translateX(-50%) scale(0.92); }
-
-    .tab-content-wrapper { flex: 1; overflow: hidden; display: flex; flex-direction: column; position: relative; min-height: 0; }
-    .tab-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; min-height: 0; }
-    .hidden { display: none !important; }
-    
-    .btn {
-      background: var(--gradient-main); color: white; border: none; padding: 11px;
-      border-radius: 12px; cursor: pointer; width: 100%; font-weight: 700; font-size: 13px;
-      box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35); transition: all 0.2s; margin-top: 6px;
-    }
-    .match-wednesday .btn { box-shadow: 0 4px 18px rgba(255, 0, 127, 0.6); }
-    .btn:active { transform: scale(0.97); }
-    .btn:disabled { background: #334155 !important; opacity: 0.5 !important; cursor: not-allowed !important; box-shadow: none !important; color: #94a3b8 !important; }
-    .btn-secondary { background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border); color: var(--text); box-shadow: none; }
-    
-    input, textarea, select {
-      width: 100%; padding: 11px 14px; margin: 4px 0 10px;
-      background: var(--card); border: 1px solid var(--border); color: white;
-      border-radius: 12px; font-size: 13px; font-family: inherit; transition: border-color 0.2s;
-    }
-    input:focus, textarea:focus, select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15); }
-    .match-wednesday input:focus, .match-wednesday textarea:focus, .match-wednesday select:focus { box-shadow: 0 0 0 3px rgba(255, 0, 127, 0.3); border-color: #ff007f; }
-    
-    .password-container { position: relative; }
-    .password-toggle { position: absolute; right: 12px; top: 14px; background: none; border: none; cursor: pointer; font-size: 16px; color: var(--text-muted); }
-    .forgot-password { display: block; text-align: right; font-size: 11px; color: #818cf8; text-decoration: none; margin-top: -6px; margin-bottom: 10px; cursor: pointer; font-weight: 600; }
-    .match-wednesday .forgot-password { color: #ff66b2; }
-    
-    .category-group { display: flex; gap: 6px; margin-bottom: 8px; overflow-x: auto; padding-bottom: 2px; flex-shrink: 0; }
-    .cat-pill {
-      background: var(--card); border: 1px solid var(--border); color: var(--text-muted);
-      padding: 6px 14px; border-radius: 30px; font-size: 12px; cursor: pointer; white-space: nowrap; font-weight: 600; transition: all 0.2s;
-    }
-    .cat-pill.active { background: rgba(99, 102, 241, 0.2); border-color: var(--primary); color: #818cf8; }
-    .match-wednesday .cat-pill.active { background: rgba(255, 0, 127, 0.25); border-color: #ff007f; color: #ff66b2; box-shadow: 0 0 10px rgba(255,0,127,0.3); }
-
-    .event-card, .live-card {
-      background: var(--card); border: 1px solid var(--border); border-radius: 16px;
-      padding: 14px; margin-bottom: 10px; box-shadow: 0 4px 16px rgba(0,0,0,0.2);
-    }
-    .match-wednesday .event-card, .match-wednesday .live-card { box-shadow: 0 4px 18px rgba(255, 0, 127, 0.2); border-color: rgba(255, 0, 127, 0.3); }
-    .event-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px; }
-    .event-title { font-size: 15px; font-weight: 700; }
-    .event-meta { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; }
-    .event-footer { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); padding-top: 8px; }
-    .btn-join { background: rgba(16, 185, 129, 0.15); color: var(--success); border: 1px solid rgba(16, 185, 129, 0.3); padding: 5px 12px; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer; }
-    .match-wednesday .btn-join { background: rgba(255, 0, 127, 0.2); color: #ff66b2; border-color: rgba(255, 0, 127, 0.4); }
-
-    .chat-container { display: flex; flex-direction: column; height: 100%; min-height: 0; }
-    .messages-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 2px; margin-bottom: 10px; min-height: 0; }
-    .msg-bubble { background: var(--card); border: 1px solid var(--border); padding: 10px 12px; border-radius: 14px; font-size: 13px; max-width: 650px; }
-    .chat-input-area { display: flex; gap: 6px; flex-shrink: 0; }
-    .chat-input-area input { margin: 0; }
-    .msg-box { font-size: 12px; margin-bottom: 10px; padding: 8px; border-radius: 10px; text-align: center; font-weight: 600; }
-    .msg-error { background: rgba(236,72,153,0.15); color: var(--accent); }
-    .msg-success { background: rgba(16,185,129,0.15); color: var(--success); }
-
-    .profile-header-card { display: flex; align-items: center; justify-content: space-between; background: var(--card); border: 1px solid var(--border); padding: 14px; border-radius: 16px; margin-bottom: 12px; max-width: 600px; }
-    .profile-avatar-lg { 
-      width: 64px; height: 64px; border-radius: 50%; background: var(--border); object-fit: cover; 
-      display: flex; align-items: center; justify-content: center; font-size: 26px; color: var(--text-muted); 
-      border: 2px solid var(--primary); flex-shrink: 0; cursor: pointer; transition: transform 0.2s, opacity 0.2s; 
-    }
-    .match-wednesday .profile-avatar-lg { border-color: #ff007f; box-shadow: 0 0 12px rgba(255,0,127,0.6); }
-    .profile-avatar-lg:hover { transform: scale(1.05); opacity: 0.9; }
-    
-    .reels-subnav { 
-      display: flex; gap: 6px; width: 100%; flex-shrink: 0; margin-bottom: 8px; 
-      background: var(--card-glass); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-      padding: 4px 6px; border-radius: 20px; border: 1px solid var(--border);
-    }
-    .reel-pill { 
-      flex: 1; background: none; border: 1px solid transparent; color: var(--text-muted); 
-      padding: 8px 2px; border-radius: 14px; font-size: 11px; cursor: pointer; font-weight: 700; 
-      text-align: center; white-space: nowrap; transition: all 0.25s; overflow: hidden; text-overflow: ellipsis; 
-    }
-    .reel-pill.active { background: rgba(99, 102, 241, 0.15); color: #818cf8; }
-    .match-wednesday .reel-pill.active { background: rgba(255, 0, 127, 0.25); color: #ff66b2; box-shadow: 0 0 8px rgba(255,0,127,0.3); }
-
-    .reel-card-wrapper { 
-      flex: 1; 
-      overflow-y: scroll; 
-      scroll-snap-type: y mandatory; 
-      -webkit-overflow-scrolling: touch; 
-      display: flex; 
-      flex-direction: column; 
-      gap: 16px; 
-      padding: 10px 0; 
-      min-height: 0; 
-    }
-    .reel-item { 
-      scroll-snap-align: center; 
-      scroll-snap-stop: always;
-      height: calc(100% - 50px); 
-      min-height: 320px; 
-      max-height: calc(100% - 50px); 
-      background: #000; 
-      border-radius: 16px; 
-      border: 1px solid var(--border); 
-      position: relative; 
-      overflow: hidden; 
-      display: flex; 
-      flex-direction: column; 
-      justify-content: center; 
-      align-items: center; 
-      max-width: 420px; 
-      margin: 0 auto; 
-      width: 100%; 
-      box-shadow: 0 8px 24px rgba(0,0,0,0.5); 
-      flex: 0 0 calc(100% - 50px); 
-    }
-    .match-wednesday .reel-item { border-color: rgba(255, 0, 127, 0.4); box-shadow: 0 8px 30px rgba(255, 0, 127, 0.25); }
-    .reel-media { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
-    .reel-overlay { 
-      position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-      z-index: 2; background: rgba(9, 13, 22, 0.75); 
-      padding: 24px; display: flex; flex-direction: column; 
-      align-items: center; justify-content: center; text-align: center; 
-    }
-    
-    .footer-links { display: flex; justify-content: center; gap: 8px; padding: 4px 0 0 0; font-size: 10px; color: var(--text-muted); flex-shrink: 0; }
-    .footer-links span { cursor: pointer; transition: color 0.2s; }
-    .footer-links span:hover { color: #818cf8; text-decoration: underline; }
-    .match-wednesday .footer-links span:hover { color: #ff66b2; }
-
-    .profile-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 10px; }
-    .profile-grid-item { aspect-ratio: 1; background: var(--card); border-radius: 8px; overflow: hidden; border: 1px solid var(--border); position: relative; }
-    .profile-grid-item img, .profile-grid-item video { width: 100%; height: 100%; object-fit: cover; }
-    
-    .tutorial-step { display: none; }
-    .tutorial-step.active { display: block; }
-
-    /* 🎓 LECTURE MODE (Vorlesungs-Modus) */
-    .app-card.lecture-mode {
-      background: #000000 !important;
-      --card: #0c0c0c !important;
-      --border: rgba(255, 255, 255, 0.05) !important;
-    }
-    .app-card.lecture-mode .header-right > *:not(#score),
-    .app-card.lecture-mode .match-banner,
-    .app-card.lecture-mode #campus-drop-banner,
-    .app-card.lecture-mode #uni-duell-container,
-    .app-card.lecture-mode .nav-tabs,
-    .app-card.lecture-mode .footer-links,
-    .app-card.lecture-mode .tab-content-wrapper > *:not(#tab-lecture-mode) {
-      display: none !important;
-    }
-    
-    .lecture-mode-view {
-      display: none;
-      flex-direction: column;
-      height: 100%;
-      padding: 10px 0;
-    }
-    .app-card.lecture-mode .lecture-mode-view {
-      display: flex;
-    }
-    .lecture-notepad {
-      flex: 1;
-      background: #0c0c0c;
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 14px;
-      color: #e2e8f0;
-      font-size: 14px;
-      resize: none;
-      font-family: inherit;
-      line-height: 1.5;
-      margin-bottom: 8px;
-    }
-    .lecture-notepad:focus {
-      border-color: #333;
-      box-shadow: none;
-    }
-
-    @keyframes pulseGlow {
-      0% { opacity: 0.8; text-shadow: 0 0 8px rgba(255, 0, 127, 0.6); }
-      50% { opacity: 1; text-shadow: 0 0 20px rgba(255, 0, 127, 1); }
-      100% { opacity: 0.8; text-shadow: 0 0 8px rgba(255, 0, 127, 0.6); }
-    }
-    
-    @media (min-width: 768px) { .app-card { padding: 20px 24px; } #tab-profile, #auth-gate > div { max-width: 500px; } }
-  </style>
+  <!-- Eigenes Stylesheet -->
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
@@ -577,7 +102,7 @@
 
     <div class="tab-content-wrapper">
       
-      <!-- LECTURE MODE ANSICHT (MIT EXPORT / SPEICHERN FUNKTION) -->
+      <!-- LECTURE MODE ANSICHT -->
       <div id="tab-lecture-mode" class="lecture-mode-view">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
           <div>
@@ -589,13 +114,21 @@
 
         <textarea id="lecture-notes-input" class="lecture-notepad" placeholder="Schreibe hier deine Vorlesungsnotizen mit... (Werden automatisch im Browser gespeichert)"></textarea>
 
-        <!-- SPEICHERN & EXPORT BEREICH -->
         <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; padding: 10px; margin-top: 4px; flex-shrink: 0;">
           <div style="font-size: 11px; font-weight: 700; color: #cbd5e1; margin-bottom: 6px;">💾 Notiz auf Gerät speichern:</div>
           <div style="display: flex; gap: 6px; margin-bottom: 6px;">
             <input type="text" id="lecture-file-name" placeholder="Dateiname (z.B. Vorlesung_Mathe)" style="margin: 0; flex: 2; font-size: 11px; padding: 8px 10px;">
             <input type="date" id="lecture-file-date" style="margin: 0; flex: 1; font-size: 11px; padding: 8px 10px; background: var(--card); color: white; border: 1px solid var(--border); border-radius: 12px;">
           </div>
+          
+          <div style="display: flex; gap: 6px; margin-bottom: 6px; align-items: center;">
+            <label style="font-size: 11px; font-weight: 600; color: var(--text-muted); white-space: nowrap;">Format:</label>
+            <select id="lecture-file-format" style="margin: 0; font-size: 11px; padding: 8px 10px; background: var(--card); color: white; border: 1px solid var(--border); border-radius: 12px;">
+              <option value="txt">.txt (Textdatei)</option>
+              <option value="pdf">.pdf (Dokument)</option>
+            </select>
+          </div>
+
           <button class="btn" onclick="saveLectureNotesToFile()" style="margin: 0; padding: 9px; font-size: 11px; font-weight: 800;">📥 Als Datei herunterladen (Laptop / Smartphone)</button>
         </div>
       </div>
@@ -761,13 +294,12 @@
         </div>
       </div>
 
-      <!-- TAB 7: ADMIN PANEL (Mit interaktiver Leaflet Karte & Punkte-Simulator) -->
+      <!-- TAB 7: ADMIN PANEL -->
       <div id="tab-admin" class="tab-content hidden">
         <div style="max-width: 600px; padding-bottom: 20px;">
           <h3 style="font-size: 16px; font-weight: 800; margin-bottom: 4px; color: var(--admin);">⚡ Admin-Interface: Campus-Drops & Test-Tools</h3>
           <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;">Verwalte hier Drops und teste dein Punktekonto im Admin-Modus.</p>
 
-          <!-- NEU: ADMIN PUNKTE-TEST-SIMULATOR -->
           <div style="background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); border-radius: 12px; padding: 12px; margin-bottom: 14px;">
             <h4 style="font-size: 13px; font-weight: 800; color: var(--admin); margin-bottom: 4px;">🧪 Admin Test-Modus: Punkte simulieren</h4>
             <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">Da du als Admin bist, kannst du hier deinen Test-Punktestand direkt anpassen:</p>
@@ -793,7 +325,6 @@
           <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Startzeitpunkt (Datum & Uhrzeit):</label>
           <input type="datetime-local" id="admin-drop-start-time">
 
-          <!-- INTERAKTIVE LEAFLET KARTE -->
           <label style="font-size: 11px; font-weight: 600; color: var(--text-muted); display: block; margin-top: 6px;">📍 Spot auf Karte auswählen (Klick setzt Marker):</label>
           <div id="admin-map" style="width: 100%; height: 220px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 8px; z-index: 1;"></div>
 
@@ -841,34 +372,32 @@
 
   </div>
 
-  <!-- MODAL: MEHR PUNKTE SAMMELN (Auswahlmenü) -->
+  <!-- MODALS (Mehr Punkte, Prof-Guide, Quiz, Active Spots, Crush, etc.) -->
   <div id="more-points-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.92); z-index: 100;">
     <div style="width: 100%; max-width: 400px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 18px; margin: 10px;">
       <h3 style="margin-bottom: 4px; font-weight: 900; color: var(--primary);">🎁 Mehr Punkte sammeln</h3>
       <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 14px; line-height: 1.4;">Wähle eine Methode, um deinen Punktestand und dein Uni-Ranking zu pushen:</p>
       
       <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px;">
-        <div onclick="closeMorePointsModal(); openCampusQuizModal();" style="background: rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.3); padding: 12px; border-radius: 12px; cursor: pointer; transition: transform 0.2s;">
+        <div onclick="closeMorePointsModal(); openCampusQuizModal();" style="background: rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.3); padding: 12px; border-radius: 12px; cursor: pointer;">
           <div style="font-weight: 800; font-size: 13px; color: #818cf8; margin-bottom: 2px;">🧠 Tägliches Campus- & Allgemein-Quiz</div>
           <div style="font-size: 11px; color: var(--text-muted);">Teste dein Wissen in 15 Sek. pro Frage & hol dir Bonuspunkte!</div>
         </div>
 
-        <div onclick="closeMorePointsModal(); openActiveSpotsModal();" style="background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.3); padding: 12px; border-radius: 12px; cursor: pointer; transition: transform 0.2s;">
+        <div onclick="closeMorePointsModal(); openActiveSpotsModal();" style="background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.3); padding: 12px; border-radius: 12px; cursor: pointer;">
           <div style="font-weight: 800; font-size: 13px; color: var(--admin); margin-bottom: 2px;">📍 Vor-Ort Campus-Drops</div>
           <div style="font-size: 11px; color: var(--text-muted);">Checke aktive Partner-Spots in Wien ab.</div>
         </div>
 
-        <div onclick="closeMorePointsModal(); switchTab('profile');" style="background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); padding: 12px; border-radius: 12px; cursor: pointer; transition: transform 0.2s;">
+        <div onclick="closeMorePointsModal(); switchTab('profile');" style="background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); padding: 12px; border-radius: 12px; cursor: pointer;">
           <div style="font-weight: 800; font-size: 13px; color: var(--success); margin-bottom: 2px;">📲 Profil & Social Sharing</div>
           <div style="font-size: 11px; color: var(--text-muted);">Teile deine Erfolge in WhatsApp / Insta für Hype-Punkte.</div>
         </div>
       </div>
-
       <button class="btn btn-secondary" onclick="closeMorePointsModal()">Schließen</button>
     </div>
   </div>
 
-  <!-- MODAL: PROF-RATING & SURVIVAL GUIDE (PUNKT 8) -->
   <div id="prof-guide-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.95); z-index: 120;">
     <div style="width: 100%; max-width: 480px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 18px; margin: 10px; max-height: 85vh; display: flex; flex-direction: column;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
@@ -877,16 +406,14 @@
       </div>
       <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;">Altklausuren-Tipps, Prof-Erfahrungen und Schwierigkeitsgrade.</p>
       
-      <!-- Eingabeformular für neue Reviews (standardmäßig eingeklappt) -->
       <div id="prof-review-form-container" class="hidden" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 12px;">
         <h4 style="font-size: 13px; font-weight: 800; margin-bottom: 6px; color: var(--text);">✍️ Neue Erfahrung teilen</h4>
-        
         <input type="text" id="prof-name-input" placeholder="Name des Professors (z. B. Prof. Müller)" style="margin-bottom: 6px;">
         <input type="text" id="prof-subject-input" placeholder="Modul / Vorlesung (z. B. Analysis 1)" style="margin-bottom: 6px;">
         
         <div style="display: flex; gap: 8px; margin-bottom: 6px;">
           <div style="flex: 1;">
-            <label style="font-size: 10px; color: var(--text-muted);">Bewertung (1-5 Sterne):</label>
+            <label style="font-size: 10px; color: var(--text-muted);">Bewertung:</label>
             <select id="prof-rating-select" style="margin: 2px 0 6px 0;">
               <option value="5">⭐⭐⭐⭐⭐ (Top)</option>
               <option value="4">⭐⭐⭐⭐ (Gut)</option>
@@ -896,7 +423,7 @@
             </select>
           </div>
           <div style="flex: 1;">
-            <label style="font-size: 10px; color: var(--text-muted);">Schwierigkeit (1-5):</label>
+            <label style="font-size: 10px; color: var(--text-muted);">Schwierigkeit:</label>
             <select id="prof-difficulty-select" style="margin: 2px 0 6px 0;">
               <option value="1">1 - Chillig</option>
               <option value="2">2 - Machbar</option>
@@ -906,28 +433,21 @@
             </select>
           </div>
         </div>
-
-        <textarea id="prof-comment-input" rows="3" placeholder="Insider-Tipps, Altklausuren-Hinweise, Vorlesungsstil..." style="margin-bottom: 8px; resize: none;"></textarea>
-        
+        <textarea id="prof-comment-input" rows="3" placeholder="Insider-Tipps, Altklausuren..." style="margin-bottom: 8px; resize: none;"></textarea>
         <div style="display: flex; gap: 6px;">
           <button class="btn" onclick="submitProfReview()" style="margin-top: 0; padding: 8px;">Abschicken (+15 P) 🚀</button>
           <button class="btn btn-secondary" onclick="toggleProfForm()" style="margin-top: 0; padding: 8px; width: auto;">Abbrechen</button>
         </div>
       </div>
 
-      <!-- Suchfeld für Filter -->
       <input type="text" id="prof-search-input" placeholder="🔍 Nach Prof oder Fach suchen..." oninput="filterProfReviews()" style="margin-bottom: 10px;">
-
-      <!-- Liste der Reviews -->
       <div id="prof-reviews-list" style="overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;">
         <p style="font-size: 12px; color: var(--text-muted); text-align: center; padding: 20px;">Lade Bewertungen...</p>
       </div>
-
       <button class="btn btn-secondary" onclick="closeProfGuideModal()">Schließen</button>
     </div>
   </div>
 
-  <!-- MODAL: CAMPUS & ALLGEMEIN QUIZ (MIT SICHERER BACKEND-ANBINDUNG & 15s TIMER) -->
   <div id="quiz-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.95); z-index: 110;">
     <div style="width: 100%; max-width: 400px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 18px; margin: 10px;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
@@ -935,73 +455,52 @@
         <span id="quiz-timer-badge" style="background: rgba(236,72,153,0.2); color: var(--accent); border: 1px solid rgba(236,72,153,0.4); padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 800;">⏱️ 15s</span>
       </div>
       <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;" id="quiz-subtitle">Frage laden...</p>
-      
-      <div id="quiz-question-container" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 12px; font-size: 13px; font-weight: 700; line-height: 1.4;">
-        Lade Fragen aus der Datenbank...
-      </div>
-
-      <div id="quiz-options-container" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px;">
-        <!-- Dynamische Antwort-Buttons -->
-      </div>
-
+      <div id="quiz-question-container" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 12px; font-size: 13px; font-weight: 700; line-height: 1.4;">Lade Fragen...</div>
+      <div id="quiz-options-container" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px;"></div>
       <button class="btn btn-secondary" onclick="closeCampusQuizModal()">Abbrechen</button>
     </div>
   </div>
 
-  <!-- MODAL: AKTUELLE SPOTS & PARTNER-AKTIONEN -->
   <div id="active-spots-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.92); z-index: 100;">
     <div style="width: 100%; max-width: 400px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 18px; margin: 10px; max-height: 80vh; display: flex; flex-direction: column;">
       <h3 style="margin-bottom: 4px; font-weight: 900; color: var(--admin);">📍 Aktuelle Campus- & Partner-Spots</h3>
-      <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px; line-height: 1.4;">Hier siehst du alle aktiven Drops in Wien. Gehe zum Spot vor Ort, um die Punkte einzusammeln!</p>
-      
-      <div id="modal-active-spots-list" style="overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;">
-        <p style="font-size: 11px; color: var(--text-muted); text-align: center; padding: 20px;">Lade aktive Spots...</p>
-      </div>
-
+      <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px; line-height: 1.4;">Gehe zum Spot vor Ort, um Punkte einzusammeln!</p>
+      <div id="modal-active-spots-list" style="overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;"></div>
       <button class="btn btn-secondary" onclick="closeActiveSpotsModal()">Schließen</button>
     </div>
   </div>
 
-  <!-- MODAL: CRUSH RADAR -->
   <div id="crush-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.92); z-index: 100;">
     <div style="width: 100%; max-width: 400px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 18px; margin: 10px;">
       <h3 style="margin-bottom: 4px; font-weight: 900; color: var(--accent);">💖 Anonymes Crush Radar</h3>
-      <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px; line-height: 1.4;">Trage die E-Mail oder den Namen deines Campus-Crushes ein. Bleibt es einseitig, erfährt es niemand. Matchen sich beide gegenseitig, gibt es ein Blind-Date!</p>
-      
+      <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px; line-height: 1.4;">Trage deinen Campus-Crush ein. Bei gegenseitigem Match gibt es ein Blind-Date!</p>
       <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Crush (E-Mail oder @handle):</label>
       <input type="text" id="crush-target-input" placeholder="crush@uni.at oder @username">
-
-      <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Geheimer Hinweis / Vibe (optional):</label>
-      <input type="text" id="crush-hint-input" placeholder="z.B. Wir sahen uns in der Bib in Reihe 4...">
-
+      <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Geheimer Hinweis (optional):</label>
+      <input type="text" id="crush-hint-input" placeholder="z.B. Bib Reihe 4...">
       <button class="btn" onclick="submitCrush()">Abschicken & Hoffen 💘</button>
-      
       <div id="crush-matches-box" style="margin-top: 12px; font-size: 12px; text-align: center; color: var(--text-muted);"></div>
-
       <button class="btn btn-secondary" onclick="closeCrushModal()" style="margin-top: 8px;">Schließen</button>
     </div>
   </div>
 
-  <!-- MODAL: TUTORIAL -->
   <div id="stream-help-modal" class="hidden tab-content" style="align-items: center; justify-content: center;">
     <div style="width: 100%; max-width: 420px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 20px; max-height: 85vh; overflow-y: auto;">
       <h3 style="margin-bottom: 12px; font-weight: 800; color: #818cf8;">💡 Live-Stream Campus Guide</h3>
-      
       <div id="tutorial-steps-container" style="min-height: 120px; margin-bottom: 16px;">
         <div class="tutorial-step active" data-step="1">
           <h4 style="font-size: 14px; margin-bottom: 6px;">Schritt 1 von 3: Vorbereitung</h4>
-          <p style="font-size: 12px; color: var(--text-muted); line-height: 1.4;">Stelle sicher, dass du eine stabile Internetverbindung hast und eine passende Plattform bereitsteht.</p>
+          <p style="font-size: 12px; color: var(--text-muted);">Stelle sicher, dass du eine stabile Verbindung hast.</p>
         </div>
         <div class="tutorial-step" data-step="2">
           <h4 style="font-size: 14px; margin-bottom: 6px;">Schritt 2 von 3: Community & Regeln</h4>
-          <p style="font-size: 12px; color: var(--text-muted); line-height: 1.4;">Gehe respektvoll mit anderen Studierenden um. Keine Belästigung, kein Spam.</p>
+          <p style="font-size: 12px; color: var(--text-muted);">Respektvoller Umgang miteinander.</p>
         </div>
         <div class="tutorial-step" data-step="3">
           <h4 style="font-size: 14px; margin-bottom: 6px;">Schritt 3 von 3: Bonuspunkte</h4>
-          <p style="font-size: 12px; color: var(--text-muted); line-height: 1.4;">Nach Abschluss schaltest du den Live-Button frei und sammelst wertvolle Punkte!</p>
+          <p style="font-size: 12px; color: var(--text-muted);">Sammle wertvolle Punkte!</p>
         </div>
       </div>
-
       <div style="display: flex; gap: 8px;">
         <button class="btn btn-secondary" id="tutorial-back-btn" onclick="changeTutorialStep(-1)" style="margin-top: 0; display: none;">Zurück</button>
         <button class="btn" id="tutorial-next-btn" onclick="changeTutorialStep(1)" style="margin-top: 0;">Weiter</button>
@@ -1010,7 +509,6 @@
     </div>
   </div>
 
-  <!-- MODAL: GO LIVE -->
   <div id="go-live-modal" class="hidden tab-content" style="align-items: center; justify-content: center;">
     <div style="width: 100%; max-width: 400px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 16px;">
       <h3 style="margin-bottom: 8px; font-weight: 800;">🔴 Live-Stream starten</h3>
@@ -1028,7 +526,6 @@
     </div>
   </div>
 
-  <!-- MODAL: MELDEN -->
   <div id="report-modal" class="hidden tab-content" style="align-items: center; justify-content: center;">
     <div style="width: 100%; max-width: 400px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 16px;">
       <h3 style="margin-bottom: 8px; font-weight: 800;">🚨 Inhalts-Meldung</h3>
@@ -1043,7 +540,6 @@
     </div>
   </div>
 
-  <!-- MODAL: IMPRESSUM -->
   <div id="impressum-modal" class="hidden tab-content" style="align-items: center; justify-content: center;">
     <div style="width: 100%; max-width: 420px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 16px; max-height: 80vh; overflow-y: auto;">
       <h3 style="margin-bottom: 8px; font-weight: 800;">Impressum</h3>
@@ -1052,7 +548,6 @@
     </div>
   </div>
 
-  <!-- MODAL: AGB -->
   <div id="agb-modal" class="hidden tab-content" style="align-items: center; justify-content: center;">
     <div style="width: 100%; max-width: 420px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 16px; max-height: 80vh; overflow-y: auto;">
       <h3 style="margin-bottom: 8px; font-weight: 800;">AGB</h3>
@@ -1061,21 +556,17 @@
     </div>
   </div>
 
-  <!-- MODAL: UPLOAD -->
   <div id="upload-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.92); z-index: 100;">
     <div style="width: 100%; max-width: 400px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 18px; margin: 10px;">
       <h3 style="margin-bottom: 4px; font-weight: 900; color: var(--accent);">🤫 Anonyme Confession teilen</h3>
-      <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px; line-height: 1.4;">Teile deinen Campus-Gossip oder Beichte 100% anonym im Feed. Keine Namen, keine Spuren.</p>
-      
+      <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px; line-height: 1.4;">Teile deinen Campus-Gossip 100% anonym im Feed.</p>
       <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Deine Confession:</label>
-      <textarea id="confession-text-input" rows="4" placeholder="Was wollte schon immer alle Welt über den Campus wissen...?" style="resize: none;"></textarea>
-
+      <textarea id="confession-text-input" rows="4" placeholder="Was wollte schon immer alle Welt wissen...?" style="resize: none;"></textarea>
       <button class="btn" onclick="submitConfessionPost()">Anonym posten (+15 P) 🚀</button>
       <button class="btn btn-secondary" onclick="closeUploadModal()" style="margin-top: 8px;">Abbrechen</button>
     </div>
   </div>
 
-  <!-- MODAL: TREFFEN ERSTELLEN -->
   <div id="create-modal" class="hidden tab-content" style="align-items: center; justify-content: center;">
     <div style="width: 100%; max-width: 400px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 16px;">
       <h3 style="margin-bottom: 8px; font-weight: 800;">Spontanes Treffen erstellen</h3>
@@ -1089,1426 +580,11 @@
       <button class="btn btn-secondary" onclick="toggleModal(false)">Abbrechen</button>
     </div>
   </div>
+
 </div>
 
-<script>
-  const SUPABASE_URL = 'https://ykyfdrnkxqfvhasfbehe.supabase.co';
-  const SUPABASE_KEY = 'sb_publishable_2bLjUm02NS5XDAJMvVDgTA_rSzQKZAe';
-  const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-  const MASTER_ADMIN_EMAIL = 'admin@purelogic.app';
-  const MASTER_ADMIN_PASS = 'Doschi08021991';
-
-  let currentUserEmail = localStorage.getItem('campus_email') || '';
-  let userPoints = 0;
-  let selectedCategory = '☕ Kaffee';
-  let selectedGoLiveCategory = '🎮 Gaming';
-  let activeFilter = 'Alle';
-  let activeLiveFilter = 'Alle';
-  let reelFilter = 'foryou';
-  let allEventsCache = [];
-  let liveStreamsCache = [];
-  let globalChatCache = [];
-  let profilesCache = {};
-  let followsCache = []; 
-  let mediaPostsCache = [];
-  
-  let currentTutorialStep = 1;
-  const totalTutorialSteps = 3;
-
-  let activeDropCache = null;
-  let allActiveDropsCache = [];
-  let profReviewsCache = [];
-  let isLectureModeActive = false;
-
-  // Quiz State (Punkt 7 mit Backend-Validierung & 15 Sek. Timer)
-  let activeQuizQuestions = [];
-  let currentQuizIndex = 0;
-  let userQuizAnswers = [];
-  let quizTimerInterval = null;
-  let quizSecondsLeft = 15;
-
-  // Globale Variablen für die Admin-Karte
-  let adminMap = null;
-  let adminMarker = null;
-
-  window.addEventListener('DOMContentLoaded', async () => {
-    checkMatchWednesday();
-
-    if (currentUserEmail) {
-      document.getElementById('logout-btn').classList.remove('hidden');
-      document.getElementById('header-profile-btn').classList.remove('hidden');
-      if (currentUserEmail === MASTER_ADMIN_EMAIL) {
-        userPoints = 9999;
-        setupAdminUI();
-        initApp();
-      } else {
-        const { data } = await _supabase.from('users').select('*').eq('email', currentUserEmail).maybeSingle();
-        if (data) {
-          userPoints = data.points || 0;
-          updatePointsDisplay();
-          initApp();
-        } else {
-          resetUser(false);
-        }
-      }
-    }
-    
-    loadActiveCampusDrops();
-    loadProfReviews();
-
-    // Notizen aus LocalStorage für den Lecture Mode laden & Standardwerte setzen
-    const notesInput = document.getElementById('lecture-notes-input');
-    const fileNameInput = document.getElementById('lecture-file-name');
-    const fileDateInput = document.getElementById('lecture-file-date');
-
-    if (notesInput) {
-      notesInput.value = localStorage.getItem('lecture_mode_notes') || '';
-      notesInput.addEventListener('input', () => {
-        localStorage.setItem('lecture_mode_notes', notesInput.value);
-      });
-    }
-
-    if (fileDateInput) {
-      // Heutiges Datum als Standard setzen
-      const todayStr = new Date().toISOString().split('T')[0];
-      fileDateInput.value = todayStr;
-    }
-
-    if (fileNameInput) {
-      fileNameInput.value = 'Vorlesung_Notizen';
-    }
-
-    window.addEventListener('click', (e) => {
-      const dropdown = document.getElementById('points-dropdown-menu');
-      const scoreBadge = document.getElementById('score');
-      if (dropdown && !dropdown.classList.contains('hidden') && !scoreBadge.contains(e.target)) {
-        dropdown.classList.add('hidden');
-      }
-    });
-  });
-
-  // --- LECTURE MODE & SPEICHERN LOGIK (PUNKT 9) ---
-  function toggleLectureMode() {
-    const appCard = document.querySelector('.app-card');
-    const dropdown = document.getElementById('points-dropdown-menu');
-    if (dropdown) dropdown.classList.add('hidden');
-
-    isLectureModeActive = !isLectureModeActive;
-
-    if (isLectureModeActive) {
-      appCard.classList.add('lecture-mode');
-      const savedNotes = localStorage.getItem('lecture_mode_notes') || '';
-      document.getElementById('lecture-notes-input').value = savedNotes;
-    } else {
-      appCard.classList.remove('lecture-mode');
-    }
-  }
-
-  function saveLectureNotesToFile() {
-    const notesContent = document.getElementById('lecture-notes-input').value;
-    if (!notesContent.trim()) {
-      alert('⚠️ Deine Notiz ist leer. Es gibt nichts zum Speichern!');
-      return;
-    }
-
-    const customName = document.getElementById('lecture-file-name').value.trim() || 'Vorlesung_Notizen';
-    const customDate = document.getElementById('lecture-file-date').value || new Date().toISOString().split('T')[0];
-    
-    // Dateiinhalte aufbereiten
-    const fileContent = `=== PURE LOGIC CAMPUS NOTIZ ===\nDatum: ${customDate}\nTitel: ${customName}\n=================================\n\n${notesContent}`;
-
-    // Blob erstellen und Download-Link triggern (funktioniert auf PC & Smartphone)
-    const blob = new Blob([fileContent], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${customName}_${customDate}.txt`;
-    
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-
-    alert(`✅ Notiz erfolgreich als "${customName}_${customDate}.txt" heruntergeladen!`);
-  }
-
-  // --- PROF-RATING & SURVIVAL GUIDE LOGIK (PUNKT 8) ---
-  function openProfGuideModal() {
-    document.getElementById('prof-guide-modal').classList.remove('hidden');
-    loadProfReviews();
-  }
-
-  function closeProfGuideModal() {
-    document.getElementById('prof-guide-modal').classList.add('hidden');
-  }
-
-  function toggleProfForm() {
-    const form = document.getElementById('prof-review-form-container');
-    form.classList.toggle('hidden');
-  }
-
-  async function loadProfReviews() {
-    const { data, error } = await _supabase.from('prof_reviews').select('*').order('created_at', { ascending: false });
-    if (!error && data) {
-      profReviewsCache = data;
-      renderProfReviews(profReviewsCache);
-    }
-  }
-
-  function renderProfReviews(reviews) {
-    const listEl = document.getElementById('prof-reviews-list');
-    if (!listEl) return;
-
-    if (reviews.length === 0) {
-      listEl.innerHTML = '<p style="font-size: 12px; color: var(--text-muted); text-align: center; padding: 20px;">Noch keine Bewertungen vorhanden. Sei der Erste! 🎓</p>';
-      return;
-    }
-
-    listEl.innerHTML = reviews.map(r => {
-      const stars = '⭐'.repeat(r.rating);
-      const diffText = ['Chillig', 'Machbar', 'Mittel', 'Anspruchsvoll', 'Killer-Klausur'][r.difficulty - 1] || 'Mittel';
-      return `
-        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; padding: 12px;">
-          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
-            <div>
-              <strong style="font-size: 13px; color: var(--text);">👨‍🏫 ${r.prof_name}</strong><br>
-              <span style="font-size: 11px; color: #818cf8; font-weight: 700;">📖 ${r.subject_code}</span>
-            </div>
-            <div style="text-align: right;">
-              <span style="font-size: 11px;">${stars}</span><br>
-              <span style="font-size: 10px; color: var(--text-muted);">Schwierigkeit: ${diffText}</span>
-            </div>
-          </div>
-          <p style="font-size: 12px; color: var(--text-muted); margin-top: 6px; line-height: 1.4;">💬 ${r.comment}</p>
-          <div style="font-size: 9px; color: var(--text-muted); margin-top: 6px; text-align: right;">Von: ${r.author_email ? r.author_email.split('@')[0] : 'Anonym'}</div>
-        </div>
-      `;
-    }).join('');
-  }
-
-  function filterProfReviews() {
-    const query = document.getElementById('prof-search-input').value.toLowerCase();
-    const filtered = profReviewsCache.filter(r => 
-      r.prof_name.toLowerCase().includes(query) || 
-      r.subject_code.toLowerCase().includes(query) ||
-      r.comment.toLowerCase().includes(query)
-    );
-    renderProfReviews(filtered);
-  }
-
-  async function submitProfReview() {
-    const profName = document.getElementById('prof-name-input').value.trim();
-    const subject = document.getElementById('prof-subject-input').value.trim();
-    const rating = parseInt(document.getElementById('prof-rating-select').value);
-    const difficulty = parseInt(document.getElementById('prof-difficulty-select').value);
-    const comment = document.getElementById('prof-comment-input').value.trim();
-
-    if (!profName || !subject || !comment) {
-      alert('⚠️ Bitte fülle alle Felder aus.');
-      return;
-    }
-
-    const { error } = await _supabase.from('prof_reviews').insert([{
-      prof_name: profName,
-      subject_code: subject,
-      rating: rating,
-      difficulty: difficulty,
-      comment: comment,
-      author_email: currentUserEmail || 'student@uni.at'
-    }]);
-
-    if (error) {
-      alert('Fehler beim Speichern der Review: ' + error.message);
-      return;
-    }
-
-    document.getElementById('prof-name-input').value = '';
-    document.getElementById('prof-subject-input').value = '';
-    document.getElementById('prof-comment-input').value = '';
-    toggleProfForm();
-
-    await addPoints(15);
-    loadProfReviews();
-    alert('🎉 Review erfolgreich veröffentlicht! +15 Punkte gutgeschrieben. 🚀');
-  }
-
-  // --- ADMIN TEST-MODUS PUNKTE SETZEN ---
-  function adminSetTestPoints() {
-    const input = document.getElementById('admin-test-points-input');
-    const val = parseInt(input.value);
-    if (isNaN(val)) return alert('Bitte eine gültige Zahl eingeben.');
-
-    userPoints = val;
-    const badge = document.getElementById('score');
-    badge.innerText = `${userPoints} P`;
-    badge.className = 'points-badge'; 
-    badge.onclick = (e) => togglePointsDropdown(e);
-    alert(`✅ Test-Punktzahl auf ${userPoints} P gesetzt! Du kannst das Menü jetzt testen.`);
-  }
-
-  // --- UNTERMENÜ & PUNKTE LOGIK ---
-  function togglePointsDropdown(event) {
-    event.stopPropagation();
-    const dropdown = document.getElementById('points-dropdown-menu');
-    dropdown.classList.toggle('hidden');
-  }
-
-  function openMorePointsModal() {
-    document.getElementById('more-points-modal').classList.remove('hidden');
-  }
-
-  function closeMorePointsModal() {
-    document.getElementById('more-points-modal').classList.add('hidden');
-  }
-
-  // --- SICHERES BACKEND-QUIZ (MIT 15s TIMER & EDGE FUNCTION) ---
-  async function openCampusQuizModal() {
-    document.getElementById('quiz-modal').classList.remove('hidden');
-    document.getElementById('quiz-question-container').innerText = 'Lade Fragen aus der Datenbank... ⏳';
-    document.getElementById('quiz-options-container').innerHTML = '';
-
-    const { data, error } = await _supabase
-      .from('quiz_questions')
-      .select('id, question_text, options')
-      .limit(5);
-
-    if (error || !data || data.length === 0) {
-      document.getElementById('quiz-question-container').innerText = '⚠️ Keine Quiz-Fragen in der Datenbank gefunden oder Fehler beim Laden.';
-      return;
-    }
-
-    activeQuizQuestions = data;
-    currentQuizIndex = 0;
-    userQuizAnswers = [];
-    startQuizQuestion();
-  }
-
-  function closeCampusQuizModal() {
-    if (quizTimerInterval) clearInterval(quizTimerInterval);
-    document.getElementById('quiz-modal').classList.add('hidden');
-  }
-
-  function startQuizQuestion() {
-    if (currentQuizIndex >= activeQuizQuestions.length) {
-      submitQuizToBackend();
-      return;
-    }
-
-    quizSecondsLeft = 15;
-    updateQuizTimerDisplay();
-
-    if (quizTimerInterval) clearInterval(quizTimerInterval);
-    quizTimerInterval = setInterval(() => {
-      quizSecondsLeft--;
-      updateQuizTimerDisplay();
-      if (quizSecondsLeft <= 0) {
-        clearInterval(quizTimerInterval);
-        userQuizAnswers.push({ questionId: activeQuizQuestions[currentQuizIndex].id, selectedOptionId: null });
-        currentQuizIndex++;
-        startQuizQuestion();
-      }
-    }, 1000);
-
-    const q = activeQuizQuestions[currentQuizIndex];
-    document.getElementById('quiz-subtitle').innerText = `Frage ${currentQuizIndex + 1} von ${activeQuizQuestions.length}`;
-    document.getElementById('quiz-question-container').innerText = q.question_text;
-
-    const optContainer = document.getElementById('quiz-options-container');
-    const optionsList = Array.isArray(q.options) ? q.options : [];
-
-    optContainer.innerHTML = optionsList.map((opt, idx) => {
-      const optId = opt.id !== undefined ? opt.id : idx;
-      const optText = typeof opt === 'string' ? opt : (opt.text || opt);
-      return `<button class="btn btn-secondary" style="text-align: left; margin-top: 0; padding: 10px 14px; font-size: 12px;" onclick="selectQuizAnswer('${q.id}', ${optId})">${optText}</button>`;
-    }).join('');
-  }
-
-  function updateQuizTimerDisplay() {
-    const timerBadge = document.getElementById('quiz-timer-badge');
-    if (timerBadge) {
-      timerBadge.innerText = `⏱️ ${quizSecondsLeft}s`;
-    }
-  }
-
-  function selectQuizAnswer(questionId, selectedOptionId) {
-    if (quizTimerInterval) clearInterval(quizTimerInterval);
-    userQuizAnswers.push({ questionId: questionId, selectedOptionId: selectedOptionId });
-    currentQuizIndex++;
-    startQuizQuestion();
-  }
-
-  async function submitQuizToBackend() {
-    if (quizTimerInterval) clearInterval(quizTimerInterval);
-    document.getElementById('quiz-question-container').innerText = 'Wertet Antworten serverseitig aus... ⏳';
-    document.getElementById('quiz-options-container').innerHTML = '';
-    document.getElementById('quiz-subtitle').innerText = 'Sichere Validierung';
-
-    try {
-      const { data, error } = await _supabase.functions.invoke('submit-quiz', {
-        body: { answers: userQuizAnswers }
-      });
-
-      if (error) {
-        throw new Error(error.message || 'Fehler beim Aufruf der Edge Function');
-      }
-
-      if (data && data.success) {
-        await addPoints(data.earnedPoints || 0);
-        document.getElementById('quiz-question-container').innerHTML = `
-          <h3 style="color: var(--success); margin-bottom: 6px;">🎉 Quiz erfolgreich beendet!</h3>
-          <p>Deine Antworten wurden sicher im Backend ausgewertet.</p>
-          <p style="margin-top: 6px; font-size: 15px; color: #818cf8;">Erhaltene Punkte: <strong>+${data.earnedPoints} P</strong> 🚀</p>
-        `;
-        document.getElementById('quiz-options-container').innerHTML = `<button class="btn" onclick="closeCampusQuizModal()">Fertig</button>`;
-      } else {
-        throw new Error(data.error || 'Unbekannter Serverfehler');
-      }
-    } catch (err) {
-      document.getElementById('quiz-question-container').innerHTML = `
-        <h3 style="color: var(--accent); margin-bottom: 6px;">⚠️ Hinweis</h3>
-        <p>${err.message}</p>
-      `;
-      document.getElementById('quiz-options-container').innerHTML = `<button class="btn btn-secondary" onclick="closeCampusQuizModal()">Schließen</button>`;
-    }
-  }
-
-  // --- LEAFLET KARTE INITIALISIEREN ---
-  function initAdminMap() {
-    if (adminMap) {
-      adminMap.invalidateSize();
-      return;
-    }
-
-    const defaultLat = 48.2128;
-    const defaultLng = 16.3598;
-
-    adminMap = L.map('admin-map').setView([defaultLat, defaultLng], 14);
-
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '© OpenStreetMap contributors'
-    }).addTo(adminMap);
-
-    adminMap.on('click', function(e) {
-      const lat = e.latlng.lat;
-      const lng = e.latlng.lng;
-
-      document.getElementById('admin-drop-lat').value = lat.toFixed(6);
-      document.getElementById('admin-drop-lng').value = lng.toFixed(6);
-
-      if (adminMarker) {
-        adminMarker.setLatLng([lat, lng]);
-      } else {
-        adminMarker = L.marker([lat, lng]).addTo(adminMap);
-      }
-    });
-  }
-
-  // --- FLASH DROP LOGIK & AKTIVE SPOTS MODAL ---
-  function openActiveSpotsModal() {
-    document.getElementById('active-spots-modal').classList.remove('hidden');
-    renderActiveSpotsInModal();
-  }
-
-  function closeActiveSpotsModal() {
-    document.getElementById('active-spots-modal').classList.add('hidden');
-  }
-
-  function renderActiveSpotsInModal() {
-    const listEl = document.getElementById('modal-active-spots-list');
-    if (!listEl) return;
-
-    if (allActiveDropsCache.length === 0) {
-      listEl.innerHTML = '<p style="font-size: 12px; color: var(--text-muted); text-align: center; padding: 20px;">Aktuell sind keine Partner-Spots aktiv.</p>';
-      return;
-    }
-
-    listEl.innerHTML = allActiveDropsCache.map(drop => {
-      const isClaimed = localStorage.getItem(`claimed_drop_${drop.id}`);
-      return `
-        <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.04); padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border);">
-          <div>
-            <strong style="font-size: 13px; color: var(--text);">📍 ${drop.title}</strong><br>
-            <span style="font-size: 11px; color: var(--text-muted);">Belohnung: <strong>${drop.reward_value} ${drop.reward_type === 'points' ? 'Punkte' : 'Badge'}</strong></span>
-          </div>
-          <div>
-            ${isClaimed ? '<span style="color: var(--success); font-weight: 800; font-size: 11px;">Eingesammelt ✅</span>' : `<button class="btn-join" onclick="claimSpecificDrop('${drop.id}')">Einlösen 🎯</button>`}
-          </div>
-        </div>
-      `;
-    }).join('');
-  }
-
-  async function loadActiveCampusDrops() {
-    try {
-      const { data, error } = await _supabase.from('campus_drops')
-        .select('*')
-        .gt('expires_at', new Date().toISOString())
-        .order('created_at', { ascending: false });
-
-      allActiveDropsCache = data || [];
-      const banner = document.getElementById('campus-drop-banner');
-
-      if (allActiveDropsCache.length > 0) {
-        activeDropCache = allActiveDropsCache[0];
-        const claimedKey = `claimed_drop_${activeDropCache.id}`;
-        
-        if (localStorage.getItem(claimedKey) || new Date().getTime() > new Date(activeDropCache.expires_at).getTime()) {
-          if (banner) banner.style.display = 'none';
-        } else {
-          let locationInfo = activeDropCache.latitude ? " 📍 [Vor Ort Spot]" : "";
-          if (banner) {
-            document.getElementById('drop-title-text').innerText = `⚡ FLASH DROP: ${activeDropCache.title}${locationInfo}`;
-            const expiresTime = new Date(activeDropCache.expires_at).getTime();
-            const now = new Date().getTime();
-            const diffMins = Math.max(1, Math.round((expiresTime - now) / 60000));
-            const timerText = document.getElementById('drop-timer-text');
-            if (timerText) timerText.innerText = `Noch ${diffMins} Minuten aktiv! [Klick auf Punkte für Alle 🎁]`;
-            banner.style.display = 'block';
-          }
-        }
-      } else {
-        if (banner) banner.style.display = 'none';
-        handleFallbackDrop();
-      }
-    } catch (err) {
-      console.error("Fehler beim Laden der Drops:", err);
-      handleFallbackDrop();
-    }
-  }
-
-  function handleFallbackDrop() {
-    const banner = document.getElementById('campus-drop-banner');
-    if (!banner) return;
-
-    const fallbackKey = 'claimed_drop_fallback_test';
-    if (localStorage.getItem(fallbackKey)) {
-      banner.style.display = 'none';
-    } else {
-      document.getElementById('drop-title-text').innerText = '⚡ FLASH DROP: 50 Extra-Punkte abholen!';
-      const timerText = document.getElementById('drop-timer-text');
-      if (timerText) timerText.innerText = 'Exklusiver Campus-Drop! [Klick auf Punkte für Alle 🎁]';
-      banner.style.display = 'block';
-    }
-  }
-
-  function calculateDistance(lat1, lon1, lat2, lon2) {
-    const R = 6371e3;
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-              Math.sin(dLon/2) * Math.sin(dLon/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return R * c;
-  }
-
-  async function claimActiveDrop() {
-    if (activeDropCache) {
-      await claimSpecificDrop(activeDropCache.id);
-    } else {
-      const banner = document.getElementById('campus-drop-banner');
-      const fallbackKey = 'claimed_drop_fallback_test';
-      if (localStorage.getItem(fallbackKey)) {
-        alert('⚠️ Du hast diesen Drop bereits eingesammelt!');
-        if (banner) banner.style.display = 'none';
-        return;
-      }
-      
-      await addPoints(50);
-      localStorage.setItem(fallbackKey, 'true');
-      alert('🎉 Glückwunsch! Du hast dir erfolgreich 50 Hype-Punkte gesichert! 🔥');
-      if (banner) banner.style.display = 'none';
-    }
-  }
-
-  async function claimSpecificDrop(dropId) {
-    const drop = allActiveDropsCache.find(d => d.id === dropId);
-    if (!drop) return alert('⚠️ Drop nicht gefunden oder bereits abgelaufen.');
-
-    const claimedKey = `claimed_drop_${drop.id}`;
-    if (localStorage.getItem(claimedKey)) {
-      return alert('⚠️ Du hast diesen Drop bereits eingesammelt!');
-    }
-
-    if (new Date().getTime() > new Date(drop.expires_at).getTime()) {
-      return alert('⏳ Dieser Drop ist leider bereits abgelaufen!');
-    }
-
-    if (drop.latitude && drop.longitude) {
-      if (!navigator.geolocation) {
-        return alert('❌ Dein Browser unterstützt keine Standortabfrage.');
-      }
-
-      alert('📍 Standort wird geprüft, um zu verifizieren, dass du vor Ort bist...');
-
-      try {
-        const position = await new Promise((resolve, reject) => {
-          navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 10000 });
-        });
-
-        const userLat = position.coords.latitude;
-        const userLng = position.coords.longitude;
-        const distance = calculateDistance(userLat, userLng, drop.latitude, drop.longitude);
-        const allowedRadius = drop.radius || 100;
-
-        if (distance > allowedRadius) {
-          return alert(`❌ Du bist zu weit entfernt! Du bist ca. ${Math.round(distance)} Meter vom Spot entfernt (Erlaubt: ${allowedRadius}m). Bewege dich vor Ort zum Partner-Lokal! 📍`);
-        }
-      } catch (err) {
-        return alert('❌ Standort konnte nicht ermittelt werden. Bitte erlaube den GPS-Zugriff in deinen Browsereinstellungen.');
-      }
-    }
-
-    const { data: existingClaim } = await _supabase.from('drop_claims').select('*').eq('drop_id', drop.id).eq('user_email', currentUserEmail).maybeSingle();
-    if (existingClaim) {
-      localStorage.setItem(claimedKey, 'true');
-      loadActiveCampusDrops();
-      renderActiveSpotsInModal();
-      return alert('⚠️ Du hast diesen Drop laut Server bereits beansprucht!');
-    }
-
-    await _supabase.from('drop_claims').insert([{ drop_id: drop.id, user_email: currentUserEmail }]);
-
-    if (drop.reward_type === 'points') {
-      const pts = parseInt(drop.reward_value) || 20;
-      await addPoints(pts);
-      alert(`🎉 Drop vor Ort erfolgreich eingesammelt! +${pts} Punkte! 🚀`);
-    } else {
-      alert(`🎉 Drop vor Ort eingesammelt! Du hast das seltene Badge erhalten: ${drop.reward_value} 👑`);
-    }
-
-    localStorage.setItem(claimedKey, 'true');
-    loadActiveCampusDrops();
-    renderActiveSpotsInModal();
-  }
-
-  async function handleCreateCampusDrop() {
-    if (currentUserEmail !== MASTER_ADMIN_EMAIL) {
-      alert('⚠️ Nur Administratoren können Campus-Drops erstellen!');
-      return;
-    }
-
-    const title = document.getElementById('admin-drop-title').value.trim();
-    const rewardType = document.getElementById('admin-drop-reward-type').value;
-    const rewardValue = document.getElementById('admin-drop-reward-value').value.trim();
-    const startTimeInput = document.getElementById('admin-drop-start-time').value;
-    const lat = parseFloat(document.getElementById('admin-drop-lat').value) || null;
-    const lng = parseFloat(document.getElementById('admin-drop-lng').value) || null;
-    const radius = parseInt(document.getElementById('admin-drop-radius').value) || 100;
-
-    if (!title || !rewardValue || !startTimeInput) {
-      alert('⚠️ Bitte fülle alle Pflichtfelder für den Campus-Drop aus.');
-      return;
-    }
-
-    const startDate = new Date(startTimeInput);
-    const hours = startDate.getHours();
-    const minutes = startDate.getMinutes();
-    const totalMinutes = hours * 60 + minutes;
-
-    const isValidWindow = (totalMinutes >= 240 && totalMinutes <= 1440) || (totalMinutes >= 0 && totalMinutes <= 60);
-
-    if (!isValidWindow) {
-      alert('❌ Ungültige Startzeit! Campus-Drops dürfen nur im Zeitfenster zwischen 04:00 Uhr morgens und 01:00 Uhr nachts gestartet werden.');
-      return;
-    }
-
-    const expiresDate = new Date(startDate.getTime() + 3 * 60 * 60 * 1000);
-
-    const { error } = await _supabase.from('campus_drops').insert([{
-      title: title,
-      reward_type: rewardType,
-      reward_value: rewardValue,
-      created_at: startDate.toISOString(),
-      expires_at: expiresDate.toISOString(),
-      latitude: lat,
-      longitude: lng,
-      radius: radius
-    }]);
-
-    if (error) {
-      alert('Fehler beim Erstellen des Drops in Supabase: ' + error.message);
-      return;
-    }
-
-    alert('✅ GPS-gebundener Campus-Drop erfolgreich erstellt! (Laufzeit: 3 Stunden)');
-    document.getElementById('admin-drop-title').value = '';
-    document.getElementById('admin-drop-reward-value').value = '';
-    document.getElementById('admin-drop-start-time').value = '';
-    document.getElementById('admin-drop-lat').value = '';
-    document.getElementById('admin-drop-lng').value = '';
-    if (adminMarker && adminMap) {
-      adminMap.removeLayer(adminMarker);
-      adminMarker = null;
-    }
-    loadActiveCampusDrops();
-  }
-
-  function checkMatchWednesday() {
-    const today = new Date().getDay();
-    const isWednesday = (today === 3);
-    const rootElement = document.documentElement;
-    if (isWednesday) {
-      rootElement.classList.add('match-wednesday');
-    } else {
-      rootElement.classList.remove('match-wednesday');
-    }
-  }
-
-  async function initApp() {
-    document.getElementById('auth-gate').classList.add('hidden');
-    document.getElementById('main-app').classList.remove('hidden');
-    
-    await loadProfiles();
-    await loadFollows();
-    await ensureMyProfileExists();
-    updateStreamButtonState();
-
-    loadEvents();
-    loadLiveStreams();
-    loadMediaPosts();
-    loadGlobalChat();
-    initRealtime();
-    
-    switchTab('reels');
-    setReelFilter('foryou');
-  }
-
-  function changeLanguage(langCode) {
-    console.log("Ausgewählte Sprache:", langCode);
-  }
-
-  function changeAvatarDirectly() {
-    const currentUrl = document.getElementById('profile-avatar').value;
-    const newUrl = prompt("Gib die Bild-URL für dein neues Profilbild ein:", currentUrl);
-    if (newUrl !== null) {
-      document.getElementById('profile-avatar').value = newUrl;
-      document.getElementById('my-profile-avatar-preview').src = newUrl;
-      document.getElementById('header-avatar-preview').src = newUrl;
-    }
-  }
-
-  function updateStreamButtonState() {
-    const streamBtn = document.getElementById('start-stream-btn');
-    if (!streamBtn) return;
-    const profile = profilesCache[currentUserEmail] || {};
-    const isCompleted = (currentUserEmail === MASTER_ADMIN_EMAIL || profile.tutorial_completed);
-    streamBtn.disabled = !isCompleted;
-  }
-
-  function initRealtime() {
-    _supabase.channel('public:all')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'live_events' }, () => loadEvents())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'live_streams' }, () => loadLiveStreams())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'global_chat' }, () => loadGlobalChat())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => { loadProfiles(); updateStreamButtonState(); })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'follows' }, () => loadFollows())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'media_posts' }, () => loadMediaPosts())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'campus_drops' }, () => loadActiveCampusDrops())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'prof_reviews' }, () => loadProfReviews())
-      .subscribe();
-  }
-
-  async function loadProfiles() {
-    const { data } = await _supabase.from('profiles').select('*');
-    if (data) {
-      profilesCache = {};
-      data.forEach(p => { profilesCache[p.email] = p; });
-      renderMyProfileInputs();
-      renderUniDuellAndRanking();
-      updateStreamButtonState();
-    }
-  }
-
-  async function loadFollows() {
-    const { data } = await _supabase.from('follows').select('*').eq('follower_email', currentUserEmail);
-    followsCache = data ? data.map(f => f.following_email) : [];
-    updateFollowerStatsUI();
-  }
-
-  async function ensureMyProfileExists() {
-    if (!profilesCache[currentUserEmail]) {
-      const defaultUsername = currentUserEmail.split('@')[0];
-      await _supabase.from('profiles').insert([{
-        email: currentUserEmail,
-        username: defaultUsername,
-        full_name: defaultUsername,
-        university: 'Universität Wien',
-        bio: 'Hey! Frisch am Campus.',
-        avatar_url: '',
-        interests: ['Campus', 'Kaffee'],
-        tutorial_completed: false
-      }]);
-      await loadProfiles();
-    }
-    renderMyProfileInputs();
-    updateStreamButtonState();
-  }
-
-  function getCampusRank(points) {
-    if (points >= 600) return { title: '👑 Absolute Campus-Legende', color: '#ec4899' };
-    if (points >= 300) return { title: '🔥 Campus Insider', color: '#f59e0b' };
-    if (points >= 100) return { title: '🍕 Aktiver Fachschaftler', color: '#10b981' };
-    return { title: '☕ Frischer Erstie', color: '#818cf8' };
-  }
-
-  function renderMyProfileInputs() {
-    const profile = profilesCache[currentUserEmail];
-    if (!profile) return;
-
-    document.getElementById('profile-username').value = profile.username || '';
-    document.getElementById('profile-fullname').value = profile.full_name || '';
-    document.getElementById('profile-university').value = profile.university || 'Universität Wien';
-    document.getElementById('profile-bio').value = profile.bio || '';
-    document.getElementById('profile-avatar').value = profile.avatar_url || '';
-    document.getElementById('profile-interests').value = Array.isArray(profile.interests) ? profile.interests.join(', ') : '';
-
-    document.getElementById('my-profile-display-name').innerText = profile.full_name || profile.username || currentUserEmail.split('@')[0];
-    document.getElementById('my-profile-handle-preview').innerText = '@' + (profile.username || 'user');
-    
-    const rankInfo = getCampusRank(userPoints);
-    const rankBadge = document.getElementById('profile-rank-badge');
-    if (rankBadge) {
-      rankBadge.innerText = rankInfo.title;
-      rankBadge.style.color = rankInfo.color;
-      rankBadge.style.borderColor = rankInfo.color;
-      rankBadge.style.background = rankInfo.color + '22';
-    }
-
-    const avatarUrl = profile.avatar_url || '';
-    document.getElementById('my-profile-avatar-preview').src = avatarUrl;
-    document.getElementById('header-avatar-preview').src = avatarUrl;
-
-    updateFollowerStatsUI();
-    renderMyProfilePostsGrid();
-  }
-
-  function shareProfileCard() {
-    const profile = profilesCache[currentUserEmail] || {};
-    const handle = profile.username || currentUserEmail.split('@')[0];
-    const rankInfo = getCampusRank(userPoints);
-    const shareText = `🎓 Hey! Check mein PURE LOGIC Campus-Profil aus:\n\n👤 @${handle}\n🏆 Rang: ${rankInfo.title}\n⭐ Punkte: ${userPoints} P\n\nSei auch dabei beim Wiener Uni-Duell! 🚀`;
-
-    if (navigator.share) {
-      navigator.share({
-        title: 'PURE LOGIC • Campus Profil',
-        text: shareText,
-        url: window.location.href
-      }).catch(() => {});
-    } else {
-      navigator.clipboard.writeText(shareText);
-      alert('📋 Profil-Text in die Zwischenablage kopiert! Füge ihn jetzt in deinen WhatsApp-Status oder deine Insta-Story ein! 🚀');
-    }
-  }
-
-  function renderMyProfilePostsGrid() {
-    const grid = document.getElementById('my-profile-posts-grid');
-    if (!grid) return;
-    const myPosts = mediaPostsCache.filter(p => p.author_email === currentUserEmail);
-    if (myPosts.length === 0) {
-      grid.innerHTML = '<p style="color:var(--text-muted); font-size:11px; grid-column:span 3; padding:8px 0;">Noch keine eigenen Beiträge.</p>';
-      return;
-    }
-    grid.innerHTML = myPosts.map(p => `
-      <div class="profile-grid-item">
-        ${p.media_type === 'video' ? `<video src="${p.media_url}"></video>` : `<img src="${p.media_url}" alt="Post">`}
-      </div>
-    `).join('');
-  }
-
-  async function updateFollowerStatsUI() {
-    const { count: followingCount } = await _supabase.from('follows').select('*', { count: 'exact', head: true }).eq('follower_email', currentUserEmail);
-    const { count: followerCount } = await _supabase.from('follows').select('*', { count: 'exact', head: true }).eq('following_email', currentUserEmail);
-    const statsEl = document.getElementById('follower-stats');
-    if (statsEl) {
-      statsEl.innerText = `${followerCount || 0} Follower • ${followingCount || 0} Gefolgt`;
-    }
-  }
-
-  async function saveMyProfile() {
-    const username = document.getElementById('profile-username').value.trim().replace(/^@/, '');
-    const full_name = document.getElementById('profile-fullname').value.trim();
-    const university = document.getElementById('profile-university').value;
-    const bio = document.getElementById('profile-bio').value.trim();
-    const avatar_url = document.getElementById('profile-avatar').value.trim();
-    const interestsRaw = document.getElementById('profile-interests').value.trim();
-    const interests = interestsRaw ? interestsRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
-
-    if (!username) return alert('Bitte einen Benutzernamen (Handle) eingeben.');
-
-    const { error } = await _supabase.from('profiles').update({
-      username, full_name, university, bio, avatar_url, interests
-    }).eq('email', currentUserEmail);
-
-    if (error) return alert('Fehler beim Speichern: ' + error.message);
-
-    await addPoints(10);
-    await loadProfiles();
-    alert('Profil erfolgreich aktualisiert!');
-  }
-
-  function renderUniDuellAndRanking() {
-    const duellListEl = document.getElementById('uni-duell-list');
-    const creatorsListEl = document.getElementById('top-creators-list');
-    if (!duellListEl || !creatorsListEl) return;
-
-    let uniStats = {};
-    let usersList = [];
-
-    Object.values(profilesCache).forEach(p => {
-      const uni = p.university || 'Universität Wien';
-      if (!uniStats[uni]) uniStats[uni] = { totalPoints: 0, studentCount: 0 };
-      uniStats[uni].totalPoints += (p.points || 100);
-      uniStats[uni].studentCount += 1;
-
-      usersList.push({
-        name: p.full_name || p.username || p.email.split('@')[0],
-        handle: p.username || 'user',
-        avatar: p.avatar_url || '',
-        points: p.points || Math.floor(Math.random() * 500) + 50
-      });
-    });
-
-    let uniRanking = Object.keys(uniStats).map(uni => {
-      const stats = uniStats[uni];
-      const avg = stats.studentCount > 0 ? Math.round(stats.totalPoints / stats.studentCount) : 0;
-      return { uni, avg, count: stats.studentCount };
-    });
-    uniRanking.sort((a, b) => b.avg - a.avg);
-
-    duellListEl.innerHTML = uniRanking.map((item, index) => `
-      <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); padding: 8px 10px; border-radius: 10px; font-size: 12px;">
-        <div><strong>#${index + 1} ${item.uni}</strong> <span style="font-size:10px; color:var(--text-muted);">(${item.count} Studis)</span></div>
-        <div style="color: #818cf8; font-weight: 800;">${item.avg} P Ø</div>
-      </div>
-    `).join('');
-
-    usersList.sort((a, b) => b.points - a.points);
-    const top10 = usersList.slice(0, 10);
-
-    creatorsListEl.innerHTML = top10.map((u, index) => `
-      <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); padding: 8px 10px; border-radius: 10px; font-size: 12px;">
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <span style="font-weight: 800; color: ${index === 0 ? '#f59e0b' : index === 1 ? '#94a3b8' : index === 2 ? '#b45309' : 'var(--text-muted)'};">#${index + 1}</span>
-          <img src="${u.avatar}" style="width:24px; height:24px; border-radius:50%; object-fit:cover; background:var(--border);" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'24\' height=\'24\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%2394a3b8\' stroke-width=\'2\'><path d=\'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2\'></path><circle cx=\'12\' cy=\'7\' r=\'4\'></circle></svg>'">
-          <div><strong>${u.name}</strong><br><span style="font-size:10px; color:var(--text-muted);">@${u.handle}</span></div>
-        </div>
-        <div style="font-weight: 800; color: var(--success);">${u.points} P</div>
-      </div>
-    `).join('');
-  }
-
-  function switchTab(tabName) {
-    document.querySelectorAll('#bottom-nav-bar .tab-btn').forEach(btn => btn.classList.remove('active'));
-    ['live', 'reels', 'feed', 'ranking', 'global', 'inbox', 'profile', 'admin'].forEach(t => {
-      const el = document.getElementById(`tab-${t}`);
-      if (el) el.classList.add('hidden');
-    });
-
-    const activeBtn = document.getElementById(`btn-tab-${tabName}`);
-    if (activeBtn) activeBtn.classList.add('active');
-    
-    const targetTab = document.getElementById(`tab-${tabName}`);
-    if (targetTab) targetTab.classList.remove('hidden');
-    
-    if (tabName === 'profile') renderMyProfileInputs();
-    if (tabName === 'ranking') renderUniDuellAndRanking();
-    
-    if (tabName === 'admin') {
-      setTimeout(initAdminMap, 200);
-    }
-
-    if (tabName === 'live') {
-      document.getElementById('tab-reels').classList.remove('hidden');
-      document.getElementById('tab-live').classList.remove('hidden');
-      document.getElementById('reel-filter-live').classList.add('active');
-      ['discover', 'foryou', 'following'].forEach(f => document.getElementById(`reel-filter-${f}`).classList.remove('active'));
-    }
-  }
-
-  function setLiveFilter(element, cat) {
-    document.querySelectorAll('#live-filter-group .cat-pill').forEach(el => el.classList.remove('active'));
-    element.classList.add('active');
-    activeLiveFilter = cat;
-    renderLiveStreams();
-  }
-
-  function selectGoLiveCategory(element, cat) {
-    document.querySelectorAll('#go-live-category-group .cat-pill').forEach(el => el.classList.remove('active'));
-    element.classList.add('active');
-    selectedGoLiveCategory = cat;
-  }
-
-  function openCrushModal() {
-    document.getElementById('crush-modal').classList.remove('hidden');
-    checkCrushMatches();
-  }
-
-  function closeCrushModal() {
-    document.getElementById('crush-modal').classList.add('hidden');
-  }
-
-  async function submitCrush() {
-    const target = document.getElementById('crush-target-input').value.trim().toLowerCase();
-    const hint = document.getElementById('crush-hint-input').value.trim();
-    if (!target) return alert('Bitte gib deinen Crush an.');
-
-    const { error } = await _supabase.from('crushes').insert([{
-      sender_email: currentUserEmail,
-      target_identifier: target,
-      hint: hint
-    }]);
-
-    if (error) {
-      alert('Fehler beim Speichern des Crushes: ' + error.message);
-      return;
-    }
-
-    alert('Dein geheimer Crush wurde ins Radar eingetragen! 💘 Wenn diese Person dich auch einträgt, funkt es.');
-    closeCrushModal();
-    checkCrushMatches();
-  }
-
-  async function checkCrushMatches() {
-    const box = document.getElementById('crush-matches-box');
-    box.innerHTML = '<span style="color:var(--accent);">🔍 Prüfe Radar auf Matches... ✨</span>';
-    
-    const { data, error } = await _supabase.from('crushes').select('*');
-    if (error || !data) {
-      box.innerHTML = '<span style="color:var(--text-muted);">Radar momentan nicht erreichbar.</span>';
-      return;
-    }
-
-    const myCrushes = data.filter(c => c.sender_email === currentUserEmail);
-    let matched = false;
-
-    for (let c of myCrushes) {
-      const matchFound = data.find(item => item.sender_email === c.target_identifier && item.target_identifier === currentUserEmail);
-      if (matchFound) {
-        matched = true;
-        break;
-      }
-    }
-
-    if (matched) {
-      box.innerHTML = '<span style="color:var(--success); font-weight:800;">🎉 IT\'S A MATCH! Ihr habt euch gegenseitig als Crush angegeben! Blind-Date freigeschaltet! 🥂</span>';
-    } else {
-      box.innerHTML = '<span style="color:var(--text-muted);">🔍 Radar aktiv... Keine gegenseitigen Treffer bisher. Bleib dran! ✨</span>';
-    }
-  }
-
-  function openStreamHelpModal() {
-    currentTutorialStep = 1;
-    updateTutorialStepUI();
-    document.getElementById('tab-live').classList.add('hidden');
-    document.getElementById('go-live-modal').classList.add('hidden');
-    document.getElementById('bottom-nav-bar').classList.add('hidden');
-    document.getElementById('stream-help-modal').classList.remove('hidden');
-  }
-
-  function closeStreamHelpModal() {
-    document.getElementById('stream-help-modal').classList.add('hidden');
-    document.getElementById('bottom-nav-bar').classList.remove('hidden');
-    document.getElementById('tab-live').classList.remove('hidden');
-  }
-
-  function changeTutorialStep(direction) {
-    currentTutorialStep += direction;
-    if (currentTutorialStep > totalTutorialSteps) {
-      completeTutorialAndProceed();
-      return;
-    }
-    if (currentTutorialStep < 1) currentTutorialStep = 1;
-    updateTutorialStepUI();
-  }
-
-  function updateTutorialStepUI() {
-    document.querySelectorAll('.tutorial-step').forEach(el => {
-      el.classList.remove('active');
-      if (parseInt(el.getAttribute('data-step')) === currentTutorialStep) el.classList.add('active');
-    });
-    const backBtn = document.getElementById('tutorial-back-btn');
-    const nextBtn = document.getElementById('tutorial-next-btn');
-    backBtn.style.display = (currentTutorialStep === 1) ? 'none' : 'block';
-    nextBtn.innerText = (currentTutorialStep === totalTutorialSteps) ? 'Abschließen & Loslegen ✅' : 'Weiter';
-  }
-
-  async function completeTutorialAndProceed() {
-    await _supabase.from('profiles').update({ tutorial_completed: true }).eq('email', currentUserEmail);
-    if (profilesCache[currentUserEmail]) profilesCache[currentUserEmail].tutorial_completed = true;
-    updateStreamButtonState();
-    closeStreamHelpModal();
-    openGoLiveModal();
-  }
-
-  function handlePreLiveCheck() {
-    const profile = profilesCache[currentUserEmail] || {};
-    if (currentUserEmail === MASTER_ADMIN_EMAIL || profile.tutorial_completed) openGoLiveModal();
-    else openStreamHelpModal();
-  }
-
-  function openGoLiveModal() {
-    document.getElementById('tab-live').classList.add('hidden');
-    document.getElementById('bottom-nav-bar').classList.add('hidden');
-    document.getElementById('go-live-modal').classList.remove('hidden');
-  }
-
-  function closeGoLiveModal() {
-    document.getElementById('go-live-modal').classList.add('hidden');
-    document.getElementById('bottom-nav-bar').classList.remove('hidden');
-    document.getElementById('tab-live').classList.remove('hidden');
-  }
-
-  async function submitLiveStream() {
-    const title = document.getElementById('live-title').value.trim();
-    const url = document.getElementById('live-url').value.trim();
-    if (!title || !url) return alert('Bitte Titel und Stream-URL angeben.');
-    const expiresAt = new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString();
-    await _supabase.from('live_streams').insert([{ host_email: currentUserEmail, title, stream_url: url, category: selectedGoLiveCategory, expires_at: expiresAt }]);
-    await addPoints(25);
-    closeGoLiveModal();
-    loadLiveStreams();
-  }
-
-  async function loadLiveStreams() {
-    const { data } = await _supabase.from('live_streams').select('*').gt('expires_at', new Date().toISOString()).order('created_at', { ascending: false });
-    liveStreamsCache = data || [];
-    renderLiveStreams();
-  }
-
-  function renderLiveStreams() {
-    const list = document.getElementById('live-streams-list');
-    let streams = activeLiveFilter === 'Alle' ? liveStreamsCache : liveStreamsCache.filter(s => s.category === activeLiveFilter);
-    if (streams.length === 0) {
-      list.innerHTML = '<p style="color: var(--text-muted); font-size: 12px; text-align: center; padding: 40px;">Keine Live-Streams aktiv.</p>';
-      return;
-    }
-    list.innerHTML = streams.map(s => `
-      <div class="live-card">
-        <div class="event-header"><div class="event-title">${s.category || '🔴'} ${s.title}</div></div>
-        <div class="event-footer"><a href="${s.stream_url}" target="_blank" class="btn-join" style="text-decoration:none;">Stream ansehen</a></div>
-      </div>
-    `).join('');
-  }
-
-  function openReportModal() { document.getElementById('bottom-nav-bar').classList.add('hidden'); document.getElementById('report-modal').classList.remove('hidden'); }
-  function closeReportModal() { document.getElementById('report-modal').classList.add('hidden'); document.getElementById('bottom-nav-bar').classList.remove('hidden'); }
-  async function submitReport() {
-    const reason = document.getElementById('report-reason').value;
-    const details = document.getElementById('report-details').value.trim();
-    await _supabase.from('reports').insert([{ reporter_email: currentUserEmail, reason, details }]);
-    alert('Meldung versendet.');
-    closeReportModal();
-  }
-
-  function openImpressumModal() { document.getElementById('bottom-nav-bar').classList.add('hidden'); document.getElementById('impressum-modal').classList.remove('hidden'); }
-  function closeImpressumModal() { document.getElementById('impressum-modal').classList.add('hidden'); document.getElementById('bottom-nav-bar').classList.remove('hidden'); }
-
-  function openAgbModal() { document.getElementById('bottom-nav-bar').classList.add('hidden'); document.getElementById('agb-modal').classList.remove('hidden'); }
-  function closeAgbModal() { document.getElementById('agb-modal').classList.add('hidden'); document.getElementById('bottom-nav-bar').classList.remove('hidden'); }
-
-  function setReelFilter(filter) {
-    reelFilter = filter;
-    ['discover', 'foryou', 'following', 'live'].forEach(f => {
-      const el = document.getElementById(`reel-filter-${f}`);
-      if (el) el.classList.remove('active');
-    });
-    document.getElementById(`reel-filter-${filter}`).classList.add('active');
-    
-    if (filter === 'live') {
-      document.getElementById('tab-live').classList.remove('hidden');
-    } else {
-      document.getElementById('tab-live').classList.add('hidden');
-      renderMediaPosts();
-    }
-  }
-
-  async function loadMediaPosts() {
-    const { data } = await _supabase.from('media_posts').select('*').order('created_at', { ascending: false });
-    mediaPostsCache = data || [];
-    renderMediaPosts();
-    renderMyProfilePostsGrid();
-  }
-
-  function renderMediaPosts() {
-    const list = document.getElementById('reels-list');
-    let posts = [...mediaPostsCache];
-    
-    if (posts.length === 0) {
-      posts = [
-        { id: 'mock-1', author_email: 'campus@uni.at', media_url: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=600', media_type: 'image', caption: 'Willkommen am Campus! 🎉 Starte jetzt dein Netzwerk.', likes: [], comments: [] },
-        { id: 'mock-2', author_email: 'lounge@uni.at', media_url: 'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=600', media_type: 'image', caption: 'Kaffee-Treffen in der Lounge heute um 14 Uhr! ☕', likes: [], comments: [] }
-      ];
-    }
-
-    if (reelFilter === 'foryou') {
-      const myProfile = profilesCache[currentUserEmail] || {};
-      const myInterests = (myProfile.interests || []).map(i => i.toLowerCase());
-      if (myInterests.length > 0) {
-        posts.sort((a, b) => {
-          const capA = (a.caption || '').toLowerCase();
-          const capB = (b.caption || '').toLowerCase();
-          const matchA = myInterests.some(i => capA.includes(i)) ? 1 : 0;
-          const matchB = myInterests.some(i => capB.includes(i)) ? 1 : 0;
-          return matchB - matchA;
-        });
-      }
-    } else if (reelFilter === 'following') {
-      posts = posts.filter(p => followsCache.includes(p.author_email) || p.author_email === currentUserEmail);
-    }
-
-    if (posts.length === 0) {
-      list.innerHTML = '<p style="color: var(--text-muted); font-size: 12px; text-align: center; padding: 30px;">Keine Beiträge in dieser Ansicht gefunden.</p>';
-      return;
-    }
-
-    list.innerHTML = posts.map(post => `
-      <div class="reel-item">
-        ${post.media_type === 'video' ? `<video class="reel-media" src="${post.media_url}" autoplay muted loop playsinline></video>` : `<img class="reel-media" src="${post.media_url}" alt="Post">`}
-        <div class="reel-overlay">
-          <p style="font-size: 24px; color: white; font-weight: 700; line-height: 1.4; text-shadow: 0 2px 8px rgba(0,0,0,0.8);">${post.caption || ''}</p>
-        </div>
-      </div>
-    `).join('');
-  }
-
-  async function openUploadModal() { document.getElementById('upload-modal').classList.remove('hidden'); document.getElementById('bottom-nav-bar').classList.add('hidden'); }
-  function closeUploadModal() { document.getElementById('upload-modal').classList.add('hidden'); document.getElementById('bottom-nav-bar').classList.remove('hidden'); }
-
-  async function submitConfessionPost() {
-    const text = document.getElementById('confession-text-input').value.trim();
-    if (!text) return alert('Bitte gib einen Text für deine Confession ein.');
-
-    const bgImages = [
-      "https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=600",
-      "https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=600",
-      "https://images.unsplash.com/photo-1498243691581-b145c3f54a5a?w=600",
-      "https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=600",
-      "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=600"
-    ];
-    const randomImg = bgImages[Math.floor(Math.random() * bgImages.length)];
-
-    const { error } = await _supabase.from('media_posts').insert([{
-      author_email: 'anonymous@campus.at',
-      media_url: randomImg,
-      media_type: 'image',
-      caption: text,
-      likes: {},
-      comments: []
-    }]);
-
-    if (error) {
-      alert('Fehler beim Posten: ' + error.message);
-      return;
-    }
-
-    document.getElementById('confession-text-input').value = '';
-    await addPoints(15);
-    closeUploadModal();
-    loadMediaPosts();
-    alert('Deine Confession wurde anonym im Feed veröffentlicht! 🤫✨');
-  }
-
-  function togglePasswordVisibility() {
-    const pw = document.getElementById('password');
-    pw.type = pw.type === 'password' ? 'text' : 'password';
-  }
-
-  function selectCreateCategory(el, cat) {
-    document.querySelectorAll('#create-category-group .cat-pill').forEach(p => p.classList.remove('active'));
-    el.classList.add('active');
-    selectedCategory = cat;
-  }
-
-  function setFilter(el, cat) {
-    document.querySelectorAll('#filter-group .cat-pill').forEach(p => p.classList.remove('active'));
-    el.classList.add('active');
-    activeFilter = cat;
-    renderEvents();
-  }
-
-  function showMessage(text, isError = type = true) {
-    const box = document.getElementById('auth-msg');
-    box.innerText = text;
-    box.className = `msg-box ${isError ? 'msg-error' : 'msg-success'}`;
-    box.classList.remove('hidden');
-  }
-
-  async function handleLogin() {
-    const email = document.getElementById('email').value.trim().toLowerCase();
-    const password = document.getElementById('password').value;
-    if (!email || !password) return showMessage('Bitte E-Mail und Passwort eingeben.');
-
-    if (email === MASTER_ADMIN_EMAIL && password === MASTER_ADMIN_PASS) {
-      currentUserEmail = email;
-      localStorage.setItem('campus_email', currentUserEmail);
-      userPoints = 9999;
-      setupAdminUI();
-      document.getElementById('logout-btn').classList.remove('hidden');
-      document.getElementById('header-profile-btn').classList.remove('hidden');
-      initApp();
-      return;
-    }
-
-    const { error } = await _supabase.auth.signInWithPassword({ email, password });
-    if (error) return showMessage('Login fehlgeschlagen: ' + error.message);
-    currentUserEmail = email;
-    localStorage.setItem('campus_email', currentUserEmail);
-    document.getElementById('logout-btn').classList.remove('hidden');
-    document.getElementById('header-profile-btn').classList.remove('hidden');
-    initApp();
-  }
-
-  async function handleSignup() {
-    const email = document.getElementById('email').value.trim().toLowerCase();
-    const password = document.getElementById('password').value;
-    if (!email || !password) return showMessage('Bitte E-Mail und Passwort eingeben.');
-    const { error } = await _supabase.auth.signUp({ email, password });
-    if (error) return showMessage('Fehler: ' + error.message);
-    showMessage('Account erstellt!', false);
-  }
-
-  async function handleForgotPassword() {
-    const email = document.getElementById('email').value.trim().toLowerCase();
-    if (!email) return showMessage('Bitte E-Mail oben eingeben.');
-    await _supabase.auth.resetPasswordForEmail(email);
-    showMessage('E-Mail zum Zurücksetzen gesendet!', false);
-  }
-
-  function setupAdminUI() {
-    const badge = document.getElementById('score');
-    badge.innerText = '⭐ Admin';
-    badge.className = 'points-badge admin-badge';
-    badge.onclick = (e) => togglePointsDropdown(e);
-  }
-
-  async function addPoints(amount) {
-    if (currentUserEmail === MASTER_ADMIN_EMAIL) {
-      userPoints += amount;
-      document.getElementById('score').innerText = `${userPoints} P`;
-      return;
-    }
-    userPoints += amount;
-    updatePointsDisplay();
-    renderMyProfilePostsGrid();
-  }
-
-  function updatePointsDisplay() {
-    if (currentUserEmail === MASTER_ADMIN_EMAIL) return;
-    document.getElementById('score').innerText = `${userPoints} P`;
-  }
-
-  function resetUser(ask = true) {
-    if (!ask || confirm('Abmelden?')) {
-      localStorage.removeItem('campus_email');
-      _supabase.auth.signOut();
-      location.reload();
-    }
-  }
-
-  function toggleModal(show) {
-    document.getElementById('create-modal').classList.toggle('hidden', !show);
-    document.getElementById('bottom-nav-bar').classList.toggle('hidden', show);
-    document.getElementById('tab-feed').classList.toggle('hidden', show);
-  }
-
-  async function submitEvent() {
-    const title = document.getElementById('title').value.trim();
-    const location = document.getElementById('location').value.trim();
-    if (!title || !location) return alert('Bitte ausfüllen');
-    await _supabase.from('live_events').insert([{ title, location, category: selectedCategory, expires_at: new Date(Date.now() + 7200000).toISOString() }]);
-    await addPoints(20);
-    toggleModal(false);
-    loadEvents();
-  }
-
-  async function loadEvents() {
-    const { data } = await _supabase.from('live_events').select('*').gt('expires_at', new Date().toISOString());
-    allEventsCache = data || [];
-    renderEvents();
-  }
-
-  function renderEvents() {
-    const list = document.getElementById('feed-list');
-    let filtered = activeFilter === 'Alle' ? allEventsCache : allEventsCache.filter(e => e.category === activeFilter);
-    if (filtered.length === 0) {
-      list.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:15px;">Keine Treffen.</p>';
-      return;
-    }
-    list.innerHTML = filtered.map(e => `
-      <div class="event-card">
-        <div class="event-title">${e.category || '📍'} ${e.title}</div>
-        <div class="event-meta">${e.location}</div>
-        <button class="btn-join" onclick="joinEvent('${e.id}')">Bin dabei!</button>
-      </div>
-    `).join('');
-  }
-
-  async function joinEvent(id) {
-    await addPoints(10);
-    alert('Angemeldet!');
-  }
-
-  async function loadGlobalChat() {
-    const { data } = await _supabase.from('global_chat').select('*').order('created_at', { ascending: true });
-    globalChatCache = data || [];
-    renderGlobalChat();
-  }
-
-  function renderGlobalChat() {
-    const list = document.getElementById('global-chat-list');
-    list.innerHTML = globalChatCache.map(m => `<div class="msg-bubble"><strong>${m.user_email.split('@')[0]}:</strong> ${m.message}</div>`).join('');
-  }
-
-  async function sendGlobalMessage() {
-    const input = document.getElementById('global-chat-input');
-    if (!input.value.trim()) return;
-    await _supabase.from('global_chat').insert([{ user_email: currentUserEmail, message: input.value.trim() }]);
-    input.value = '';
-    loadGlobalChat();
-  }
-
-  async function loadDirectMessages() {
-    const recipient = document.getElementById('dm-recipient').value.trim().toLowerCase();
-    const list = document.getElementById('dm-chat-list');
-    if (!recipient) return;
-
-    const { data, error } = await _supabase.from('direct_messages').select('*')
-      .or(`and(sender_email.eq.${currentUserEmail},recipient_email.eq.${recipient}),and(sender_email.eq.${recipient},recipient_email.eq.${currentUserEmail})`)
-      .order('created_at', { ascending: true });
-
-    if (error || !data || data.length === 0) {
-      list.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:20px;">Keine Nachrichten mit diesem Nutzer.</p>';
-      return;
-    }
-
-    list.innerHTML = data.map(m => `<div class="msg-bubble" style="${m.sender_email === currentUserEmail ? 'background: rgba(99,102,241,0.2);' : ''}"><strong>${m.sender_email.split('@')[0]}:</strong> ${m.message}</div>`).join('');
-  }
-
-  async function sendDirectMessage() {
-    const recipient = document.getElementById('dm-recipient').value.trim().toLowerCase();
-    const input = document.getElementById('dm-input');
-    const msg = input.value.trim();
-
-    if (!recipient || !msg) return alert('Bitte Empfänger und Nachricht eingeben.');
-
-    const { error } = await _supabase.from('direct_messages').insert([{
-      sender_email: currentUserEmail,
-      recipient_email: recipient,
-      message: msg
-    }]);
-
-    if (error) {
-      alert('Fehler beim Senden: ' + error.message);
-      return;
-    }
-
-    input.value = '';
-    loadDirectMessages();
-  }
-</script>
+<!-- Externe Logikdatei -->
+<script src="app.js"></script>
 
 </body>
 </html>
