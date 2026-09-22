@@ -476,6 +476,7 @@
       resize: none;
       font-family: inherit;
       line-height: 1.5;
+      margin-bottom: 8px;
     }
     .lecture-notepad:focus {
       border-color: #333;
@@ -576,7 +577,7 @@
 
     <div class="tab-content-wrapper">
       
-      <!-- LECTURE MODE ANSICHT -->
+      <!-- LECTURE MODE ANSICHT (MIT EXPORT / SPEICHERN FUNKTION) -->
       <div id="tab-lecture-mode" class="lecture-mode-view">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
           <div>
@@ -585,7 +586,18 @@
           </div>
           <button class="btn btn-secondary" style="width: auto; margin-top: 0; padding: 6px 12px; font-size: 11px;" onclick="toggleLectureMode()">Modus beenden ✕</button>
         </div>
-        <textarea id="lecture-notes-input" class="lecture-notepad" placeholder="Schreibe hier deine Vorlesungsnotizen mit... (Werden automatisch gespeichert)"></textarea>
+
+        <textarea id="lecture-notes-input" class="lecture-notepad" placeholder="Schreibe hier deine Vorlesungsnotizen mit... (Werden automatisch im Browser gespeichert)"></textarea>
+
+        <!-- SPEICHERN & EXPORT BEREICH -->
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; padding: 10px; margin-top: 4px; flex-shrink: 0;">
+          <div style="font-size: 11px; font-weight: 700; color: #cbd5e1; margin-bottom: 6px;">💾 Notiz auf Gerät speichern:</div>
+          <div style="display: flex; gap: 6px; margin-bottom: 6px;">
+            <input type="text" id="lecture-file-name" placeholder="Dateiname (z.B. Vorlesung_Mathe)" style="margin: 0; flex: 2; font-size: 11px; padding: 8px 10px;">
+            <input type="date" id="lecture-file-date" style="margin: 0; flex: 1; font-size: 11px; padding: 8px 10px; background: var(--card); color: white; border: 1px solid var(--border); border-radius: 12px;">
+          </div>
+          <button class="btn" onclick="saveLectureNotesToFile()" style="margin: 0; padding: 9px; font-size: 11px; font-weight: 800;">📥 Als Datei herunterladen (Laptop / Smartphone)</button>
+        </div>
       </div>
 
       <!-- TAB 0: LIVE STREAMING -->
@@ -1145,13 +1157,26 @@
     loadActiveCampusDrops();
     loadProfReviews();
 
-    // Notizen aus LocalStorage für den Lecture Mode laden
+    // Notizen aus LocalStorage für den Lecture Mode laden & Standardwerte setzen
     const notesInput = document.getElementById('lecture-notes-input');
+    const fileNameInput = document.getElementById('lecture-file-name');
+    const fileDateInput = document.getElementById('lecture-file-date');
+
     if (notesInput) {
       notesInput.value = localStorage.getItem('lecture_mode_notes') || '';
       notesInput.addEventListener('input', () => {
         localStorage.setItem('lecture_mode_notes', notesInput.value);
       });
+    }
+
+    if (fileDateInput) {
+      // Heutiges Datum als Standard setzen
+      const todayStr = new Date().toISOString().split('T')[0];
+      fileDateInput.value = todayStr;
+    }
+
+    if (fileNameInput) {
+      fileNameInput.value = 'Vorlesung_Notizen';
     }
 
     window.addEventListener('click', (e) => {
@@ -1163,7 +1188,7 @@
     });
   });
 
-  // --- LECTURE MODE LOGIK (PUNKT 9) ---
+  // --- LECTURE MODE & SPEICHERN LOGIK (PUNKT 9) ---
   function toggleLectureMode() {
     const appCard = document.querySelector('.app-card');
     const dropdown = document.getElementById('points-dropdown-menu');
@@ -1178,6 +1203,34 @@
     } else {
       appCard.classList.remove('lecture-mode');
     }
+  }
+
+  function saveLectureNotesToFile() {
+    const notesContent = document.getElementById('lecture-notes-input').value;
+    if (!notesContent.trim()) {
+      alert('⚠️ Deine Notiz ist leer. Es gibt nichts zum Speichern!');
+      return;
+    }
+
+    const customName = document.getElementById('lecture-file-name').value.trim() || 'Vorlesung_Notizen';
+    const customDate = document.getElementById('lecture-file-date').value || new Date().toISOString().split('T')[0];
+    
+    // Dateiinhalte aufbereiten
+    const fileContent = `=== PURE LOGIC CAMPUS NOTIZ ===\nDatum: ${customDate}\nTitel: ${customName}\n=================================\n\n${notesContent}`;
+
+    // Blob erstellen und Download-Link triggern (funktioniert auf PC & Smartphone)
+    const blob = new Blob([fileContent], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${customName}_${customDate}.txt`;
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    alert(`✅ Notiz erfolgreich als "${customName}_${customDate}.txt" heruntergeladen!`);
   }
 
   // --- PROF-RATING & SURVIVAL GUIDE LOGIK (PUNKT 8) ---
