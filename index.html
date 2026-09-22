@@ -165,7 +165,7 @@
       position: absolute;
       top: 36px;
       right: 0;
-      width: 220px;
+      width: 230px;
       background: var(--card);
       border: 1px solid var(--border);
       border-radius: 14px;
@@ -440,6 +440,48 @@
     .tutorial-step { display: none; }
     .tutorial-step.active { display: block; }
 
+    /* 🎓 LECTURE MODE (Vorlesungs-Modus) */
+    .app-card.lecture-mode {
+      background: #000000 !important;
+      --card: #0c0c0c !important;
+      --border: rgba(255, 255, 255, 0.05) !important;
+    }
+    .app-card.lecture-mode .header-right > *:not(#score),
+    .app-card.lecture-mode .match-banner,
+    .app-card.lecture-mode #campus-drop-banner,
+    .app-card.lecture-mode #uni-duell-container,
+    .app-card.lecture-mode .nav-tabs,
+    .app-card.lecture-mode .footer-links,
+    .app-card.lecture-mode .tab-content-wrapper > *:not(#tab-lecture-mode) {
+      display: none !important;
+    }
+    
+    .lecture-mode-view {
+      display: none;
+      flex-direction: column;
+      height: 100%;
+      padding: 10px 0;
+    }
+    .app-card.lecture-mode .lecture-mode-view {
+      display: flex;
+    }
+    .lecture-notepad {
+      flex: 1;
+      background: #0c0c0c;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      color: #e2e8f0;
+      font-size: 14px;
+      resize: none;
+      font-family: inherit;
+      line-height: 1.5;
+    }
+    .lecture-notepad:focus {
+      border-color: #333;
+      box-shadow: none;
+    }
+
     @keyframes pulseGlow {
       0% { opacity: 0.8; text-shadow: 0 0 8px rgba(255, 0, 127, 0.6); }
       50% { opacity: 1; text-shadow: 0 0 20px rgba(255, 0, 127, 1); }
@@ -461,6 +503,7 @@
         <div id="points-dropdown-menu" class="points-dropdown hidden">
           <div class="points-dropdown-item" onclick="openActiveSpotsModal()">📍 Aktuelle Partner-Spots</div>
           <div class="points-dropdown-item" onclick="openProfGuideModal()">📚 Prof-Rating & Survival Guide</div>
+          <div class="points-dropdown-item" onclick="toggleLectureMode()">🎓 Lecture Mode (Fokus)</div>
           <div class="points-dropdown-item" onclick="openMorePointsModal()">🎁 Mehr Punkte sammeln</div>
         </div>
       </div>
@@ -533,6 +576,18 @@
 
     <div class="tab-content-wrapper">
       
+      <!-- LECTURE MODE ANSICHT -->
+      <div id="tab-lecture-mode" class="lecture-mode-view">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <div>
+            <h3 style="font-size: 15px; font-weight: 800; color: #94a3b8;">🎓 Hörsaal-Fokusmodus</h3>
+            <span style="font-size: 10px; color: #64748b;">Ablenkungsfrei & Akku-schonend</span>
+          </div>
+          <button class="btn btn-secondary" style="width: auto; margin-top: 0; padding: 6px 12px; font-size: 11px;" onclick="toggleLectureMode()">Modus beenden ✕</button>
+        </div>
+        <textarea id="lecture-notes-input" class="lecture-notepad" placeholder="Schreibe hier deine Vorlesungsnotizen mit... (Werden automatisch gespeichert)"></textarea>
+      </div>
+
       <!-- TAB 0: LIVE STREAMING -->
       <div id="tab-live" class="tab-content hidden">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px; flex-shrink:0; gap: 6px;">
@@ -1052,6 +1107,7 @@
   let activeDropCache = null;
   let allActiveDropsCache = [];
   let profReviewsCache = [];
+  let isLectureModeActive = false;
 
   // Quiz State (Punkt 7 mit Backend-Validierung & 15 Sek. Timer)
   let activeQuizQuestions = [];
@@ -1089,6 +1145,15 @@
     loadActiveCampusDrops();
     loadProfReviews();
 
+    // Notizen aus LocalStorage für den Lecture Mode laden
+    const notesInput = document.getElementById('lecture-notes-input');
+    if (notesInput) {
+      notesInput.value = localStorage.getItem('lecture_mode_notes') || '';
+      notesInput.addEventListener('input', () => {
+        localStorage.setItem('lecture_mode_notes', notesInput.value);
+      });
+    }
+
     window.addEventListener('click', (e) => {
       const dropdown = document.getElementById('points-dropdown-menu');
       const scoreBadge = document.getElementById('score');
@@ -1097,6 +1162,23 @@
       }
     });
   });
+
+  // --- LECTURE MODE LOGIK (PUNKT 9) ---
+  function toggleLectureMode() {
+    const appCard = document.querySelector('.app-card');
+    const dropdown = document.getElementById('points-dropdown-menu');
+    if (dropdown) dropdown.classList.add('hidden');
+
+    isLectureModeActive = !isLectureModeActive;
+
+    if (isLectureModeActive) {
+      appCard.classList.add('lecture-mode');
+      const savedNotes = localStorage.getItem('lecture_mode_notes') || '';
+      document.getElementById('lecture-notes-input').value = savedNotes;
+    } else {
+      appCard.classList.remove('lecture-mode');
+    }
+  }
 
   // --- PROF-RATING & SURVIVAL GUIDE LOGIK (PUNKT 8) ---
   function openProfGuideModal() {
@@ -1233,7 +1315,6 @@
     document.getElementById('quiz-question-container').innerText = 'Lade Fragen aus der Datenbank... ⏳';
     document.getElementById('quiz-options-container').innerHTML = '';
 
-    // Fragen aus Supabase laden (Tabelle 'quiz_questions')
     const { data, error } = await _supabase
       .from('quiz_questions')
       .select('id, question_text, options')
@@ -1270,7 +1351,6 @@
       updateQuizTimerDisplay();
       if (quizSecondsLeft <= 0) {
         clearInterval(quizTimerInterval);
-        // Bei Ablauf der Zeit wird automatisch null eingetragen (keine Punkte für diese Frage)
         userQuizAnswers.push({ questionId: activeQuizQuestions[currentQuizIndex].id, selectedOptionId: null });
         currentQuizIndex++;
         startQuizQuestion();
