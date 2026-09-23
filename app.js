@@ -1018,7 +1018,6 @@ async function submitLiveStream() {
     return;
   }
 
-  // Moderator direkt beim Stream-Start zuweisen falls angegeben
   if (modEmail && streamData) {
     await _supabase.from('stream_moderators').insert([{
       stream_id: streamData.id,
@@ -1096,7 +1095,6 @@ function closeReportModal() {
   document.getElementById('bottom-nav-bar').classList.remove('hidden'); 
 }
 
-// 🛡️ Rechtssichere Copyright- & Inhalts-Meldung mit automatischem Ausblenden
 async function submitReport() {
   const reason = document.getElementById('report-reason').value;
   const details = document.getElementById('report-details').value.trim();
@@ -1106,7 +1104,6 @@ async function submitReport() {
     return;
   }
 
-  // 1. Meldung rechtssicher in der Datenbank protokollieren
   const { error } = await _supabase.from('reports').insert([{
     reporter_email: currentUserEmail || 'anonymous@campus.at',
     reason: reason,
@@ -1119,7 +1116,6 @@ async function submitReport() {
     return;
   }
 
-  // 2. Automatisches Verstecken, falls es sich um Media-Posts / Confessions handelt
   if (details.includes('http') || details.length > 3) {
     await _supabase
       .from('media_posts')
@@ -1154,7 +1150,6 @@ function setReelFilter(filter) {
 }
 
 async function loadMediaPosts() {
-  // Lade nur Beiträge, die nicht versteckt wurden (is_hidden ist false)
   const { data } = await _supabase
     .from('media_posts')
     .select('*')

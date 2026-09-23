@@ -535,19 +535,8 @@
   <div id="agb-modal" class="hidden tab-content" style="align-items: center; justify-content: center;">
     <div style="width: 100%; max-width: 420px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 16px; max-height: 80vh; overflow-y: auto;">
       <h3 style="margin-bottom: 8px; font-weight: 800;">AGB</h3>
-      <p style="font-size: 12px; color: var(--text-muted); line-height: 1.4; margin-bottom: 12px;">Respektvoller Umgang miteinander ist Pflicht.</p>
+      <p style="font-size: 12px; color: var(--text-muted); line-height: 1.4; margin-bottom: 12px;">Allgemeine Geschäftsbedingungen von PURE LOGIC Campus...</p>
       <button class="btn btn-secondary" onclick="closeAgbModal()">Schließen</button>
-    </div>
-  </div>
-
-  <div id="upload-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.92); z-index: 100;">
-    <div style="width: 100%; max-width: 400px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 18px; margin: 10px;">
-      <h3 style="margin-bottom: 4px; font-weight: 900; color: var(--accent);">🤫 Anonyme Confession teilen</h3>
-      <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px; line-height: 1.4;">Teile deinen Campus-Gossip 100% anonym im Feed.</p>
-      <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Deine Confession:</label>
-      <textarea id="confession-text-input" rows="4" placeholder="Was wollte schon immer alle Welt wissen...?" style="resize: none;"></textarea>
-      <button class="btn" onclick="submitConfessionPost()">Anonym posten (+15 P) 🚀</button>
-      <button class="btn btn-secondary" onclick="closeUploadModal()" style="margin-top: 8px;">Abbrechen</button>
     </div>
   </div>
 
@@ -557,17 +546,27 @@
       <div class="category-group" id="create-category-group">
         <div class="cat-pill active" onclick="selectCreateCategory(this, '☕ Kaffee')">☕ Kaffee</div>
         <div class="cat-pill" onclick="selectCreateCategory(this, '📖 Lernen')">📖 Lernen</div>
+        <div class="cat-pill" onclick="selectCreateCategory(this, '🍺 Bier')">🍺 Bier</div>
+        <div class="cat-pill" onclick="selectCreateCategory(this, '🏀 Sport')">🏀 Sport</div>
       </div>
-      <input type="text" id="title" placeholder="Titel">
-      <input type="text" id="location" placeholder="Ort">
-      <button class="btn" onclick="submitEvent()">Veröffentlichen (+20 P)</button>
+      <input type="text" id="title" placeholder="Titel (z. B. 15min Kaffeepause)">
+      <input type="text" id="location" placeholder="Ort (z. B. Uni-Café)">
+      <button class="btn" onclick="submitEvent()">Erstellen (+20 P)</button>
       <button class="btn btn-secondary" onclick="toggleModal(false)">Abbrechen</button>
     </div>
   </div>
 
-</div>
+  <div id="upload-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.92); z-index: 100;">
+    <div style="width: 100%; max-width: 400px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 18px; margin: 10px;">
+      <h3 style="margin-bottom: 4px; font-weight: 900; color: var(--primary);">🤫 Anonyme Confession posten</h3>
+      <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;">Teile deine Gedanken anonym mit dem Campus.</p>
+      <textarea id="confession-text-input" rows="4" placeholder="Schreibe deine Confession..." style="margin-bottom: 10px; resize: none;"></textarea>
+      <button class="btn" onclick="submitConfessionPost()">Confession posten (+15 P)</button>
+      <button class="btn btn-secondary" onclick="closeUploadModal()" style="margin-top: 8px;">Abbrechen</button>
+    </div>
+  </div>
 
-<script src="app.js"></script>
+</div>
 
 </body>
 </html>
