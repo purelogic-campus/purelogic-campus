@@ -1018,7 +1018,7 @@ async function submitLiveStream() {
     return;
   }
 
-  // 🛡️ Punkt 11: Moderator direkt beim Stream-Start zuweisen falls angegeben
+  // Moderator direkt beim Stream-Start zuweisen falls angegeben
   if (modEmail && streamData) {
     await _supabase.from('stream_moderators').insert([{
       stream_id: streamData.id,
@@ -1086,14 +1086,51 @@ async function moderateStreamPrompt(streamId) {
   }
 }
 
-function openReportModal() { document.getElementById('bottom-nav-bar').classList.add('hidden'); document.getElementById('report-modal').classList.remove('hidden'); }
-function closeReportModal() { document.getElementById('report-modal').classList.add('hidden'); document.getElementById('bottom-nav-bar').classList.remove('hidden'); }
+function openReportModal() { 
+  document.getElementById('bottom-nav-bar').classList.add('hidden'); 
+  document.getElementById('report-modal').classList.remove('hidden'); 
+}
+
+function closeReportModal() { 
+  document.getElementById('report-modal').classList.add('hidden'); 
+  document.getElementById('bottom-nav-bar').classList.remove('hidden'); 
+}
+
+// 🛡️ Rechtssichere Copyright- & Inhalts-Meldung mit automatischem Ausblenden
 async function submitReport() {
   const reason = document.getElementById('report-reason').value;
   const details = document.getElementById('report-details').value.trim();
-  await _supabase.from('reports').insert([{ reporter_email: currentUserEmail, reason, details }]);
-  alert('Meldung versendet.');
+  
+  if (!details) {
+    alert('⚠️ Bitte gib den betroffenen Benutzer, Link oder Grund genauer an.');
+    return;
+  }
+
+  // 1. Meldung rechtssicher in der Datenbank protokollieren
+  const { error } = await _supabase.from('reports').insert([{
+    reporter_email: currentUserEmail || 'anonymous@campus.at',
+    reason: reason,
+    details: details,
+    status: 'pending'
+  }]);
+
+  if (error) {
+    alert('Fehler beim Senden der Meldung: ' + error.message);
+    return;
+  }
+
+  // 2. Automatisches Verstecken, falls es sich um Media-Posts / Confessions handelt
+  if (details.includes('http') || details.length > 3) {
+    await _supabase
+      .from('media_posts')
+      .update({ is_hidden: true })
+      .or(`id.eq.${details},caption.ilike.%${details}%`);
+  }
+
+  alert('🚨 Meldung erfolgreich eingereicht. Der betroffene Inhalt wurde zu deiner rechtlichen Absicherung vorübergehend ausgeblendet und wird geprüft.');
+  document.getElementById('report-details').value = '';
   closeReportModal();
+  loadMediaPosts();
 }
 
 function openImpressumModal() { document.getElementById('bottom-nav-bar').classList.add('hidden'); document.getElementById('impressum-modal').classList.remove('hidden'); }
@@ -1117,7 +1154,13 @@ function setReelFilter(filter) {
 }
 
 async function loadMediaPosts() {
-  const { data } = await _supabase.from('media_posts').select('*').order('created_at', { ascending: false });
+  // Lade nur Beiträge, die nicht versteckt wurden (is_hidden ist false)
+  const { data } = await _supabase
+    .from('media_posts')
+    .select('*')
+    .eq('is_hidden', false)
+    .order('created_at', { ascending: false });
+
   mediaPostsCache = data || [];
   renderMediaPosts();
   renderMyProfilePostsGrid();
@@ -1161,7 +1204,7 @@ async function submitConfessionPost() {
     "https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=600"
   ];
   const randomImg = bgImages[Math.floor(Math.random() * bgImages.length)];
-  await _supabase.from('media_posts').insert([{ author_email: 'anonymous@campus.at', media_url: randomImg, media_type: 'image', caption: text, likes: {}, comments: [] }]);
+  await _supabase.from('media_posts').insert([{ author_email: 'anonymous@campus.at', media_url: randomImg, media_type: 'image', caption: text, likes: {}, comments: [], is_hidden: false }]);
   document.getElementById('confession-text-input').value = '';
   await addPoints(15);
   closeUploadModal();

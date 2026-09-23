@@ -511,13 +511,14 @@
 
   <div id="report-modal" class="hidden tab-content" style="align-items: center; justify-content: center;">
     <div style="width: 100%; max-width: 400px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 16px;">
-      <h3 style="margin-bottom: 8px; font-weight: 800;">🚨 Inhalts-Meldung</h3>
+      <h3 style="margin-bottom: 8px; font-weight: 800;">🚨 Inhalts- & Copyright-Meldung</h3>
       <select id="report-reason" style="margin-bottom: 8px;">
+        <option value="Copyright">Copyright-Verstoß / Urheberrecht</option>
         <option value="Spam">Spam oder Werbung</option>
         <option value="Belästigung">Belästigung oder Mobbing</option>
         <option value="Unangemessen">Unangemessene Inhalte</option>
       </select>
-      <input type="text" id="report-details" placeholder="Betroffener Benutzer / Link">
+      <input type="text" id="report-details" placeholder="Betroffener Link, ID oder Benutzer">
       <button class="btn" onclick="submitReport()">Meldung absenden</button>
       <button class="btn btn-secondary" onclick="closeReportModal()">Schließen</button>
     </div>
