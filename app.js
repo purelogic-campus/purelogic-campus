@@ -5,8 +5,16 @@ const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const MASTER_ADMIN_EMAIL = 'admin@purelogic.app';
 const MASTER_ADMIN_PASS = 'Doschi08021991';
 
-// Erlaubte akademische bzw. Wiener Uni-Domains
 const ALLOWED_DOMAINS = ['.ac.at', 'univie.ac.at', 'tuwien.ac.at', 'wu.ac.at', 'meduniwien.ac.at', 'boku.ac.at', 'fhwien.ac.at'];
+
+// Vollautomatischer Rassismus- & Beleidigungsfilter
+const FORBIDDEN_REGEX = /\b(schimpfwort1|schimpfwort2|rassismus|hassrede|beleidigung)\b/i;
+
+function containsHateSpeech(text) {
+  if (!text) return false;
+  const cleaned = text.toLowerCase().trim();
+  return FORBIDDEN_REGEX.test(cleaned);
+}
 
 let currentUserEmail = localStorage.getItem('campus_email') || '';
 let userPoints = 0;
@@ -93,7 +101,6 @@ window.addEventListener('DOMContentLoaded', async () => {
   });
 });
 
-// --- LECTURE MODE & SPEICHERN LOGIK (.TXT ODER .PDF) ---
 function toggleLectureMode() {
   const appCard = document.querySelector('.app-card');
   const dropdown = document.getElementById('points-dropdown-menu');
@@ -170,7 +177,6 @@ function saveLectureNotesToFile() {
   }
 }
 
-// --- PROF-RATING & SURVIVAL GUIDE LOGIK ---
 function openProfGuideModal() {
   document.getElementById('prof-guide-modal').classList.remove('hidden');
   loadProfReviews();
@@ -246,6 +252,11 @@ async function submitProfReview() {
     return;
   }
 
+  if (containsHateSpeech(comment)) {
+    alert('⚠️ Deine Bewertung enthält Ausdrücke, die gegen unsere Richtlinien verstoßen.');
+    return;
+  }
+
   const { error } = await _supabase.from('prof_reviews').insert([{
     prof_name: profName,
     subject_code: subject,
@@ -270,7 +281,6 @@ async function submitProfReview() {
   alert('🎉 Review erfolgreich veröffentlicht! +15 Punkte gutgeschrieben. 🚀');
 }
 
-// --- ADMIN TEST-MODUS PUNKTE SETZEN ---
 function adminSetTestPoints() {
   const input = document.getElementById('admin-test-points-input');
   const val = parseInt(input.value);
@@ -298,7 +308,6 @@ function closeMorePointsModal() {
   document.getElementById('more-points-modal').classList.add('hidden');
 }
 
-// --- QUIZ LOGIK ---
 async function openCampusQuizModal() {
   document.getElementById('quiz-modal').classList.remove('hidden');
   document.getElementById('quiz-question-container').innerText = 'Lade Fragen aus der Datenbank... ⏳';
@@ -402,7 +411,6 @@ async function submitQuizToBackend() {
   }
 }
 
-// --- LEAFLET KARTE ---
 function initAdminMap() {
   if (adminMap) {
     adminMap.invalidateSize();
@@ -434,7 +442,6 @@ function initAdminMap() {
   });
 }
 
-// --- SPOTS & DROPS ---
 function openActiveSpotsModal() {
   document.getElementById('active-spots-modal').classList.remove('hidden');
   renderActiveSpotsInModal();
@@ -993,9 +1000,32 @@ function closeGoLiveModal() {
 async function submitLiveStream() {
   const title = document.getElementById('live-title').value.trim();
   const url = document.getElementById('live-url').value.trim();
+  const modEmail = document.getElementById('live-mod-input').value.trim().toLowerCase();
+  
   if (!title || !url) return alert('Bitte Titel und URL angeben.');
   const expiresAt = new Date(Date.now() + 3 * 3600000).toISOString();
-  await _supabase.from('live_streams').insert([{ host_email: currentUserEmail, title, stream_url: url, category: selectedGoLiveCategory, expires_at: expiresAt }]);
+  
+  const { data: streamData, error: streamError } = await _supabase.from('live_streams').insert([{ 
+    host_email: currentUserEmail, 
+    title, 
+    stream_url: url, 
+    category: selectedGoLiveCategory, 
+    expires_at: expiresAt 
+  }]).select().single();
+
+  if (streamError) {
+    alert('Fehler beim Starten des Streams: ' + streamError.message);
+    return;
+  }
+
+  // 🛡️ Punkt 11: Moderator direkt beim Stream-Start zuweisen falls angegeben
+  if (modEmail && streamData) {
+    await _supabase.from('stream_moderators').insert([{
+      stream_id: streamData.id,
+      moderator_email: modEmail
+    }]);
+  }
+
   await addPoints(25);
   closeGoLiveModal();
   loadLiveStreams();
@@ -1007,16 +1037,53 @@ async function loadLiveStreams() {
   renderLiveStreams();
 }
 
-function renderLiveStreams() {
+async function checkIfUserIsMod(streamId) {
+  if (currentUserEmail === MASTER_ADMIN_EMAIL) return true;
+  const { data } = await _supabase.from('stream_moderators').select('*').eq('stream_id', streamId).eq('moderator_email', currentUserEmail).maybeSingle();
+  return data !== null;
+}
+
+async function renderLiveStreams() {
   const list = document.getElementById('live-streams-list');
   let streams = activeLiveFilter === 'Alle' ? liveStreamsCache : liveStreamsCache.filter(s => s.category === activeLiveFilter);
   if (streams.length === 0) return list.innerHTML = '<p style="color: var(--text-muted); font-size: 12px; text-align: center; padding: 40px;">Keine Live-Streams aktiv.</p>';
-  list.innerHTML = streams.map(s => `
-    <div class="live-card">
-      <div class="event-header"><div class="event-title">${s.category || '🔴'} ${s.title}</div></div>
-      <div class="event-footer"><a href="${s.stream_url}" target="_blank" class="btn-join" style="text-decoration:none;">Stream ansehen</a></div>
-    </div>
-  `).join('');
+  
+  let html = '';
+  for (const s of streams) {
+    const isHost = s.host_email === currentUserEmail;
+    const isMod = await checkIfUserIsMod(s.id);
+
+    html += `
+      <div class="live-card">
+        <div class="event-header">
+          <div class="event-title">${s.category || '🔴'} ${s.title}</div>
+          <span style="font-size:10px; color:var(--text-muted);">Host: ${s.host_email.split('@')[0]}</span>
+        </div>
+        <div class="event-footer" style="display:flex; justify-content:space-between; align-items:center;">
+          <a href="${s.stream_url}" target="_blank" class="btn-join" style="text-decoration:none;">Stream ansehen</a>
+          ${(isHost || isMod || currentUserEmail === MASTER_ADMIN_EMAIL) ? `<button class="btn-secondary" style="width:auto; padding:4px 8px; font-size:10px; margin:0;" onclick="moderateStreamPrompt('${s.id}')">🛡️ Mod-Menü</button>` : ''}
+        </div>
+      </div>
+    `;
+  }
+  list.innerHTML = html;
+}
+
+async function moderateStreamPrompt(streamId) {
+  const action = prompt("🛡️ Moderatoren-Aktion wählen:\n1 - Moderator hinzufügen (E-Mail eingeben)\n2 - Stream vorzeitig beenden");
+  if (action === '1') {
+    const modMail = prompt("Gib die E-Mail des neuen Moderators ein:").trim().toLowerCase();
+    if (modMail) {
+      await _supabase.from('stream_moderators').insert([{ stream_id: streamId, moderator_email: modMail }]);
+      alert(`✅ Moderator ${modMail} erfolgreich hinzugefügt!`);
+    }
+  } else if (action === '2') {
+    if (confirm("Möchtest du diesen Stream wirklich beenden?")) {
+      await _supabase.from('live_streams').delete().eq('id', streamId);
+      loadLiveStreams();
+      alert('Stream beendet.');
+    }
+  }
 }
 
 function openReportModal() { document.getElementById('bottom-nav-bar').classList.add('hidden'); document.getElementById('report-modal').classList.remove('hidden'); }
@@ -1083,6 +1150,12 @@ function closeUploadModal() { document.getElementById('upload-modal').classList.
 async function submitConfessionPost() {
   const text = document.getElementById('confession-text-input').value.trim();
   if (!text) return alert('Bitte Text eingeben.');
+
+  if (containsHateSpeech(text)) {
+    alert('⚠️ Hassrede oder Beleidigungen sind in Confessions strengstens untersagt!');
+    return;
+  }
+
   const bgImages = [
     "https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=600",
     "https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=600"
@@ -1154,7 +1227,6 @@ async function handleSignup() {
     return showMessage('Bitte E-Mail und Passwort eingeben.');
   }
 
-  // Harte Zugangsschranke: Prüfen, ob die E-Mail eine gültige Uni-Endung hat
   const isValidUniMail = ALLOWED_DOMAINS.some(domain => email.endsWith(domain));
 
   if (!isValidUniMail) {
@@ -1272,8 +1344,15 @@ function renderGlobalChat() {
 
 async function sendGlobalMessage() {
   const input = document.getElementById('global-chat-input');
-  if (!input.value.trim()) return;
-  await _supabase.from('global_chat').insert([{ user_email: currentUserEmail, message: input.value.trim() }]);
+  const messageText = input.value.trim();
+  if (!messageText) return;
+
+  if (containsHateSpeech(messageText)) {
+    alert('⚠️ Deine Nachricht enthält Ausdrücke, die gegen unsere Community-Richtlinien verstoßen.');
+    return;
+  }
+
+  await _supabase.from('global_chat').insert([{ user_email: currentUserEmail, message: messageText }]);
   input.value = '';
   loadGlobalChat();
 }
@@ -1296,6 +1375,11 @@ async function sendDirectMessage() {
   const input = document.getElementById('dm-input');
   const msg = input.value.trim();
   if (!recipient || !msg) return alert('Bitte Empfänger und Nachricht eingeben.');
+
+  if (containsHateSpeech(msg)) {
+    alert('⚠️ Diese Nachricht kann wegen unangemessener Wortwahl nicht gesendet werden.');
+    return;
+  }
 
   await _supabase.from('direct_messages').insert([{ sender_email: currentUserEmail, recipient_email: recipient, message: msg }]);
   input.value = '';
