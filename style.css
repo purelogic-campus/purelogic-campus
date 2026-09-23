@@ -13,7 +13,6 @@
   --gradient-main: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
 }
 
-/* 💖 KITSCHIGER & AUFFÄLLIGER MATCH-MITTWOCH OVERRIDES */
 .match-wednesday {
   --bg: #220217 !important;
   --card: #3c092f !important;
@@ -26,7 +25,6 @@
   --gradient-main: linear-gradient(135deg, #ff007f 0%, #ff66b2 50%, #ffeb3b 100%) !important;
 }
 
-/* ⚡ GOLD-PINKER FLASH DROP ANIMATION & STYLES */
 @keyframes goldPinkFlash {
   0% { transform: scale(1); box-shadow: 0 4px 15px rgba(245, 158, 11, 0.6); filter: brightness(1); }
   50% { transform: scale(1.025); box-shadow: 0 0 30px 10px rgba(236, 72, 153, 0.95), 0 0 15px 5px rgba(251, 191, 36, 0.8); filter: brightness(1.2); }
@@ -49,7 +47,6 @@ html, body {
   position: fixed;
 }
 
-/* Schwebende Herzen im Hintergrund am Match-Mittwoch */
 .match-wednesday::before {
   content: "💖 💘 💕 💖 💗 💓 💞 💖 💘";
   position: absolute;
@@ -312,7 +309,6 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--p
 .tutorial-step { display: none; }
 .tutorial-step.active { display: block; }
 
-/* 🎓 LECTURE MODE (Vorlesungs-Modus) */
 .app-card.lecture-mode {
   background: #000000 !important;
   --card: #0c0c0c !important;
