@@ -461,112 +461,129 @@
       <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Geheimer Hinweis (optional):</label>
       <input type="text" id="crush-hint-input" placeholder="z.b. Bib Reihe 4...">
       <button class="btn" onclick="submitCrush()">Abschicken & Hoffen 💘</button>
-      <div id="crush-matches-box" style="margin-top: 12px; font-size: 12px; text-align: center; color: var(--text-muted);"></div>
-      <button class="btn btn-secondary" onclick="closeCrushModal()" style="margin-top: 8px;">Schließen</button>
+      <div id="crush-matches-box" style="margin-top: 12px; font-size: 11px;"></div>
+      <button class="btn btn-secondary" style="margin-top: 8px;" onclick="closeCrushModal()">Schließen</button>
     </div>
   </div>
 
-  <div id="stream-help-modal" class="hidden tab-content" style="align-items: center; justify-content: center;">
-    <div style="width: 100%; max-width: 420px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 20px; max-height: 85vh; overflow-y: auto;">
-      <h3 style="margin-bottom: 12px; font-weight: 800; color: #818cf8;">💡 Live-Stream Campus Guide</h3>
-      <div id="tutorial-steps-container" style="min-height: 120px; margin-bottom: 16px;">
-        <div class="tutorial-step active" data-step="1">
-          <h4 style="font-size: 14px; margin-bottom: 6px;">Schritt 1 von 3: Vorbereitung</h4>
-          <p style="font-size: 12px; color: var(--text-muted);">Stelle sicher, dass du eine stabile Verbindung hast.</p>
-        </div>
-        <div class="tutorial-step" data-step="2">
-          <h4 style="font-size: 14px; margin-bottom: 6px;">Schritt 2 von 3: Community & Regeln</h4>
-          <p style="font-size: 12px; color: var(--text-muted);">Respektvoller Umgang miteinander.</p>
-        </div>
-        <div class="tutorial-step" data-step="3">
-          <h4 style="font-size: 14px; margin-bottom: 6px;">Schritt 3 von 3: Bonuspunkte</h4>
-          <p style="font-size: 12px; color: var(--text-muted);">Sammle wertvolle Punkte!</p>
-        </div>
-      </div>
-      <div style="display: flex; gap: 8px;">
-        <button class="btn btn-secondary" id="tutorial-back-btn" onclick="changeTutorialStep(-1)" style="margin-top: 0; display: none;">Zurück</button>
-        <button class="btn" id="tutorial-next-btn" onclick="changeTutorialStep(1)" style="margin-top: 0;">Weiter</button>
-      </div>
-      <button class="btn btn-secondary" onclick="closeStreamHelpModal()" style="margin-top: 6px; background: transparent; border: none; color: var(--text-muted);">Abbrechen</button>
-    </div>
-  </div>
+  <div id="go-live-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.95); z-index: 100;">
+    <div style="width: 100%; max-width: 400px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 18px; margin: 10px;">
+      <h3 style="margin-bottom: 4px; font-weight: 900; color: var(--accent);">🔴 Live-Stream starten</h3>
+      <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;">Teile deinen Stream (z. B. Twitch, YouTube, Meet) mit dem Campus.</p>
+      
+      <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Titel:</label>
+      <input type="text" id="live-title" placeholder="z. B. Lernsession Analysis 1 📚" style="margin-bottom: 8px;">
 
-  <div id="go-live-modal" class="hidden tab-content" style="align-items: center; justify-content: center;">
-    <div style="width: 100%; max-width: 400px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 16px;">
-      <h3 style="margin-bottom: 8px; font-weight: 800;">🔴 Live-Stream starten & Mods</h3>
-      <label style="font-size: 11px; font-weight: 600; color: var(--text-muted); display: block;">Sparte wählen:</label>
-      <div class="category-group" id="go-live-category-group">
+      <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Stream-URL:</label>
+      <input type="url" id="live-url" placeholder="https://twitch.tv/dein_kanal" style="margin-bottom: 8px;">
+
+      <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Kategorie:</label>
+      <div class="category-group" id="go-live-category-group" style="margin-bottom: 8px;">
         <div class="cat-pill active" onclick="selectGoLiveCategory(this, '🎮 Gaming')">🎮 Gaming</div>
         <div class="cat-pill" onclick="selectGoLiveCategory(this, '🎵 Musik')">🎵 Musik</div>
         <div class="cat-pill" onclick="selectGoLiveCategory(this, '💬 Plaudern')">💬 Plaudern</div>
-        <div class="cat-pill" onclick="selectGoLiveCategory(this, '🔬 Lernen & Wissenschaft')">🔬 Lernen & Wissenschaft</div>
+        <div class="cat-pill" onclick="selectGoLiveCategory(this, '🔬 Lernen & Wissenschaft')">🔬 Lernen</div>
       </div>
-      <input type="text" id="live-title" placeholder="z. B. Zusammen lernen für Mathe Klausur">
-      <input type="text" id="live-url" placeholder="https://twitch.tv/deinname">
-      <input type="text" id="live-mod-input" placeholder="Mod-E-Mail hinzufügen (optional)">
-      <button class="btn" id="go-live-submit-btn" onclick="submitLiveStream()">Live gehen (+25 P)</button>
-      <button class="btn btn-secondary" onclick="closeGoLiveModal()">Abbrechen</button>
+
+      <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Mod-E-Mail (optional für Co-Moderation):</label>
+      <input type="email" id="live-mod-input" placeholder="mod@uni.at" style="margin-bottom: 12px;">
+
+      <div style="display: flex; gap: 8px;">
+        <button class="btn" onclick="submitLiveStream()" style="margin-top: 0;">Starten (+25 P) 🚀</button>
+        <button class="btn btn-secondary" onclick="closeGoLiveModal()" style="margin-top: 0; width: auto;">Abbrechen</button>
+      </div>
     </div>
   </div>
 
-  <div id="report-modal" class="hidden tab-content" style="align-items: center; justify-content: center;">
-    <div style="width: 100%; max-width: 400px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 16px;">
-      <h3 style="margin-bottom: 8px; font-weight: 800;">🚨 Inhalts- & Copyright-Meldung</h3>
+  <div id="stream-help-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.95); z-index: 130;">
+    <div style="width: 100%; max-width: 400px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 18px; margin: 10px;">
+      <h3 style="font-weight: 900; color: #818cf8; font-size: 16px; margin-bottom: 4px;">💡 Campus-Stream Quick-Guide</h3>
+      <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 14px;">Dein Leitfaden für erfolgreiche Live-Sessions.</p>
+      
+      <div class="tutorial-step active" data-step="1">
+        <strong style="color:var(--text); font-size:13px;">1. Vorbereitung & Plattform</strong>
+        <p style="font-size:11px; color:var(--text-muted); margin-top:4px; line-height:1.4;">Nutze externe Plattformen wie Twitch, YouTube Live oder Jitsi. Kopiere einfach den Link in das Stream-Feld.</p>
+      </div>
+      <div class="tutorial-step" data-step="2">
+        <strong style="color:var(--text); font-size:13px;">2. Moderation & Regeln</strong>
+        <p style="font-size:11px; color:var(--text-muted); margin-top:4px; line-height:1.4;">Trage bei Bedarf vertraute Kommilitonen als Co-Moderatoren ein, um den Chat sauber zu halten.</p>
+      </div>
+      <div class="tutorial-step" data-step="3">
+        <strong style="color:var(--text); font-size:13px;">3. Hype & Punkte</strong>
+        <p style="font-size:11px; color:var(--text-muted); margin-top:4px; line-height:1.4;">Sammle sofort 25 Hype-Punkte beim Start und steige im Wiener Uni-Ranking auf!</p>
+      </div>
+
+      <div style="display: flex; gap: 8px; margin-top: 14px;">
+        <button class="btn btn-secondary" id="tutorial-back-btn" onclick="changeTutorialStep(-1)" style="display:none; margin-top:0;">Zurück</button>
+        <button class="btn" id="tutorial-next-btn" onclick="changeTutorialStep(1)" style="margin-top:0;">Weiter</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="upload-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.95); z-index: 100;">
+    <div style="width: 100%; max-width: 400px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 18px; margin: 10px;">
+      <h3 style="margin-bottom: 4px; font-weight: 900; color: var(--primary);">🤫 Anonyme Campus Confession</h3>
+      <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;">Teile deine Gedanken anonym mit dem Campus.</p>
+      
+      <textarea id="confession-text-input" rows="4" placeholder="Schreibe deine Confession..." style="margin-bottom: 10px; resize: none;"></textarea>
+      
+      <div style="display: flex; gap: 8px;">
+        <button class="btn" onclick="submitConfessionPost()" style="margin-top: 0;">Anonym posten (+15 P) 🚀</button>
+        <button class="btn btn-secondary" onclick="closeUploadModal()" style="margin-top: 0; width: auto;">Abbrechen</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="report-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.95); z-index: 130;">
+    <div style="width: 100%; max-width: 400px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 18px; margin: 10px;">
+      <h3 style="font-weight: 900; color: #ef4444; font-size: 16px; margin-bottom: 4px;">🚨 Inhalt oder Nutzer melden</h3>
+      <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;">Hilf uns, den Campus sicher zu halten.</p>
+      
+      <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Grund:</label>
       <select id="report-reason" style="margin-bottom: 8px;">
-        <option value="Copyright">Copyright-Verstoß / Urheberrecht</option>
-        <option value="Spam">Spam oder Werbung</option>
-        <option value="Belästigung">Belästigung oder Mobbing</option>
-        <option value="Unangemessen">Unangemessene Inhalte</option>
+        <option value="hate">Hassrede / Diskriminierung</option>
+        <option value="spam">Spam / Werbung</option>
+        <option value="bullying">Belästigung</option>
+        <option value="other">Sonstiges</option>
       </select>
-      <input type="text" id="report-details" placeholder="Betroffener Link, ID oder Benutzer">
-      <button class="btn" onclick="submitReport()">Meldung absenden</button>
-      <button class="btn btn-secondary" onclick="closeReportModal()">Schließen</button>
+
+      <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Details / Link / Benutzer:</label>
+      <textarea id="report-details" rows="3" placeholder="Beschreibe den Vorfall..." style="margin-bottom: 12px; resize: none;"></textarea>
+
+      <div style="display: flex; gap: 8px;">
+        <button class="btn" onclick="submitReport()" style="margin-top: 0; background: #ef4444;">Meldung abschicken 🛡️</button>
+        <button class="btn btn-secondary" onclick="closeReportModal()" style="margin-top: 0; width: auto;">Abbrechen</button>
+      </div>
     </div>
   </div>
 
-  <div id="impressum-modal" class="hidden tab-content" style="align-items: center; justify-content: center;">
-    <div style="width: 100%; max-width: 420px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 16px; max-height: 80vh; overflow-y: auto;">
-      <h3 style="margin-bottom: 8px; font-weight: 800;">Impressum</h3>
-      <p style="font-size: 12px; color: var(--text-muted); line-height: 1.4; margin-bottom: 12px;">PURE LOGIC • GenZ Campus<br>E-Mail: admin@purelogic.app</p>
+  <div id="impressum-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.95); z-index: 130;">
+    <div style="width: 100%; max-width: 400px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 18px; margin: 10px; max-height: 80vh; display: flex; flex-direction: column;">
+      <h3 style="font-weight: 900; color: var(--text); font-size: 16px; margin-bottom: 8px;">Impressum</h3>
+      <div style="font-size: 11px; color: var(--text-muted); overflow-y: auto; flex: 1; line-height: 1.5; margin-bottom: 12px;">
+        <p><strong>PURE LOGIC Campus App</strong><br>Wien, Österreich</p>
+        <p style="margin-top: 8px;">Kontakt: admin@purelogic.app</p>
+        <p style="margin-top: 8px;">Verantwortlich für den Inhalt: Master Administration</p>
+      </div>
       <button class="btn btn-secondary" onclick="closeImpressumModal()">Schließen</button>
     </div>
   </div>
 
-  <div id="agb-modal" class="hidden tab-content" style="align-items: center; justify-content: center;">
-    <div style="width: 100%; max-width: 420px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 16px; max-height: 80vh; overflow-y: auto;">
-      <h3 style="margin-bottom: 8px; font-weight: 800;">AGB</h3>
-      <p style="font-size: 12px; color: var(--text-muted); line-height: 1.4; margin-bottom: 12px;">Allgemeine Geschäftsbedingungen von PURE LOGIC Campus...</p>
-      <button class="btn btn-secondary" onclick="closeAgbModal()">Schließen</button>
-    </div>
-  </div>
-
-  <div id="create-modal" class="hidden tab-content" style="align-items: center; justify-content: center;">
-    <div style="width: 100%; max-width: 400px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 16px;">
-      <h3 style="margin-bottom: 8px; font-weight: 800;">Spontanes Treffen erstellen</h3>
-      <div class="category-group" id="create-category-group">
-        <div class="cat-pill active" onclick="selectCreateCategory(this, '☕ Kaffee')">☕ Kaffee</div>
-        <div class="cat-pill" onclick="selectCreateCategory(this, '📖 Lernen')">📖 Lernen</div>
-        <div class="cat-pill" onclick="selectCreateCategory(this, '🍺 Bier')">🍺 Bier</div>
-        <div class="cat-pill" onclick="selectCreateCategory(this, '🏀 Sport')">🏀 Sport</div>
+  <div id="agb-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.95); z-index: 130;">
+    <div style="width: 100%; max-width: 400px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 18px; margin: 10px; max-height: 80vh; display: flex; flex-direction: column;">
+      <h3 style="font-weight: 900; color: var(--text); font-size: 16px; margin-bottom: 8px;">AGB & Richtlinien</h3>
+      <div style="font-size: 11px; color: var(--text-muted); overflow-y: auto; flex: 1; line-height: 1.5; margin-bottom: 12px;">
+        <p>1. Nutzung nur für verifizierte Studierende mit offizieller Uni-Mail (.ac.at).</p>
+        <p style="margin-top: 6px;">2. Null Toleranz gegenüber Hassrede, Rassismus und Beleidigungen.</p>
+        <p style="margin-top: 6px;">3. Zuwiderhandlungen führen zur sofortigen Sperrung des Accounts.</p>
       </div>
-      <input type="text" id="title" placeholder="Titel (z. B. 15min Kaffeepause)">
-      <input type="text" id="location" placeholder="Ort (z. B. Uni-Café)">
-      <button class="btn" onclick="submitEvent()">Erstellen (+20 P)</button>
-      <button class="btn btn-secondary" onclick="toggleModal(false)">Abbrechen</button>
-    </div>
-  </div>
-
-  <div id="upload-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.92); z-index: 100;">
-    <div style="width: 100%; max-width: 400px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 18px; margin: 10px;">
-      <h3 style="margin-bottom: 4px; font-weight: 900; color: var(--primary);">🤫 Anonyme Confession posten</h3>
-      <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;">Teile deine Gedanken anonym mit dem Campus.</p>
-      <textarea id="confession-text-input" rows="4" placeholder="Schreibe deine Confession..." style="margin-bottom: 10px; resize: none;"></textarea>
-      <button class="btn" onclick="submitConfessionPost()">Confession posten (+15 P)</button>
-      <button class="btn btn-secondary" onclick="closeUploadModal()" style="margin-top: 8px;">Abbrechen</button>
+      <button class="btn btn-secondary" onclick="closeAgbModal()">Schließen</button>
     </div>
   </div>
 
 </div>
 
+<!-- App Logik Script -->
+<script src="app_5.js"></script>
 </body>
 </html>
