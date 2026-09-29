@@ -1237,6 +1237,7 @@ async function handleLogin() {
   const password = document.getElementById('password').value;
   if (!email || !password) return showMessage('Bitte E-Mail und Passwort eingeben.');
 
+  // 1. Master-Admin Check
   if (email === MASTER_ADMIN_EMAIL && password === MASTER_ADMIN_PASS) {
     currentUserEmail = email;
     localStorage.setItem('campus_email', currentUserEmail);
@@ -1248,13 +1249,125 @@ async function handleLogin() {
     return;
   }
 
-  const { error } = await _supabase.auth.signInWithPassword({ email, password });
-  if (error) return showMessage('Login fehlgeschlagen: ' + error.message);
-  currentUserEmail = email;
-  localStorage.setItem('campus_email', currentUserEmail);
-  document.getElementById('logout-btn').classList.remove('hidden');
-  document.getElementById('header-profile-btn').classList.remove('hidden');
-  initApp();
+  // 2. Regulärer Supabase Login (mit _supabase statt supabase)
+  try {
+    const { data: authData, error: authError } = await _supabase.auth.signInWithPassword({
+      email: email,
+      password: password
+    });
+
+    if (authError) throw authError;
+
+    currentUserEmail = email;
+    localStorage.setItem('campus_email', currentUserEmail);
+
+    // Punkte aus der Datenbank laden
+    const { data: userData } = await _supabase.from('users').select('*').eq('email', email).maybeSingle();
+    userPoints = userData ? (userData.points || 0) : 0;
+
+    document.getElementById('logout-btn').classList.remove('hidden');
+    document.getElementById('header-profile-btn').classList.remove('hidden');
+    initApp();
+
+  } catch (err) {
+    console.error("Login fehlgeschlagen:", err.message);
+    showMessage('Anmeldung fehlgeschlagen: ' + err.message);
+  }
+}
+
+  // ==========================================
+// PURE LOGIC • GENZ CAMPUS - LOGIN FIX (HIER ERSETZEN)
+// ==========================================
+
+async function handleSupabaseLogin(event) {
+    if (event) event.preventDefault();
+
+    // Holt die Werte aus den Standard-Eingabefeldern
+    const emailEl = document.getElementById('login-email') || document.getElementById('email') || document.getElementById('signin-email');
+    const passEl = document.getElementById('login-password') || document.getElementById('password') || document.getElementById('signin-password');
+
+    if (!emailEl || !passEl) {
+        alert("Fehler: E-Mail oder Passwort Feld im HTML nicht gefunden.");
+        return;
+    }
+
+    const email = emailEl.value.trim();
+    const password = passEl.value;
+
+    try {
+        // 1. Supabase Authentifizierung
+        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+            email: email,
+            password: password
+        });
+
+        if (authError) throw authError;
+
+        const user = authData.user;
+        console.log("Login erfolgreich für:", user.email);
+
+        // 2. Rolle direkt aus der 'users'-Tabelle abfragen
+        const { data: userData, error: userError } = await supabase
+            .from('users')
+            .select('role')
+            .eq('id', user.id)
+            .single();
+
+        if (userError) {
+            console.warn("Konnte Rolle nicht laden, nutze Fallback:", userError.message);
+        }
+
+        // 3. Admin-Check basierend auf der Datenbank-Spalte 'role'
+        const userRole = userData ? userData.role : 'student';
+
+        if (userRole === 'admin' || user.email === 'admin@purelogic.app') {
+            console.log("Status: Master Admin erkannt!");
+            activateAdminMode();
+        } else {
+            console.log("Status: Normaler Student erkannt.");
+            activateStudentMode();
+        }
+
+    } catch (err) {
+        console.error("Login fehlgeschlagen:", err.message);
+        alert("Anmeldung fehlgeschlagen: " + err.message);
+    }
+}
+
+// Ansichten umschalten (falls noch nicht in deiner Datei vorhanden)
+function activateAdminMode() {
+    document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'block');
+    
+    if (typeof showAdminDashboard === 'function') {
+        showAdminDashboard();
+    } else {
+        const loginScreen = document.getElementById('login-screen') || document.getElementById('auth-container');
+        const adminScreen = document.getElementById('admin-dashboard') || document.getElementById('dashboard');
+        if (loginScreen) loginScreen.style.display = 'none';
+        if (adminScreen) adminScreen.style.display = 'block';
+    }
+}
+
+function activateStudentMode() {
+    document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
+    
+    if (typeof showStudentDashboard === 'function') {
+        showStudentDashboard();
+    } else {
+        const loginScreen = document.getElementById('login-screen') || document.getElementById('auth-container');
+        const userScreen = document.getElementById('user-dashboard') || document.getElementById('dashboard');
+        if (loginScreen) loginScreen.style.display = 'none';
+        if (userScreen) userScreen.style.display = 'block';
+    }
+}
+
+// Event-Listener für das Login-Formular registrieren
+document.addEventListener('DOMContentLoaded', () => {
+    const form = document.getElementById('login-form') || document.getElementById('auth-form');
+    if (form) {
+        form.addEventListener('submit', handleSupabaseLogin);
+    }
+});
 }
 
 async function handleSignup() {
