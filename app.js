@@ -7,7 +7,7 @@ const MASTER_ADMIN_PASS = 'Doschi08021991';
 
 const ALLOWED_DOMAINS = ['.ac.at', 'univie.ac.at', 'tuwien.ac.at', 'wu.ac.at', 'meduniwien.ac.at', 'boku.ac.at', 'fhwien.ac.at'];
 
-// Vollautomatischer Rassismus- & Beleidigungsfilter
+// Vollautomatischer Rassismus- & Beleidigungsfilter[cite: 11]
 const FORBIDDEN_REGEX = /\b(schimpfwort1|schimpfwort2|rassismus|hassrede|beleidigung)\b/i;
 
 function containsHateSpeech(text) {
@@ -16,7 +16,7 @@ function containsHateSpeech(text) {
   return FORBIDDEN_REGEX.test(cleaned);
 }
 
-// i18n Sprachübersetzungen für alle 10 Sprachen
+// i18n Sprachübersetzungen für alle 10 Sprachen[cite: 11]
 const translations = {
   de: {
     matchBanner: "💖 MATCH-MITTWOCH • FIND YOUR CRUSH! [Klick fürs Radar 💘]",
@@ -208,7 +208,6 @@ let adminMarker = null;
 window.addEventListener('DOMContentLoaded', async () => {
   checkMatchWednesday();
 
-  // Gespeicherte Sprache im Dropdown setzen
   const langSelect = document.getElementById('languageSelect');
   if (langSelect) {
     langSelect.value = currentLanguage;
@@ -589,7 +588,7 @@ async function submitQuizToBackend() {
   } catch (err) {
     if (qEl) {
       qEl.innerHTML = `
-        <h3 style="color: var(--accent); margin-bottom: 6px;">⚠️️ Hinweis</h3>
+        <h3 style="color: var(--accent); margin-bottom: 6px;">⚠ Hinweis</h3>
         <p>${err.message}</p>
       `;
     }
@@ -1476,7 +1475,6 @@ async function handleLogin() {
   const password = passEl.value;
   if (!email || !password) return showMessage('Bitte E-Mail und Passwort eingeben.');
 
-  // 1. Master-Admin Check
   if (email === MASTER_ADMIN_EMAIL && password === MASTER_ADMIN_PASS) {
     currentUserEmail = email;
     localStorage.setItem('campus_email', currentUserEmail);
@@ -1488,7 +1486,6 @@ async function handleLogin() {
     return;
   }
 
-  // 2. Regulärer Supabase Login
   try {
     const { data: authData, error: authError } = await _supabase.auth.signInWithPassword({
       email: email,
