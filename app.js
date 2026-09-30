@@ -52,8 +52,11 @@ window.addEventListener('DOMContentLoaded', async () => {
   checkMatchWednesday();
 
   if (currentUserEmail) {
-    document.getElementById('logout-btn').classList.remove('hidden');
-    document.getElementById('header-profile-btn').classList.remove('hidden');
+    const logoutBtn = document.getElementById('logout-btn');
+    const headerProfileBtn = document.getElementById('header-profile-btn');
+    if (logoutBtn) logoutBtn.classList.remove('hidden');
+    if (headerProfileBtn) headerProfileBtn.classList.remove('hidden');
+
     if (currentUserEmail === MASTER_ADMIN_EMAIL) {
       userPoints = 9999;
       setupAdminUI();
@@ -95,7 +98,7 @@ window.addEventListener('DOMContentLoaded', async () => {
   window.addEventListener('click', (e) => {
     const dropdown = document.getElementById('points-dropdown-menu');
     const scoreBadge = document.getElementById('score');
-    if (dropdown && !dropdown.classList.contains('hidden') && !scoreBadge.contains(e.target)) {
+    if (dropdown && !dropdown.classList.contains('hidden') && scoreBadge && !scoreBadge.contains(e.target)) {
       dropdown.classList.add('hidden');
     }
   });
@@ -109,24 +112,27 @@ function toggleLectureMode() {
   isLectureModeActive = !isLectureModeActive;
 
   if (isLectureModeActive) {
-    appCard.classList.add('lecture-mode');
+    if (appCard) appCard.classList.add('lecture-mode');
     const savedNotes = localStorage.getItem('lecture_mode_notes') || '';
-    document.getElementById('lecture-notes-input').value = savedNotes;
+    const notesInput = document.getElementById('lecture-notes-input');
+    if (notesInput) notesInput.value = savedNotes;
   } else {
-    appCard.classList.remove('lecture-mode');
+    if (appCard) appCard.classList.remove('lecture-mode');
   }
 }
 
 function saveLectureNotesToFile() {
-  const notesContent = document.getElementById('lecture-notes-input').value;
+  const notesInput = document.getElementById('lecture-notes-input');
+  if (!notesInput) return;
+  const notesContent = notesInput.value;
   if (!notesContent.trim()) {
     alert('⚠️ Deine Notiz ist leer. Es gibt nichts zum Speichern!');
     return;
   }
 
-  const customName = document.getElementById('lecture-file-name').value.trim() || 'Vorlesung_Notizen';
-  const customDate = document.getElementById('lecture-file-date').value || new Date().toISOString().split('T')[0];
-  const formatChoice = document.getElementById('lecture-file-format').value;
+  const customName = document.getElementById('lecture-file-name')?.value.trim() || 'Vorlesung_Notizen';
+  const customDate = document.getElementById('lecture-file-date')?.value || new Date().toISOString().split('T')[0];
+  const formatChoice = document.getElementById('lecture-file-format')?.value || 'txt';
 
   if (formatChoice === 'txt') {
     const fileContent = `=== PURE LOGIC CAMPUS NOTIZ ===\nDatum: ${customDate}\nTitel: ${customName}\n=================================\n\n${notesContent}`;
@@ -178,17 +184,17 @@ function saveLectureNotesToFile() {
 }
 
 function openProfGuideModal() {
-  document.getElementById('prof-guide-modal').classList.remove('hidden');
+  document.getElementById('prof-guide-modal')?.classList.remove('hidden');
   loadProfReviews();
 }
 
 function closeProfGuideModal() {
-  document.getElementById('prof-guide-modal').classList.add('hidden');
+  document.getElementById('prof-guide-modal')?.classList.add('hidden');
 }
 
 function toggleProfForm() {
   const form = document.getElementById('prof-review-form-container');
-  form.classList.toggle('hidden');
+  form?.classList.toggle('hidden');
 }
 
 async function loadProfReviews() {
@@ -231,7 +237,7 @@ function renderProfReviews(reviews) {
 }
 
 function filterProfReviews() {
-  const query = document.getElementById('prof-search-input').value.toLowerCase();
+  const query = document.getElementById('prof-search-input')?.value.toLowerCase() || '';
   const filtered = profReviewsCache.filter(r => 
     r.prof_name.toLowerCase().includes(query) || 
     r.subject_code.toLowerCase().includes(query) ||
@@ -241,11 +247,11 @@ function filterProfReviews() {
 }
 
 async function submitProfReview() {
-  const profName = document.getElementById('prof-name-input').value.trim();
-  const subject = document.getElementById('prof-subject-input').value.trim();
-  const rating = parseInt(document.getElementById('prof-rating-select').value);
-  const difficulty = parseInt(document.getElementById('prof-difficulty-select').value);
-  const comment = document.getElementById('prof-comment-input').value.trim();
+  const profName = document.getElementById('prof-name-input')?.value.trim();
+  const subject = document.getElementById('prof-subject-input')?.value.trim();
+  const rating = parseInt(document.getElementById('prof-rating-select')?.value || '5');
+  const difficulty = parseInt(document.getElementById('prof-difficulty-select')?.value || '3');
+  const comment = document.getElementById('prof-comment-input')?.value.trim();
 
   if (!profName || !subject || !comment) {
     alert('⚠️ Bitte fülle alle Felder aus.');
@@ -271,9 +277,9 @@ async function submitProfReview() {
     return;
   }
 
-  document.getElementById('prof-name-input').value = '';
-  document.getElementById('prof-subject-input').value = '';
-  document.getElementById('prof-comment-input').value = '';
+  if (document.getElementById('prof-name-input')) document.getElementById('prof-name-input').value = '';
+  if (document.getElementById('prof-subject-input')) document.getElementById('prof-subject-input').value = '';
+  if (document.getElementById('prof-comment-input')) document.getElementById('prof-comment-input').value = '';
   toggleProfForm();
 
   await addPoints(15);
@@ -283,40 +289,44 @@ async function submitProfReview() {
 
 function adminSetTestPoints() {
   const input = document.getElementById('admin-test-points-input');
-  const val = parseInt(input.value);
+  const val = parseInt(input?.value);
   if (isNaN(val)) return alert('Bitte eine gültige Zahl eingeben.');
 
   userPoints = val;
   const badge = document.getElementById('score');
-  badge.innerText = `${userPoints} P`;
-  badge.className = 'points-badge'; 
-  badge.onclick = (e) => togglePointsDropdown(e);
+  if (badge) {
+    badge.innerText = `${userPoints} P`;
+    badge.className = 'points-badge'; 
+    badge.onclick = (e) => togglePointsDropdown(e);
+  }
   alert(`✅ Test-Punktzahl auf ${userPoints} P gesetzt! Du kannst das Menü jetzt testen.`);
 }
 
 function togglePointsDropdown(event) {
   event.stopPropagation();
   const dropdown = document.getElementById('points-dropdown-menu');
-  dropdown.classList.toggle('hidden');
+  dropdown?.classList.toggle('hidden');
 }
 
 function openMorePointsModal() {
-  document.getElementById('more-points-modal').classList.remove('hidden');
+  document.getElementById('more-points-modal')?.classList.remove('hidden');
 }
 
 function closeMorePointsModal() {
-  document.getElementById('more-points-modal').classList.add('hidden');
+  document.getElementById('more-points-modal')?.classList.add('hidden');
 }
 
 async function openCampusQuizModal() {
-  document.getElementById('quiz-modal').classList.remove('hidden');
-  document.getElementById('quiz-question-container').innerText = 'Lade Fragen aus der Datenbank... ⏳';
-  document.getElementById('quiz-options-container').innerHTML = '';
+  document.getElementById('quiz-modal')?.classList.remove('hidden');
+  const qContainer = document.getElementById('quiz-question-container');
+  const optContainer = document.getElementById('quiz-options-container');
+  if (qContainer) qContainer.innerText = 'Lade Fragen aus der Datenbank... ⏳';
+  if (optContainer) optContainer.innerHTML = '';
 
   const { data, error } = await _supabase.from('quiz_questions').select('id, question_text, options').limit(5);
 
   if (error || !data || data.length === 0) {
-    document.getElementById('quiz-question-container').innerText = '⚠️ Keine Quiz-Fragen in der Datenbank gefunden oder Fehler beim Laden.';
+    if (qContainer) qContainer.innerText = '⚠️ Keine Quiz-Fragen in der Datenbank gefunden oder Fehler beim Laden.';
     return;
   }
 
@@ -328,7 +338,7 @@ async function openCampusQuizModal() {
 
 function closeCampusQuizModal() {
   if (quizTimerInterval) clearInterval(quizTimerInterval);
-  document.getElementById('quiz-modal').classList.add('hidden');
+  document.getElementById('quiz-modal')?.classList.add('hidden');
 }
 
 function startQuizQuestion() {
@@ -353,17 +363,21 @@ function startQuizQuestion() {
   }, 1000);
 
   const q = activeQuizQuestions[currentQuizIndex];
-  document.getElementById('quiz-subtitle').innerText = `Frage ${currentQuizIndex + 1} von ${activeQuizQuestions.length}`;
-  document.getElementById('quiz-question-container').innerText = q.question_text;
+  const subEl = document.getElementById('quiz-subtitle');
+  const qEl = document.getElementById('quiz-question-container');
+  if (subEl) subEl.innerText = `Frage ${currentQuizIndex + 1} von ${activeQuizQuestions.length}`;
+  if (qEl) qEl.innerText = q.question_text;
 
   const optContainer = document.getElementById('quiz-options-container');
   const optionsList = Array.isArray(q.options) ? q.options : [];
 
-  optContainer.innerHTML = optionsList.map((opt, idx) => {
-    const optId = opt.id !== undefined ? opt.id : idx;
-    const optText = typeof opt === 'string' ? opt : (opt.text || opt);
-    return `<button class="btn btn-secondary" style="text-align: left; margin-top: 0; padding: 10px 14px; font-size: 12px;" onclick="selectQuizAnswer('${q.id}', ${optId})">${optText}</button>`;
-  }).join('');
+  if (optContainer) {
+    optContainer.innerHTML = optionsList.map((opt, idx) => {
+      const optId = opt.id !== undefined ? opt.id : idx;
+      const optText = typeof opt === 'string' ? opt : (opt.text || opt);
+      return `<button class="btn btn-secondary" style="text-align: left; margin-top: 0; padding: 10px 14px; font-size: 12px;" onclick="selectQuizAnswer('${q.id}', ${optId})">${optText}</button>`;
+    }).join('');
+  }
 }
 
 function updateQuizTimerDisplay() {
@@ -380,9 +394,13 @@ function selectQuizAnswer(questionId, selectedOptionId) {
 
 async function submitQuizToBackend() {
   if (quizTimerInterval) clearInterval(quizTimerInterval);
-  document.getElementById('quiz-question-container').innerText = 'Wertet Antworten serverseitig aus... ⏳';
-  document.getElementById('quiz-options-container').innerHTML = '';
-  document.getElementById('quiz-subtitle').innerText = 'Sichere Validierung';
+  const qEl = document.getElementById('quiz-question-container');
+  const optEl = document.getElementById('quiz-options-container');
+  const subEl = document.getElementById('quiz-subtitle');
+
+  if (qEl) qEl.innerText = 'Wertet Antworten serverseitig aus... ⏳';
+  if (optEl) optEl.innerHTML = '';
+  if (subEl) subEl.innerText = 'Sichere Validierung';
 
   try {
     const { data, error } = await _supabase.functions.invoke('submit-quiz', {
@@ -393,21 +411,25 @@ async function submitQuizToBackend() {
 
     if (data && data.success) {
       await addPoints(data.earnedPoints || 0);
-      document.getElementById('quiz-question-container').innerHTML = `
-        <h3 style="color: var(--success); margin-bottom: 6px;">🎉 Quiz erfolgreich beendet!</h3>
-        <p>Deine Antworten wurden sicher im Backend ausgewertet.</p>
-        <p style="margin-top: 6px; font-size: 15px; color: #818cf8;">Erhaltene Punkte: <strong>+${data.earnedPoints} P</strong> 🚀</p>
-      `;
-      document.getElementById('quiz-options-container').innerHTML = `<button class="btn" onclick="closeCampusQuizModal()">Fertig</button>`;
+      if (qEl) {
+        qEl.innerHTML = `
+          <h3 style="color: var(--success); margin-bottom: 6px;">🎉 Quiz erfolgreich beendet!</h3>
+          <p>Deine Antworten wurden sicher im Backend ausgewertet.</p>
+          <p style="margin-top: 6px; font-size: 15px; color: #818cf8;">Erhaltene Punkte: <strong>+${data.earnedPoints} P</strong> 🚀</p>
+        `;
+      }
+      if (optEl) optEl.innerHTML = `<button class="btn" onclick="closeCampusQuizModal()">Fertig</button>`;
     } else {
       throw new Error(data.error || 'Unbekannter Serverfehler');
     }
   } catch (err) {
-    document.getElementById('quiz-question-container').innerHTML = `
-      <h3 style="color: var(--accent); margin-bottom: 6px;">⚠️ Hinweis</h3>
-      <p>${err.message}</p>
-    `;
-    document.getElementById('quiz-options-container').innerHTML = `<button class="btn btn-secondary" onclick="closeCampusQuizModal()">Schließen</button>`;
+    if (qEl) {
+      qEl.innerHTML = `
+        <h3 style="color: var(--accent); margin-bottom: 6px;">⚠️ Hinweis</h3>
+        <p>${err.message}</p>
+      `;
+    }
+    if (optEl) optEl.innerHTML = `<button class="btn btn-secondary" onclick="closeCampusQuizModal()">Schließen</button>`;
   }
 }
 
@@ -420,6 +442,9 @@ function initAdminMap() {
   const defaultLat = 48.2128;
   const defaultLng = 16.3598;
 
+  const mapContainer = document.getElementById('admin-map');
+  if (!mapContainer) return;
+
   adminMap = L.map('admin-map').setView([defaultLat, defaultLng], 14);
 
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -431,8 +456,10 @@ function initAdminMap() {
     const lat = e.latlng.lat;
     const lng = e.latlng.lng;
 
-    document.getElementById('admin-drop-lat').value = lat.toFixed(6);
-    document.getElementById('admin-drop-lng').value = lng.toFixed(6);
+    const latInput = document.getElementById('admin-drop-lat');
+    const lngInput = document.getElementById('admin-drop-lng');
+    if (latInput) latInput.value = lat.toFixed(6);
+    if (lngInput) lngInput.value = lng.toFixed(6);
 
     if (adminMarker) {
       adminMarker.setLatLng([lat, lng]);
@@ -443,12 +470,12 @@ function initAdminMap() {
 }
 
 function openActiveSpotsModal() {
-  document.getElementById('active-spots-modal').classList.remove('hidden');
+  document.getElementById('active-spots-modal')?.classList.remove('hidden');
   renderActiveSpotsInModal();
 }
 
 function closeActiveSpotsModal() {
-  document.getElementById('active-spots-modal').classList.add('hidden');
+  document.getElementById('active-spots-modal')?.classList.add('hidden');
 }
 
 function renderActiveSpotsInModal() {
@@ -492,7 +519,8 @@ async function loadActiveCampusDrops() {
       } else {
         let locationInfo = activeDropCache.latitude ? " 📍 [Vor Ort Spot]" : "";
         if (banner) {
-          document.getElementById('drop-title-text').innerText = `⚡ FLASH DROP: ${activeDropCache.title}${locationInfo}`;
+          const titleText = document.getElementById('drop-title-text');
+          if (titleText) titleText.innerText = `⚡ FLASH DROP: ${activeDropCache.title}${locationInfo}`;
           const expiresTime = new Date(activeDropCache.expires_at).getTime();
           const now = new Date().getTime();
           const diffMins = Math.max(1, Math.round((expiresTime - now) / 60000));
@@ -517,7 +545,8 @@ function handleFallbackDrop() {
   if (localStorage.getItem(fallbackKey)) {
     banner.style.display = 'none';
   } else {
-    document.getElementById('drop-title-text').innerText = '⚡ FLASH DROP: 50 Extra-Punkte abholen!';
+    const titleText = document.getElementById('drop-title-text');
+    if (titleText) titleText.innerText = '⚡ FLASH DROP: 50 Extra-Punkte abholen!';
     const timerText = document.getElementById('drop-timer-text');
     if (timerText) timerText.innerText = 'Exklusiver Campus-Drop! [Klick auf Punkte für Alle 🎁]';
     banner.style.display = 'block';
@@ -593,13 +622,13 @@ async function claimSpecificDrop(dropId) {
 async function handleCreateCampusDrop() {
   if (currentUserEmail !== MASTER_ADMIN_EMAIL) return alert('⚠️ Nur Administratoren können Campus-Drops erstellen!');
 
-  const title = document.getElementById('admin-drop-title').value.trim();
-  const rewardType = document.getElementById('admin-drop-reward-type').value;
-  const rewardValue = document.getElementById('admin-drop-reward-value').value.trim();
-  const startTimeInput = document.getElementById('admin-drop-start-time').value;
-  const lat = parseFloat(document.getElementById('admin-drop-lat').value) || null;
-  const lng = parseFloat(document.getElementById('admin-drop-lng').value) || null;
-  const radius = parseInt(document.getElementById('admin-drop-radius').value) || 100;
+  const title = document.getElementById('admin-drop-title')?.value.trim();
+  const rewardType = document.getElementById('admin-drop-reward-type')?.value;
+  const rewardValue = document.getElementById('admin-drop-reward-value')?.value.trim();
+  const startTimeInput = document.getElementById('admin-drop-start-time')?.value;
+  const lat = parseFloat(document.getElementById('admin-drop-lat')?.value) || null;
+  const lng = parseFloat(document.getElementById('admin-drop-lng')?.value) || null;
+  const radius = parseInt(document.getElementById('admin-drop-radius')?.value) || 100;
 
   if (!title || !rewardValue || !startTimeInput) return alert('⚠️ Bitte fülle alle Pflichtfelder aus.');
 
@@ -615,11 +644,11 @@ async function handleCreateCampusDrop() {
   if (error) return alert('Fehler: ' + error.message);
 
   alert('✅ Campus-Drop erfolgreich erstellt!');
-  document.getElementById('admin-drop-title').value = '';
-  document.getElementById('admin-drop-reward-value').value = '';
-  document.getElementById('admin-drop-start-time').value = '';
-  document.getElementById('admin-drop-lat').value = '';
-  document.getElementById('admin-drop-lng').value = '';
+  if (document.getElementById('admin-drop-title')) document.getElementById('admin-drop-title').value = '';
+  if (document.getElementById('admin-drop-reward-value')) document.getElementById('admin-drop-reward-value').value = '';
+  if (document.getElementById('admin-drop-start-time')) document.getElementById('admin-drop-start-time').value = '';
+  if (document.getElementById('admin-drop-lat')) document.getElementById('admin-drop-lat').value = '';
+  if (document.getElementById('admin-drop-lng')) document.getElementById('admin-drop-lng').value = '';
   if (adminMarker && adminMap) { adminMap.removeLayer(adminMarker); adminMarker = null; }
   loadActiveCampusDrops();
 }
@@ -631,8 +660,8 @@ function checkMatchWednesday() {
 }
 
 async function initApp() {
-  document.getElementById('auth-gate').classList.add('hidden');
-  document.getElementById('main-app').classList.remove('hidden');
+  document.getElementById('auth-gate')?.classList.add('hidden');
+  document.getElementById('main-app')?.classList.remove('hidden');
   
   await loadProfiles();
   await loadFollows();
@@ -652,12 +681,15 @@ async function initApp() {
 function changeLanguage(langCode) {}
 
 function changeAvatarDirectly() {
-  const currentUrl = document.getElementById('profile-avatar').value;
+  const currentUrl = document.getElementById('profile-avatar')?.value || '';
   const newUrl = prompt("Gib die Bild-URL für dein neues Profilbild ein:", currentUrl);
   if (newUrl !== null) {
-    document.getElementById('profile-avatar').value = newUrl;
-    document.getElementById('my-profile-avatar-preview').src = newUrl;
-    document.getElementById('header-avatar-preview').src = newUrl;
+    const avatarInput = document.getElementById('profile-avatar');
+    const avatarPreview = document.getElementById('my-profile-avatar-preview');
+    const headerPreview = document.getElementById('header-avatar-preview');
+    if (avatarInput) avatarInput.value = newUrl;
+    if (avatarPreview) avatarPreview.src = newUrl;
+    if (headerPreview) headerPreview.src = newUrl;
   }
 }
 
@@ -732,15 +764,24 @@ function renderMyProfileInputs() {
   const profile = profilesCache[currentUserEmail];
   if (!profile) return;
 
-  document.getElementById('profile-username').value = profile.username || '';
-  document.getElementById('profile-fullname').value = profile.full_name || '';
-  document.getElementById('profile-university').value = profile.university || 'Universität Wien';
-  document.getElementById('profile-bio').value = profile.bio || '';
-  document.getElementById('profile-avatar').value = profile.avatar_url || '';
-  document.getElementById('profile-interests').value = Array.isArray(profile.interests) ? profile.interests.join(', ') : '';
+  const usernameEl = document.getElementById('profile-username');
+  const fullnameEl = document.getElementById('profile-fullname');
+  const uniEl = document.getElementById('profile-university');
+  const bioEl = document.getElementById('profile-bio');
+  const avatarEl = document.getElementById('profile-avatar');
+  const interestsEl = document.getElementById('profile-interests');
 
-  document.getElementById('my-profile-display-name').innerText = profile.full_name || profile.username || currentUserEmail.split('@')[0];
-  document.getElementById('my-profile-handle-preview').innerText = '@' + (profile.username || 'user');
+  if (usernameEl) usernameEl.value = profile.username || '';
+  if (fullnameEl) fullnameEl.value = profile.full_name || '';
+  if (uniEl) uniEl.value = profile.university || 'Universität Wien';
+  if (bioEl) bioEl.value = profile.bio || '';
+  if (avatarEl) avatarEl.value = profile.avatar_url || '';
+  if (interestsEl) interestsEl.value = Array.isArray(profile.interests) ? profile.interests.join(', ') : '';
+
+  const namePreview = document.getElementById('my-profile-display-name');
+  const handlePreview = document.getElementById('my-profile-handle-preview');
+  if (namePreview) namePreview.innerText = profile.full_name || profile.username || currentUserEmail.split('@')[0];
+  if (handlePreview) handlePreview.innerText = '@' + (profile.username || 'user');
   
   const rankInfo = getCampusRank(userPoints);
   const rankBadge = document.getElementById('profile-rank-badge');
@@ -752,8 +793,10 @@ function renderMyProfileInputs() {
   }
 
   const avatarUrl = profile.avatar_url || '';
-  document.getElementById('my-profile-avatar-preview').src = avatarUrl;
-  document.getElementById('header-avatar-preview').src = avatarUrl;
+  const myAvatarPreview = document.getElementById('my-profile-avatar-preview');
+  const headerAvatarPreview = document.getElementById('header-avatar-preview');
+  if (myAvatarPreview) myAvatarPreview.src = avatarUrl;
+  if (headerAvatarPreview) headerAvatarPreview.src = avatarUrl;
 
   updateFollowerStatsUI();
   renderMyProfilePostsGrid();
@@ -796,12 +839,12 @@ async function updateFollowerStatsUI() {
 }
 
 async function saveMyProfile() {
-  const username = document.getElementById('profile-username').value.trim().replace(/^@/, '');
-  const full_name = document.getElementById('profile-fullname').value.trim();
-  const university = document.getElementById('profile-university').value;
-  const bio = document.getElementById('profile-bio').value.trim();
-  const avatar_url = document.getElementById('profile-avatar').value.trim();
-  const interestsRaw = document.getElementById('profile-interests').value.trim();
+  const username = document.getElementById('profile-username')?.value.trim().replace(/^@/, '');
+  const full_name = document.getElementById('profile-fullname')?.value.trim();
+  const university = document.getElementById('profile-university')?.value;
+  const bio = document.getElementById('profile-bio')?.value.trim();
+  const avatar_url = document.getElementById('profile-avatar')?.value.trim();
+  const interestsRaw = document.getElementById('profile-interests')?.value.trim();
   const interests = interestsRaw ? interestsRaw.split(',').map(s => s.trim()).filter(Boolean) : [];
 
   if (!username) return alert('Bitte einen Benutzernamen (Handle) eingeben.');
@@ -884,10 +927,10 @@ function switchTab(tabName) {
   if (tabName === 'admin') setTimeout(initAdminMap, 200);
 
   if (tabName === 'live') {
-    document.getElementById('tab-reels').classList.remove('hidden');
-    document.getElementById('tab-live').classList.remove('hidden');
-    document.getElementById('reel-filter-live').classList.add('active');
-    ['discover', 'foryou', 'following'].forEach(f => document.getElementById(`reel-filter-${f}`).classList.remove('active'));
+    document.getElementById('tab-reels')?.classList.remove('hidden');
+    document.getElementById('tab-live')?.classList.remove('hidden');
+    document.getElementById('reel-filter-live')?.classList.add('active');
+    ['discover', 'foryou', 'following'].forEach(f => document.getElementById(`reel-filter-${f}`)?.classList.remove('active'));
   }
 }
 
@@ -905,17 +948,17 @@ function selectGoLiveCategory(element, cat) {
 }
 
 function openCrushModal() {
-  document.getElementById('crush-modal').classList.remove('hidden');
+  document.getElementById('crush-modal')?.classList.remove('hidden');
   checkCrushMatches();
 }
 
 function closeCrushModal() {
-  document.getElementById('crush-modal').classList.add('hidden');
+  document.getElementById('crush-modal')?.classList.add('hidden');
 }
 
 async function submitCrush() {
-  const target = document.getElementById('crush-target-input').value.trim().toLowerCase();
-  const hint = document.getElementById('crush-hint-input').value.trim();
+  const target = document.getElementById('crush-target-input')?.value.trim().toLowerCase();
+  const hint = document.getElementById('crush-hint-input')?.value.trim();
   if (!target) return alert('Bitte gib deinen Crush an.');
 
   const { error } = await _supabase.from('crushes').insert([{ sender_email: currentUserEmail, target_identifier: target, hint }]);
@@ -928,6 +971,7 @@ async function submitCrush() {
 
 async function checkCrushMatches() {
   const box = document.getElementById('crush-matches-box');
+  if (!box) return;
   box.innerHTML = '<span style="color:var(--accent);">🔍 Prüfe Radar... ✨</span>';
   
   const { data } = await _supabase.from('crushes').select('*');
@@ -943,16 +987,16 @@ async function checkCrushMatches() {
 function openStreamHelpModal() {
   currentTutorialStep = 1;
   updateTutorialStepUI();
-  document.getElementById('tab-live').classList.add('hidden');
-  document.getElementById('go-live-modal').classList.add('hidden');
-  document.getElementById('bottom-nav-bar').classList.add('hidden');
-  document.getElementById('stream-help-modal').classList.remove('hidden');
+  document.getElementById('tab-live')?.classList.add('hidden');
+  document.getElementById('go-live-modal')?.classList.add('hidden');
+  document.getElementById('bottom-nav-bar')?.classList.add('hidden');
+  document.getElementById('stream-help-modal')?.classList.remove('hidden');
 }
 
 function closeStreamHelpModal() {
-  document.getElementById('stream-help-modal').classList.add('hidden');
-  document.getElementById('bottom-nav-bar').classList.remove('hidden');
-  document.getElementById('tab-live').classList.remove('hidden');
+  document.getElementById('stream-help-modal')?.classList.add('hidden');
+  document.getElementById('bottom-nav-bar')?.classList.remove('hidden');
+  document.getElementById('tab-live')?.classList.remove('hidden');
 }
 
 function changeTutorialStep(direction) {
@@ -967,8 +1011,10 @@ function updateTutorialStepUI() {
     el.classList.remove('active');
     if (parseInt(el.getAttribute('data-step')) === currentTutorialStep) el.classList.add('active');
   });
-  document.getElementById('tutorial-back-btn').style.display = (currentTutorialStep === 1) ? 'none' : 'block';
-  document.getElementById('tutorial-next-btn').innerText = (currentTutorialStep === totalTutorialSteps) ? 'Abschließen & Loslegen ✅' : 'Weiter';
+  const backBtn = document.getElementById('tutorial-back-btn');
+  const nextBtn = document.getElementById('tutorial-next-btn');
+  if (backBtn) backBtn.style.display = (currentTutorialStep === 1) ? 'none' : 'block';
+  if (nextBtn) nextBtn.innerText = (currentTutorialStep === totalTutorialSteps) ? 'Abschließen & Loslegen ✅' : 'Weiter';
 }
 
 async function completeTutorialAndProceed() {
@@ -986,21 +1032,21 @@ function handlePreLiveCheck() {
 }
 
 function openGoLiveModal() {
-  document.getElementById('tab-live').classList.add('hidden');
-  document.getElementById('bottom-nav-bar').classList.add('hidden');
-  document.getElementById('go-live-modal').classList.remove('hidden');
+  document.getElementById('tab-live')?.classList.add('hidden');
+  document.getElementById('bottom-nav-bar')?.classList.add('hidden');
+  document.getElementById('go-live-modal')?.classList.remove('hidden');
 }
 
 function closeGoLiveModal() {
-  document.getElementById('go-live-modal').classList.add('hidden');
-  document.getElementById('bottom-nav-bar').classList.remove('hidden');
-  document.getElementById('tab-live').classList.remove('hidden');
+  document.getElementById('go-live-modal')?.classList.add('hidden');
+  document.getElementById('bottom-nav-bar')?.classList.remove('hidden');
+  document.getElementById('tab-live')?.classList.remove('hidden');
 }
 
 async function submitLiveStream() {
-  const title = document.getElementById('live-title').value.trim();
-  const url = document.getElementById('live-url').value.trim();
-  const modEmail = document.getElementById('live-mod-input').value.trim().toLowerCase();
+  const title = document.getElementById('live-title')?.value.trim();
+  const url = document.getElementById('live-url')?.value.trim();
+  const modEmail = document.getElementById('live-mod-input')?.value.trim().toLowerCase();
   
   if (!title || !url) return alert('Bitte Titel und URL angeben.');
   const expiresAt = new Date(Date.now() + 3 * 3600000).toISOString();
@@ -1044,8 +1090,12 @@ async function checkIfUserIsMod(streamId) {
 
 async function renderLiveStreams() {
   const list = document.getElementById('live-streams-list');
+  if (!list) return;
   let streams = activeLiveFilter === 'Alle' ? liveStreamsCache : liveStreamsCache.filter(s => s.category === activeLiveFilter);
-  if (streams.length === 0) return list.innerHTML = '<p style="color: var(--text-muted); font-size: 12px; text-align: center; padding: 40px;">Keine Live-Streams aktiv.</p>';
+  if (streams.length === 0) {
+    list.innerHTML = '<p style="color: var(--text-muted); font-size: 12px; text-align: center; padding: 40px;">Keine Live-Streams aktiv.</p>';
+    return;
+  }
   
   let html = '';
   for (const s of streams) {
@@ -1069,9 +1119,9 @@ async function renderLiveStreams() {
 }
 
 async function moderateStreamPrompt(streamId) {
-  const action = prompt("🛡️ Moderatoren-Aktion wählen:\n1 - Moderator hinzufügen (E-Mail eingeben)\n2 - Stream vorzeitig beenden");
+  const action = prompt("🛡️️ Moderatoren-Aktion wählen:\n1 - Moderator hinzufügen (E-Mail eingeben)\n2 - Stream vorzeitig beenden");
   if (action === '1') {
-    const modMail = prompt("Gib die E-Mail des neuen Moderators ein:").trim().toLowerCase();
+    const modMail = prompt("Gib die E-Mail des neuen Moderators ein:")?.trim().toLowerCase();
     if (modMail) {
       await _supabase.from('stream_moderators').insert([{ stream_id: streamId, moderator_email: modMail }]);
       alert(`✅ Moderator ${modMail} erfolgreich hinzugefügt!`);
@@ -1086,18 +1136,18 @@ async function moderateStreamPrompt(streamId) {
 }
 
 function openReportModal() { 
-  document.getElementById('bottom-nav-bar').classList.add('hidden'); 
-  document.getElementById('report-modal').classList.remove('hidden'); 
+  document.getElementById('bottom-nav-bar')?.classList.add('hidden'); 
+  document.getElementById('report-modal')?.classList.remove('hidden'); 
 }
 
 function closeReportModal() { 
-  document.getElementById('report-modal').classList.add('hidden'); 
-  document.getElementById('bottom-nav-bar').classList.remove('hidden'); 
+  document.getElementById('report-modal')?.classList.add('hidden'); 
+  document.getElementById('bottom-nav-bar')?.classList.remove('hidden'); 
 }
 
 async function submitReport() {
-  const reason = document.getElementById('report-reason').value;
-  const details = document.getElementById('report-details').value.trim();
+  const reason = document.getElementById('report-reason')?.value;
+  const details = document.getElementById('report-details')?.value.trim();
   
   if (!details) {
     alert('⚠️ Bitte gib den betroffenen Benutzer, Link oder Grund genauer an.');
@@ -1124,15 +1174,28 @@ async function submitReport() {
   }
 
   alert('🚨 Meldung erfolgreich eingereicht. Der betroffene Inhalt wurde zu deiner rechtlichen Absicherung vorübergehend ausgeblendet und wird geprüft.');
-  document.getElementById('report-details').value = '';
+  const detailsInput = document.getElementById('report-details');
+  if (detailsInput) detailsInput.value = '';
   closeReportModal();
   loadMediaPosts();
 }
 
-function openImpressumModal() { document.getElementById('bottom-nav-bar').classList.add('hidden'); document.getElementById('impressum-modal').classList.remove('hidden'); }
-function closeImpressumModal() { document.getElementById('impressum-modal').classList.add('hidden'); document.getElementById('bottom-nav-bar').classList.remove('hidden'); }
-function openAgbModal() { document.getElementById('bottom-nav-bar').classList.add('hidden'); document.getElementById('agb-modal').classList.remove('hidden'); }
-function closeAgbModal() { document.getElementById('agb-modal').classList.add('hidden'); document.getElementById('bottom-nav-bar').classList.remove('hidden'); }
+function openImpressumModal() { 
+  document.getElementById('bottom-nav-bar')?.classList.add('hidden'); 
+  document.getElementById('impressum-modal')?.classList.remove('hidden'); 
+}
+function closeImpressumModal() { 
+  document.getElementById('impressum-modal')?.classList.add('hidden'); 
+  document.getElementById('bottom-nav-bar')?.classList.remove('hidden'); 
+}
+function openAgbModal() { 
+  document.getElementById('bottom-nav-bar')?.classList.add('hidden'); 
+  document.getElementById('agb-modal')?.classList.remove('hidden'); 
+}
+function closeAgbModal() { 
+  document.getElementById('agb-modal')?.classList.add('hidden'); 
+  document.getElementById('bottom-nav-bar')?.classList.remove('hidden'); 
+}
 
 function setReelFilter(filter) {
   reelFilter = filter;
@@ -1140,11 +1203,12 @@ function setReelFilter(filter) {
     const el = document.getElementById(`reel-filter-${f}`);
     if (el) el.classList.remove('active');
   });
-  document.getElementById(`reel-filter-${filter}`).classList.add('active');
+  document.getElementById(`reel-filter-${filter}`)?.classList.add('active');
   
-  if (filter === 'live') document.getElementById('tab-live').classList.remove('hidden');
-  else {
-    document.getElementById('tab-live').classList.add('hidden');
+  if (filter === 'live') {
+    document.getElementById('tab-live')?.classList.remove('hidden');
+  } else {
+    document.getElementById('tab-live')?.classList.add('hidden');
     renderMediaPosts();
   }
 }
@@ -1163,6 +1227,7 @@ async function loadMediaPosts() {
 
 function renderMediaPosts() {
   const list = document.getElementById('reels-list');
+  if (!list) return;
   let posts = [...mediaPostsCache];
   
   if (posts.length === 0) {
@@ -1182,11 +1247,18 @@ function renderMediaPosts() {
   `).join('');
 }
 
-function openUploadModal() { document.getElementById('upload-modal').classList.remove('hidden'); document.getElementById('bottom-nav-bar').classList.add('hidden'); }
-function closeUploadModal() { document.getElementById('upload-modal').classList.add('hidden'); document.getElementById('bottom-nav-bar').classList.remove('hidden'); }
+function openUploadModal() { 
+  document.getElementById('upload-modal')?.classList.remove('hidden'); 
+  document.getElementById('bottom-nav-bar')?.classList.add('hidden'); 
+}
+function closeUploadModal() { 
+  document.getElementById('upload-modal')?.classList.add('hidden'); 
+  document.getElementById('bottom-nav-bar')?.classList.remove('hidden'); 
+}
 
 async function submitConfessionPost() {
-  const text = document.getElementById('confession-text-input').value.trim();
+  const textInput = document.getElementById('confession-text-input');
+  const text = textInput?.value.trim();
   if (!text) return alert('Bitte Text eingeben.');
 
   if (containsHateSpeech(text)) {
@@ -1200,7 +1272,7 @@ async function submitConfessionPost() {
   ];
   const randomImg = bgImages[Math.floor(Math.random() * bgImages.length)];
   await _supabase.from('media_posts').insert([{ author_email: 'anonymous@campus.at', media_url: randomImg, media_type: 'image', caption: text, likes: {}, comments: [], is_hidden: false }]);
-  document.getElementById('confession-text-input').value = '';
+  if (textInput) textInput.value = '';
   await addPoints(15);
   closeUploadModal();
   loadMediaPosts();
@@ -1209,7 +1281,7 @@ async function submitConfessionPost() {
 
 function togglePasswordVisibility() {
   const pw = document.getElementById('password');
-  pw.type = pw.type === 'password' ? 'text' : 'password';
+  if (pw) pw.type = pw.type === 'password' ? 'text' : 'password';
 }
 
 function selectCreateCategory(el, cat) {
@@ -1227,14 +1299,19 @@ function setFilter(el, cat) {
 
 function showMessage(text, isError = true) {
   const box = document.getElementById('auth-msg');
+  if (!box) return;
   box.innerText = text;
   box.className = `msg-box ${isError ? 'msg-error' : 'msg-success'}`;
   box.classList.remove('hidden');
 }
 
 async function handleLogin() {
-  const email = document.getElementById('email').value.trim().toLowerCase();
-  const password = document.getElementById('password').value;
+  const emailEl = document.getElementById('email');
+  const passEl = document.getElementById('password');
+  if (!emailEl || !passEl) return showMessage('E-Mail oder Passwort Feld nicht gefunden.');
+
+  const email = emailEl.value.trim().toLowerCase();
+  const password = passEl.value;
   if (!email || !password) return showMessage('Bitte E-Mail und Passwort eingeben.');
 
   // 1. Master-Admin Check
@@ -1243,8 +1320,8 @@ async function handleLogin() {
     localStorage.setItem('campus_email', currentUserEmail);
     userPoints = 9999;
     setupAdminUI();
-    document.getElementById('logout-btn').classList.remove('hidden');
-    document.getElementById('header-profile-btn').classList.remove('hidden');
+    document.getElementById('logout-btn')?.classList.remove('hidden');
+    document.getElementById('header-profile-btn')?.classList.remove('hidden');
     initApp();
     return;
   }
@@ -1264,8 +1341,8 @@ async function handleLogin() {
     const { data: userData } = await _supabase.from('users').select('*').eq('email', email).maybeSingle();
     userPoints = userData ? (userData.points || 0) : 0;
 
-    document.getElementById('logout-btn').classList.remove('hidden');
-    document.getElementById('header-profile-btn').classList.remove('hidden');
+    document.getElementById('logout-btn')?.classList.remove('hidden');
+    document.getElementById('header-profile-btn')?.classList.remove('hidden');
     initApp();
 
   } catch (err) {
@@ -1275,8 +1352,12 @@ async function handleLogin() {
 }
 
 async function handleSignup() {
-  const email = document.getElementById('email').value.trim().toLowerCase();
-  const password = document.getElementById('password').value;
+  const emailEl = document.getElementById('email');
+  const passEl = document.getElementById('password');
+  if (!emailEl || !passEl) return showMessage('E-Mail oder Passwort Feld nicht gefunden.');
+
+  const email = emailEl.value.trim().toLowerCase();
+  const password = passEl.value;
   
   if (!email || !password) {
     return showMessage('Bitte E-Mail und Passwort eingeben.');
@@ -1309,7 +1390,7 @@ async function handleSignup() {
 }
 
 async function handleForgotPassword() {
-  const email = document.getElementById('email').value.trim().toLowerCase();
+  const email = document.getElementById('email')?.value.trim().toLowerCase();
   if (!email) return showMessage('Bitte E-Mail eingeben.');
   await _supabase.auth.resetPasswordForEmail(email);
   showMessage('E-Mail zum Zurücksetzen gesendet!', false);
@@ -1317,6 +1398,7 @@ async function handleForgotPassword() {
 
 function setupAdminUI() {
   const badge = document.getElementById('score');
+  if (!badge) return;
   badge.innerText = '⭐ Admin';
   badge.className = 'points-badge admin-badge';
   badge.onclick = (e) => togglePointsDropdown(e);
@@ -1325,7 +1407,8 @@ function setupAdminUI() {
 async function addPoints(amount) {
   if (currentUserEmail === MASTER_ADMIN_EMAIL) {
     userPoints += amount;
-    document.getElementById('score').innerText = `${userPoints} P`;
+    const scoreEl = document.getElementById('score');
+    if (scoreEl) scoreEl.innerText = `${userPoints} P`;
     return;
   }
   userPoints += amount;
@@ -1335,7 +1418,8 @@ async function addPoints(amount) {
 
 function updatePointsDisplay() {
   if (currentUserEmail === MASTER_ADMIN_EMAIL) return;
-  document.getElementById('score').innerText = `${userPoints} P`;
+  const scoreEl = document.getElementById('score');
+  if (scoreEl) scoreEl.innerText = `${userPoints} P`;
 }
 
 function resetUser(ask = true) {
@@ -1347,14 +1431,14 @@ function resetUser(ask = true) {
 }
 
 function toggleModal(show) {
-  document.getElementById('create-modal').classList.toggle('hidden', !show);
-  document.getElementById('bottom-nav-bar').classList.toggle('hidden', show);
-  document.getElementById('tab-feed').classList.toggle('hidden', show);
+  document.getElementById('create-modal')?.classList.toggle('hidden', !show);
+  document.getElementById('bottom-nav-bar')?.classList.toggle('hidden', show);
+  document.getElementById('tab-feed')?.classList.toggle('hidden', show);
 }
 
 async function submitEvent() {
-  const title = document.getElementById('title').value.trim();
-  const location = document.getElementById('location').value.trim();
+  const title = document.getElementById('title')?.value.trim();
+  const location = document.getElementById('location')?.value.trim();
   if (!title || !location) return alert('Bitte ausfüllen');
   await _supabase.from('live_events').insert([{ title, location, category: selectedCategory, expires_at: new Date(Date.now() + 7200000).toISOString() }]);
   await addPoints(20);
@@ -1370,8 +1454,12 @@ async function loadEvents() {
 
 function renderEvents() {
   const list = document.getElementById('feed-list');
+  if (!list) return;
   let filtered = activeFilter === 'Alle' ? allEventsCache : allEventsCache.filter(e => e.category === activeFilter);
-  if (filtered.length === 0) return list.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:15px;">Keine Treffen.</p>';
+  if (filtered.length === 0) {
+    list.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:15px;">Keine Treffen.</p>';
+    return;
+  }
   list.innerHTML = filtered.map(e => `
     <div class="event-card">
       <div class="event-title">${e.category || '📍'} ${e.title}</div>
@@ -1394,11 +1482,13 @@ async function loadGlobalChat() {
 
 function renderGlobalChat() {
   const list = document.getElementById('global-chat-list');
+  if (!list) return;
   list.innerHTML = globalChatCache.map(m => `<div class="msg-bubble"><strong>${m.user_email.split('@')[0]}:</strong> ${m.message}</div>`).join('');
 }
 
 async function sendGlobalMessage() {
   const input = document.getElementById('global-chat-input');
+  if (!input) return;
   const messageText = input.value.trim();
   if (!messageText) return;
 
@@ -1413,22 +1503,25 @@ async function sendGlobalMessage() {
 }
 
 async function loadDirectMessages() {
-  const recipient = document.getElementById('dm-recipient').value.trim().toLowerCase();
+  const recipient = document.getElementById('dm-recipient')?.value.trim().toLowerCase();
   const list = document.getElementById('dm-chat-list');
-  if (!recipient) return;
+  if (!recipient || !list) return;
 
   const { data } = await _supabase.from('direct_messages').select('*')
     .or(`and(sender_email.eq.${currentUserEmail},recipient_email.eq.${recipient}),and(sender_email.eq.${recipient},recipient_email.eq.${currentUserEmail})`)
     .order('created_at', { ascending: true });
 
-  if (!data || data.length === 0) return list.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:20px;">Keine Nachrichten.</p>';
+  if (!data || data.length === 0) {
+    list.innerHTML = '<p style="color:var(--text-muted); text-align:center; padding:20px;">Keine Nachrichten.</p>';
+    return;
+  }
   list.innerHTML = data.map(m => `<div class="msg-bubble" style="${m.sender_email === currentUserEmail ? 'background: rgba(99,102,241,0.2);' : ''}"><strong>${m.sender_email.split('@')[0]}:</strong> ${m.message}</div>`).join('');
 }
 
 async function sendDirectMessage() {
-  const recipient = document.getElementById('dm-recipient').value.trim().toLowerCase();
+  const recipient = document.getElementById('dm-recipient')?.value.trim().toLowerCase();
   const input = document.getElementById('dm-input');
-  const msg = input.value.trim();
+  const msg = input?.value.trim();
   if (!recipient || !msg) return alert('Bitte Empfänger und Nachricht eingeben.');
 
   if (containsHateSpeech(msg)) {
@@ -1437,6 +1530,6 @@ async function sendDirectMessage() {
   }
 
   await _supabase.from('direct_messages').insert([{ sender_email: currentUserEmail, recipient_email: recipient, message: msg }]);
-  input.value = '';
+  if (input) input.value = '';
   loadDirectMessages();
 }
