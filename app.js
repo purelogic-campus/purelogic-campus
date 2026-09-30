@@ -16,6 +16,163 @@ function containsHateSpeech(text) {
   return FORBIDDEN_REGEX.test(cleaned);
 }
 
+// i18n Sprachübersetzungen für alle 10 Sprachen
+const translations = {
+  de: {
+    matchBanner: "💖 MATCH-MITTWOCH • FIND YOUR CRUSH! [Klick fürs Radar 💘]",
+    loginBtn: "Einloggen",
+    signupBtn: "Account erstellen",
+    forgotPw: "Passwort vergessen?",
+    chatPlaceholder: "Nachricht an alle...",
+    sendBtn: "Senden",
+    tabReels: "Feed",
+    tabFeed: "Treffen",
+    tabGlobal: "Chat",
+    tabInbox: "Postfach"
+  },
+  en: {
+    matchBanner: "💖 MATCH-WEDNESDAY • FIND YOUR CRUSH! [Click for Radar 💘]",
+    loginBtn: "Log In",
+    signupBtn: "Create Account",
+    forgotPw: "Forgot password?",
+    chatPlaceholder: "Message everyone...",
+    sendBtn: "Send",
+    tabReels: "Feed",
+    tabFeed: "Meetups",
+    tabGlobal: "Chat",
+    tabInbox: "Inbox"
+  },
+  it: {
+    matchBanner: "💖 MATCH-MERCOLEDÌ • TROVA IL TUO CRUSH! [Clicca per il Radar 💘]",
+    loginBtn: "Accedi",
+    signupBtn: "Crea account",
+    forgotPw: "Password dimenticata?",
+    chatPlaceholder: "Messaggio a tutti...",
+    sendBtn: "Invia",
+    tabReels: "Feed",
+    tabFeed: "Incontri",
+    tabGlobal: "Chat",
+    tabInbox: "Posta"
+  },
+  bks: {
+    matchBanner: "💖 MATCH-SRIJEDA • PRONAĐI SVOG CRUSHA! [Klik za Radar 💘]",
+    loginBtn: "Prijava",
+    signupBtn: "Kreiraj račun",
+    forgotPw: "Zaboravljena lozinka?",
+    chatPlaceholder: "Poruka svima...",
+    sendBtn: "Pošalji",
+    tabReels: "Feed",
+    tabFeed: "Susreti",
+    tabGlobal: "Chat",
+    tabInbox: "Sandučić"
+  },
+  tr: {
+    matchBanner: "💖 MATCH-ÇARŞAMBA • CRUSH'INI BUL! [Radar için Tıkla 💘]",
+    loginBtn: "Giriş Yap",
+    signupBtn: "Hesap Oluştur",
+    forgotPw: "Şifremi unuttum?",
+    chatPlaceholder: "Herkese mesaj...",
+    sendBtn: "Gönder",
+    tabReels: "Akış",
+    tabFeed: "Buluşmalar",
+    tabGlobal: "Sohbet",
+    tabInbox: "Gelen Kutusu"
+  },
+  es: {
+    matchBanner: "💖 MATCH-MIÉRCOLES • ¡ENCUENTRA A TU CRUSH! [Haz clic para el Radar 💘]",
+    loginBtn: "Iniciar sesión",
+    signupBtn: "Crear cuenta",
+    forgotPw: "¿Olvidaste tu contraseña?",
+    chatPlaceholder: "Mensaje para todos...",
+    sendBtn: "Enviar",
+    tabReels: "Feed",
+    tabFeed: "Encuentros",
+    tabGlobal: "Chat",
+    tabInbox: "Buzón"
+  },
+  fr: {
+    matchBanner: "💖 MATCH-MERCREDI • TROUVE TON CRUSH ! [Clique pour le Radar 💘]",
+    loginBtn: "Se connecter",
+    signupBtn: "Créer un compte",
+    forgotPw: "Mot de passe oublié ?",
+    chatPlaceholder: "Message à tous...",
+    sendBtn: "Envoyer",
+    tabReels: "Fil",
+    tabFeed: "Rencontres",
+    tabGlobal: "Chat",
+    tabInbox: "Boîte de réception"
+  },
+  pl: {
+    matchBanner: "💖 MATCH-ŚRODA • ZNAJDŹ SWOJEGO CRUSHA! [Kliknij po Radar 💘]",
+    loginBtn: "Zaloguj się",
+    signupBtn: "Utwórz konto",
+    forgotPw: "Zapomniałeś hasła?",
+    chatPlaceholder: "Wiadomość do wszystkich...",
+    sendBtn: "Wyślij",
+    tabReels: "Tablica",
+    tabFeed: "Spotkania",
+    tabGlobal: "Czat",
+    tabInbox: "Skrzynka"
+  },
+  hu: {
+    matchBanner: "💖 MATCH-SZERDA • TALÁLD MEG A CRUSH-EDET! [Kattints a Radarért 💘]",
+    loginBtn: "Bejelentkezés",
+    signupBtn: "Fiók létrehozása",
+    forgotPw: "Elfelejtetted a jelszavad?",
+    chatPlaceholder: "Üzenet mindenkinek...",
+    sendBtn: "Küldés",
+    tabReels: "Hírfolyam",
+    tabFeed: "Találkozók",
+    tabGlobal: "Csevegés",
+    tabInbox: "Beérkező"
+  },
+  uk: {
+    matchBanner: "💖 MATCH-СЕРЕДА • ЗНАЙДИ СВОГО КРАША! [Клікни для Радару 💘]",
+    loginBtn: "Увійти",
+    signupBtn: "Створити акаунт",
+    forgotPw: "Забули пароль?",
+    chatPlaceholder: "Повідомлення всім...",
+    sendBtn: "Надіслати",
+    tabReels: "Стрічка",
+    tabFeed: "Зустрічі",
+    tabGlobal: "Чат",
+    tabInbox: "Вхідні"
+  }
+};
+
+let currentLanguage = localStorage.getItem('campus_lang') || 'de';
+
+function changeLanguage(langCode) {
+  currentLanguage = langCode;
+  localStorage.setItem('campus_lang', langCode);
+  
+  const t = translations[langCode] || translations['de'];
+
+  const matchBanner = document.getElementById('match-banner');
+  if (matchBanner) matchBanner.innerText = t.matchBanner;
+
+  const loginBtn = document.querySelector('#auth-gate .btn:not(.btn-secondary)');
+  if (loginBtn) loginBtn.innerText = t.loginBtn;
+
+  const signupBtn = document.querySelector('#auth-gate .btn-secondary');
+  if (signupBtn) signupBtn.innerText = t.signupBtn;
+
+  const globalInput = document.getElementById('global-chat-input');
+  if (globalInput) globalInput.placeholder = t.chatPlaceholder;
+
+  const btnReels = document.getElementById('btn-tab-reels');
+  if (btnReels) btnReels.innerText = `📱 ${t.tabReels}`;
+  
+  const btnFeed = document.getElementById('btn-tab-feed');
+  if (btnFeed) btnFeed.innerText = `💬 ${t.tabFeed}`;
+
+  const btnGlobal = document.getElementById('btn-tab-global');
+  if (btnGlobal) btnGlobal.innerText = `⚡ ${t.tabGlobal}`;
+
+  const btnInbox = document.getElementById('btn-tab-inbox');
+  if (btnInbox) btnInbox.innerText = `📬 ${t.tabInbox}`;
+}
+
 let currentUserEmail = localStorage.getItem('campus_email') || '';
 let userPoints = 0;
 let selectedCategory = '☕ Kaffee';
@@ -50,6 +207,13 @@ let adminMarker = null;
 
 window.addEventListener('DOMContentLoaded', async () => {
   checkMatchWednesday();
+
+  // Gespeicherte Sprache im Dropdown setzen
+  const langSelect = document.getElementById('languageSelect');
+  if (langSelect) {
+    langSelect.value = currentLanguage;
+  }
+  changeLanguage(currentLanguage);
 
   if (currentUserEmail) {
     const logoutBtn = document.getElementById('logout-btn');
@@ -425,7 +589,7 @@ async function submitQuizToBackend() {
   } catch (err) {
     if (qEl) {
       qEl.innerHTML = `
-        <h3 style="color: var(--accent); margin-bottom: 6px;">⚠️ Hinweis</h3>
+        <h3 style="color: var(--accent); margin-bottom: 6px;">⚠️️ Hinweis</h3>
         <p>${err.message}</p>
       `;
     }
@@ -677,8 +841,6 @@ async function initApp() {
   switchTab('reels');
   setReelFilter('foryou');
 }
-
-function changeLanguage(langCode) {}
 
 function changeAvatarDirectly() {
   const currentUrl = document.getElementById('profile-avatar')?.value || '';
@@ -1119,7 +1281,7 @@ async function renderLiveStreams() {
 }
 
 async function moderateStreamPrompt(streamId) {
-  const action = prompt("🛡️️ Moderatoren-Aktion wählen:\n1 - Moderator hinzufügen (E-Mail eingeben)\n2 - Stream vorzeitig beenden");
+  const action = prompt("🛡 Moderatoren-Aktion wählen:\n1 - Moderator hinzufügen (E-Mail eingeben)\n2 - Stream vorzeitig beenden");
   if (action === '1') {
     const modMail = prompt("Gib die E-Mail des neuen Moderators ein:")?.trim().toLowerCase();
     if (modMail) {
