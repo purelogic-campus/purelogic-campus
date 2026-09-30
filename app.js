@@ -7,7 +7,7 @@ const MASTER_ADMIN_PASS = 'Doschi08021991';
 
 const ALLOWED_DOMAINS = ['.ac.at', 'univie.ac.at', 'tuwien.ac.at', 'wu.ac.at', 'meduniwien.ac.at', 'boku.ac.at', 'fhwien.ac.at'];
 
-// Vollautomatischer Rassismus- & Beleidigungsfilter[cite: 11]
+// Vollautomatischer Rassismus- & Beleidigungsfilter
 const FORBIDDEN_REGEX = /\b(schimpfwort1|schimpfwort2|rassismus|hassrede|beleidigung)\b/i;
 
 function containsHateSpeech(text) {
@@ -16,7 +16,7 @@ function containsHateSpeech(text) {
   return FORBIDDEN_REGEX.test(cleaned);
 }
 
-// i18n Sprachübersetzungen für alle 10 Sprachen[cite: 11]
+// i18n Sprachübersetzungen für alle 10 Sprachen (inkl. aller Menüs, Untermenüs & UI-Elemente)
 const translations = {
   de: {
     matchBanner: "💖 MATCH-MITTWOCH • FIND YOUR CRUSH! [Klick fürs Radar 💘]",
@@ -28,7 +28,19 @@ const translations = {
     tabReels: "Feed",
     tabFeed: "Treffen",
     tabGlobal: "Chat",
-    tabInbox: "Postfach"
+    tabInbox: "Postfach",
+    tabLive: "Live",
+    tabRanking: "Ranking",
+    tabProfile: "Profil",
+    tabAdmin: "Admin",
+    subDiscover: "Entdecken",
+    subTrending: "Trends",
+    subForYou: "Für dich",
+    subFollowing: "Abonniert",
+    subAll: "Alle",
+    btnSave: "Speichern",
+    btnCancel: "Abbrechen",
+    btnBack: "Zurück"
   },
   en: {
     matchBanner: "💖 MATCH-WEDNESDAY • FIND YOUR CRUSH! [Click for Radar 💘]",
@@ -40,7 +52,19 @@ const translations = {
     tabReels: "Feed",
     tabFeed: "Meetups",
     tabGlobal: "Chat",
-    tabInbox: "Inbox"
+    tabInbox: "Inbox",
+    tabLive: "Live",
+    tabRanking: "Ranking",
+    tabProfile: "Profile",
+    tabAdmin: "Admin",
+    subDiscover: "Discover",
+    subTrending: "Trending",
+    subForYou: "For You",
+    subFollowing: "Following",
+    subAll: "All",
+    btnSave: "Save",
+    btnCancel: "Cancel",
+    btnBack: "Back"
   },
   it: {
     matchBanner: "💖 MATCH-MERCOLEDÌ • TROVA IL TUO CRUSH! [Clicca per il Radar 💘]",
@@ -52,7 +76,19 @@ const translations = {
     tabReels: "Feed",
     tabFeed: "Incontri",
     tabGlobal: "Chat",
-    tabInbox: "Posta"
+    tabInbox: "Posta",
+    tabLive: "Live",
+    tabRanking: "Classifica",
+    tabProfile: "Profilo",
+    tabAdmin: "Admin",
+    subDiscover: "Scopri",
+    subTrending: "Tendenze",
+    subForYou: "Per te",
+    subFollowing: "Seguiti",
+    subAll: "Tutti",
+    btnSave: "Salva",
+    btnCancel: "Annulla",
+    btnBack: "Indietro"
   },
   bks: {
     matchBanner: "💖 MATCH-SRIJEDA • PRONAĐI SVOG CRUSHA! [Klik za Radar 💘]",
@@ -64,7 +100,19 @@ const translations = {
     tabReels: "Feed",
     tabFeed: "Susreti",
     tabGlobal: "Chat",
-    tabInbox: "Sandučić"
+    tabInbox: "Sandučić",
+    tabLive: "Live",
+    tabRanking: "Poredak",
+    tabProfile: "Profil",
+    tabAdmin: "Admin",
+    subDiscover: "Otkrij",
+    subTrending: "U trendu",
+    subForYou: "Za tebe",
+    subFollowing: "Praćeno",
+    subAll: "Svi",
+    btnSave: "Spremi",
+    btnCancel: "Odustani",
+    btnBack: "Natrag"
   },
   tr: {
     matchBanner: "💖 MATCH-ÇARŞAMBA • CRUSH'INI BUL! [Radar için Tıkla 💘]",
@@ -76,7 +124,19 @@ const translations = {
     tabReels: "Akış",
     tabFeed: "Buluşmalar",
     tabGlobal: "Sohbet",
-    tabInbox: "Gelen Kutusu"
+    tabInbox: "Gelen Kutusu",
+    tabLive: "Canlı",
+    tabRanking: "Sıralama",
+    tabProfile: "Profil",
+    tabAdmin: "Yönetici",
+    subDiscover: "Keşfet",
+    subTrending: "Trendler",
+    subForYou: "Sizin İçin",
+    subFollowing: "Takip Edilen",
+    subAll: "Tümü",
+    btnSave: "Kaydet",
+    btnCancel: "İptal",
+    btnBack: "Geri"
   },
   es: {
     matchBanner: "💖 MATCH-MIÉRCOLES • ¡ENCUENTRA A TU CRUSH! [Haz clic para el Radar 💘]",
@@ -88,7 +148,19 @@ const translations = {
     tabReels: "Feed",
     tabFeed: "Encuentros",
     tabGlobal: "Chat",
-    tabInbox: "Buzón"
+    tabInbox: "Buzón",
+    tabLive: "En vivo",
+    tabRanking: "Ranking",
+    tabProfile: "Perfil",
+    tabAdmin: "Admin",
+    subDiscover: "Descubrir",
+    subTrending: "Tendencias",
+    subForYou: "Para ti",
+    subFollowing: "Siguiendo",
+    subAll: "Todos",
+    btnSave: "Guardar",
+    btnCancel: "Cancelar",
+    btnBack: "Atrás"
   },
   fr: {
     matchBanner: "💖 MATCH-MERCREDI • TROUVE TON CRUSH ! [Clique pour le Radar 💘]",
@@ -100,7 +172,19 @@ const translations = {
     tabReels: "Fil",
     tabFeed: "Rencontres",
     tabGlobal: "Chat",
-    tabInbox: "Boîte de réception"
+    tabInbox: "Boîte de réception",
+    tabLive: "En direct",
+    tabRanking: "Classement",
+    tabProfile: "Profil",
+    tabAdmin: "Admin",
+    subDiscover: "Découvrir",
+    subTrending: "Tendances",
+    subForYou: "Pour vous",
+    subFollowing: "Abonnements",
+    subAll: "Tous",
+    btnSave: "Enregistrer",
+    btnCancel: "Annuler",
+    btnBack: "Retour"
   },
   pl: {
     matchBanner: "💖 MATCH-ŚRODA • ZNAJDŹ SWOJEGO CRUSHA! [Kliknij po Radar 💘]",
@@ -112,7 +196,19 @@ const translations = {
     tabReels: "Tablica",
     tabFeed: "Spotkania",
     tabGlobal: "Czat",
-    tabInbox: "Skrzynka"
+    tabInbox: "Skrzynka",
+    tabLive: "Na żywo",
+    tabRanking: "Ranking",
+    tabProfile: "Profil",
+    tabAdmin: "Admin",
+    subDiscover: "Odkryj",
+    subTrending: "Trendy",
+    subForYou: "Dla Ciebie",
+    subFollowing: "Obserwowane",
+    subAll: "Wszystkie",
+    btnSave: "Zapisz",
+    btnCancel: "Anuluj",
+    btnBack: "Wstecz"
   },
   hu: {
     matchBanner: "💖 MATCH-SZERDA • TALÁLD MEG A CRUSH-EDET! [Kattints a Radarért 💘]",
@@ -124,7 +220,19 @@ const translations = {
     tabReels: "Hírfolyam",
     tabFeed: "Találkozók",
     tabGlobal: "Csevegés",
-    tabInbox: "Beérkező"
+    tabInbox: "Beérkező",
+    tabLive: "Élő",
+    tabRanking: "Rangsor",
+    tabProfile: "Profil",
+    tabAdmin: "Admin",
+    subDiscover: "Felfedezés",
+    subTrending: "Felkapott",
+    subForYou: "Neked",
+    subFollowing: "Követett",
+    subAll: "Összes",
+    btnSave: "Mentés",
+    btnCancel: "Mégse",
+    btnBack: "Vissza"
   },
   uk: {
     matchBanner: "💖 MATCH-СЕРЕДА • ЗНАЙДИ СВОГО КРАША! [Клікни для Радару 💘]",
@@ -136,7 +244,19 @@ const translations = {
     tabReels: "Стрічка",
     tabFeed: "Зустрічі",
     tabGlobal: "Чат",
-    tabInbox: "Вхідні"
+    tabInbox: "Вхідні",
+    tabLive: "Наживо",
+    tabRanking: "Рейтинг",
+    tabProfile: "Профіль",
+    tabAdmin: "Адмін",
+    subDiscover: "Відкрити",
+    subTrending: "Треandи",
+    subForYou: "Для вас",
+    subFollowing: "Підписки",
+    subAll: "Всі",
+    btnSave: "Зберегти",
+    btnCancel: "Скасувати",
+    btnBack: "Назад"
   }
 };
 
@@ -160,6 +280,7 @@ function changeLanguage(langCode) {
   const globalInput = document.getElementById('global-chat-input');
   if (globalInput) globalInput.placeholder = t.chatPlaceholder;
 
+  // Haupt-Navigation Tabs
   const btnReels = document.getElementById('btn-tab-reels');
   if (btnReels) btnReels.innerText = `📱 ${t.tabReels}`;
   
@@ -171,6 +292,31 @@ function changeLanguage(langCode) {
 
   const btnInbox = document.getElementById('btn-tab-inbox');
   if (btnInbox) btnInbox.innerText = `📬 ${t.tabInbox}`;
+
+  const btnLive = document.getElementById('btn-tab-live');
+  if (btnLive) btnLive.innerText = `🔴 ${t.tabLive}`;
+
+  const btnRanking = document.getElementById('btn-tab-ranking');
+  if (btnRanking) btnRanking.innerText = `🏆 ${t.tabRanking}`;
+
+  const btnProfile = document.getElementById('btn-tab-profile');
+  if (btnProfile) btnProfile.innerText = `👤 ${t.tabProfile}`;
+
+  const btnAdmin = document.getElementById('btn-tab-admin');
+  if (btnAdmin) btnAdmin.innerText = `🛡️ ${t.tabAdmin}`;
+
+  // Untermenüs & Filter (Entdecken, Trends, Für dich, Abonniert etc.)
+  const filterDiscover = document.getElementById('reel-filter-discover');
+  if (filterDiscover) filterDiscover.innerText = t.subDiscover;
+
+  const filterForYou = document.getElementById('reel-filter-foryou');
+  if (filterForYou) filterForYou.innerText = t.subForYou;
+
+  const filterFollowing = document.getElementById('reel-filter-following');
+  if (filterFollowing) filterFollowing.innerText = t.subFollowing;
+
+  const filterLive = document.getElementById('reel-filter-live');
+  if (filterLive) filterLive.innerText = t.tabLive;
 }
 
 let currentUserEmail = localStorage.getItem('campus_email') || '';
@@ -748,7 +894,7 @@ async function claimSpecificDrop(dropId) {
   if (!drop) return alert('⚠️ Drop nicht gefunden oder bereits abgelaufen.');
 
   const claimedKey = `claimed_drop_${drop.id}`;
-  if (localStorage.getItem(claimedKey)) return alert('⚠️ Du hast diesen Drop bereits eingesammelt!');
+  if (localStorage.getItem(claimedKey)) return alert('⚠️️ Du hast diesen Drop bereits eingesammelt!');
 
   if (new Date().getTime() > new Date(drop.expires_at).getTime()) return alert('⏳ Dieser Drop ist leider bereits abgelaufen!');
 
@@ -1271,7 +1417,7 @@ async function renderLiveStreams() {
         </div>
         <div class="event-footer" style="display:flex; justify-content:space-between; align-items:center;">
           <a href="${s.stream_url}" target="_blank" class="btn-join" style="text-decoration:none;">Stream ansehen</a>
-          ${(isHost || isMod || currentUserEmail === MASTER_ADMIN_EMAIL) ? `<button class="btn-secondary" style="width:auto; padding:4px 8px; font-size:10px; margin:0;" onclick="moderateStreamPrompt('${s.id}')">🛡️ Mod-Menü</button>` : ''}
+          ${(isHost || isMod || currentUserEmail === MASTER_ADMIN_EMAIL) ? `<button class="btn-secondary" style="width:auto; padding:4px 8px; font-size:10px; margin:0;" onclick="moderateStreamPrompt('${s.id}')">🛡️️ Mod-Menü</button>` : ''}
         </div>
       </div>
     `;
