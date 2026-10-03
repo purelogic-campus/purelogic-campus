@@ -276,7 +276,7 @@ const translations = {
     socialCardSub: "Share your achievements on WhatsApp / Insta for Hype points.",
     writeReviewBtn: "+ Write Review",
     profGuideSub: "Past exam tips, professor experiences, and difficulty levels.",
-    reviewFormTitle: "✍️ Share New Experience",
+    reviewFormTitle: "✍️️ Share New Experience",
     profNamePlaceholder: "Professor Name (e.g. Prof. Müller)",
     profSubjectPlaceholder: "Module / Lecture (e.g. Analysis 1)",
     ratingLabel: "Rating:",
@@ -293,7 +293,7 @@ const translations = {
     crushModalTitle: "💖 Anonymous Crush Radar",
     crushModalSub: "Enter your campus crush. Mutual matches unlock a blind date!",
     crushTargetLabel: "Crush (Email or @handle):",
-    crushTargetPlaceholder: "crush@uni.at or @username",
+    crushTargetPlaceholder: "crush@uni.at o @username",
     crushHintLabel: "Secret hint (optional):",
     crushHintPlaceholder: "e.g. Library Row 4...",
     crushSubmitBtn: "Submit & Hope 💘"
@@ -1256,7 +1256,7 @@ const translations = {
     socialCardSub: "Oszd meg sikereidet WhatsAppon / Instán Hype pontokért.",
     writeReviewBtn: "+ Értékelés írása",
     profGuideSub: "Korábbi vizsgatippek, professzori tapasztalatok és nehézségi szintek.",
-    reviewFormTitle: "✍️️ Új Élmény Megosztása",
+    reviewFormTitle: "✍ Új Élmény Megosztása",
     profNamePlaceholder: "Professzor neve (pl. Prof. Müller)",
     profSubjectPlaceholder: "Modul / Előadás (pl. Analízis 1)",
     ratingLabel: "Értékelés:",
@@ -2745,9 +2745,19 @@ async function submitConfessionPost() {
   alert('Confession anonym gepostet! 🤫✨');
 }
 
+// Behobene Passwort-Toggle Funktion für das Auge-Icon
 function togglePasswordVisibility() {
   const pw = document.getElementById('password');
-  if (pw) pw.type = pw.type === 'password' ? 'text' : 'password';
+  const toggleBtn = document.getElementById('toggle-pw-btn');
+  if (pw) {
+    if (pw.type === 'password') {
+      pw.type = 'text';
+      if (toggleBtn) toggleBtn.innerText = '🔒';
+    } else {
+      pw.type = 'password';
+      if (toggleBtn) toggleBtn.innerText = '👁️';
+    }
+  }
 }
 
 function selectCreateCategory(el, cat) {
