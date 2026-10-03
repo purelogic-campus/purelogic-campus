@@ -280,7 +280,6 @@ function changeLanguage(langCode) {
   const globalInput = document.getElementById('global-chat-input');
   if (globalInput) globalInput.placeholder = t.chatPlaceholder;
 
-  // Haupt-Navigation Tabs
   const btnReels = document.getElementById('btn-tab-reels');
   if (btnReels) btnReels.innerText = `📱 ${t.tabReels}`;
   
@@ -304,19 +303,6 @@ function changeLanguage(langCode) {
 
   const btnAdmin = document.getElementById('btn-tab-admin');
   if (btnAdmin) btnAdmin.innerText = `🛡️ ${t.tabAdmin}`;
-
-  // Untermenüs & Filter (Entdecken, Trends, Für dich, Abonniert etc.)
-  const filterDiscover = document.getElementById('reel-filter-discover');
-  if (filterDiscover) filterDiscover.innerText = t.subDiscover;
-
-  const filterForYou = document.getElementById('reel-filter-foryou');
-  if (filterForYou) filterForYou.innerText = t.subForYou;
-
-  const filterFollowing = document.getElementById('reel-filter-following');
-  if (filterFollowing) filterFollowing.innerText = t.subFollowing;
-
-  const filterLive = document.getElementById('reel-filter-live');
-  if (filterLive) filterLive.innerText = t.tabLive;
 }
 
 let currentUserEmail = localStorage.getItem('campus_email') || '';
@@ -635,7 +621,7 @@ async function openCampusQuizModal() {
   const { data, error } = await _supabase.from('quiz_questions').select('id, question_text, options').limit(5);
 
   if (error || !data || data.length === 0) {
-    if (qContainer) qContainer.innerText = '⚠️ Keine Quiz-Fragen in der Datenbank gefunden oder Fehler beim Laden.';
+    if (qContainer) qContainer.innerText = '⚠ Keine Quiz-Fragen in der Datenbank gefunden oder Fehler beim Laden.';
     return;
   }
 
@@ -894,7 +880,7 @@ async function claimSpecificDrop(dropId) {
   if (!drop) return alert('⚠️ Drop nicht gefunden oder bereits abgelaufen.');
 
   const claimedKey = `claimed_drop_${drop.id}`;
-  if (localStorage.getItem(claimedKey)) return alert('⚠️️ Du hast diesen Drop bereits eingesammelt!');
+  if (localStorage.getItem(claimedKey)) return alert('⚠ Du hast diesen Drop bereits eingesammelt!');
 
   if (new Date().getTime() > new Date(drop.expires_at).getTime()) return alert('⏳ Dieser Drop ist leider bereits abgelaufen!');
 
@@ -1417,7 +1403,7 @@ async function renderLiveStreams() {
         </div>
         <div class="event-footer" style="display:flex; justify-content:space-between; align-items:center;">
           <a href="${s.stream_url}" target="_blank" class="btn-join" style="text-decoration:none;">Stream ansehen</a>
-          ${(isHost || isMod || currentUserEmail === MASTER_ADMIN_EMAIL) ? `<button class="btn-secondary" style="width:auto; padding:4px 8px; font-size:10px; margin:0;" onclick="moderateStreamPrompt('${s.id}')">🛡️️ Mod-Menü</button>` : ''}
+          ${(isHost || isMod || currentUserEmail === MASTER_ADMIN_EMAIL) ? `<button class="btn-secondary" style="width:auto; padding:4px 8px; font-size:10px; margin:0;" onclick="moderateStreamPrompt('${s.id}')">🛡 Mod-Menü</button>` : ''}
         </div>
       </div>
     `;
@@ -1569,7 +1555,7 @@ async function submitConfessionPost() {
   if (!text) return alert('Bitte Text eingeben.');
 
   if (containsHateSpeech(text)) {
-    alert('⚠️ Hassrede oder Beleidigungen sind in Confessions strengstens untersagt!');
+    alert('⚠️️ Hassrede oder Beleidigungen sind in Confessions strengstens untersagt!');
     return;
   }
 
@@ -1706,4 +1692,107 @@ function setupAdminUI() {
   if (!badge) return;
   badge.innerText = '⭐ Admin';
   badge.className = 'points-badge admin-badge';
+}
+
+async function addPoints(amount) {
+  userPoints += amount;
+  updatePointsDisplay();
+  if (currentUserEmail && currentUserEmail !== MASTER_ADMIN_EMAIL) {
+    await _supabase.from('users').upsert({ email: currentUserEmail, points: userPoints });
+    await _supabase.from('profiles').update({ points: userPoints }).eq('email', currentUserEmail);
+  }
+}
+
+function updatePointsDisplay() {
+  const badge = document.getElementById('score');
+  if (badge && currentUserEmail !== MASTER_ADMIN_EMAIL) {
+    badge.innerText = `${userPoints} P`;
+  }
+}
+
+function resetUser(reload = true) {
+  localStorage.removeItem('campus_email');
+  currentUserEmail = '';
+  userPoints = 0;
+  if (reload) window.location.reload();
+}
+
+async function sendGlobalMessage() {
+  const input = document.getElementById('global-chat-input');
+  const text = input?.value.trim();
+  if (!text) return;
+  if (containsHateSpeech(text)) {
+    alert('⚠️ Nachricht enthält unzulässige Ausdrücke.');
+    return;
+  }
+  await _supabase.from('global_chat').insert([{ sender_email: currentUserEmail, message: text }]);
+  if (input) input.value = '';
+}
+
+async function loadGlobalChat() {
+  const { data } = await _supabase.from('global_chat').select('*').order('created_at', { ascending: true }).limit(100);
+  globalChatCache = data || [];
+  renderGlobalChat();
+}
+
+function renderGlobalChat() {
+  const list = document.getElementById('global-chat-list');
+  if (!list) return;
+  list.innerHTML = globalChatCache.map(m => `
+    <div style="margin-bottom: 8px; font-size: 12px; background: rgba(255,255,255,0.03); padding: 8px; border-radius: 8px;">
+      <strong style="color: #818cf8;">${m.sender_email.split('@')[0]}:</strong> ${m.message}
+    </div>
+  `).join('');
+  list.scrollTop = list.scrollHeight;
+}
+
+async function sendDirectMessage() {
+  const recipient = document.getElementById('dm-recipient')?.value.trim().toLowerCase();
+  const input = document.getElementById('dm-input');
+  const text = input?.value.trim();
+  if (!recipient || !text) return alert('Bitte Empfänger und Nachricht angeben.');
+  await _supabase.from('direct_messages').insert([{ sender_email: currentUserEmail, recipient_email: recipient, message: text }]);
+  if (input) input.value = '';
+  loadDirectMessages();
+}
+
+async function loadDirectMessages() {
+  const recipient = document.getElementById('dm-recipient')?.value.trim().toLowerCase();
+  const list = document.getElementById('dm-chat-list');
+  if (!recipient || !list) return;
+  const { data } = await _supabase.from('direct_messages').select('*').or(`and(sender_email.eq.${currentUserEmail},recipient_email.eq.${recipient}),and(sender_email.eq.${recipient},recipient_email.eq.${currentUserEmail})`).order('created_at', { ascending: true });
+  const msgs = data || [];
+  list.innerHTML = msgs.map(m => `
+    <div style="margin-bottom: 8px; font-size: 12px; background: ${m.sender_email === currentUserEmail ? 'rgba(99,102,241,0.15)' : 'rgba(255,255,255,0.03)'}; padding: 8px; border-radius: 8px;">
+      <strong style="color: ${m.sender_email === currentUserEmail ? '#818cf8' : '#ec4899'};">${m.sender_email.split('@')[0]}:</strong> ${m.message}
+    </div>
+  `).join('');
+  list.scrollTop = list.scrollHeight;
+}
+
+async function loadEvents() {
+  const { data } = await _supabase.from('live_events').select('*').order('created_at', { ascending: false });
+  allEventsCache = data || [];
+  renderEvents();
+}
+
+function renderEvents() {
+  const list = document.getElementById('feed-list');
+  if (!list) return;
+  let events = activeFilter === 'Alle' ? allEventsCache : allEventsCache.filter(e => e.category === activeFilter);
+  if (events.length === 0) {
+    list.innerHTML = '<p style="color: var(--text-muted); font-size: 12px; text-align: center; padding: 20px;">Keine Treffen in dieser Kategorie.</p>';
+    return;
+  }
+  list.innerHTML = events.map(e => `
+    <div style="background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 8px;">
+      <div style="font-weight: 800; font-size: 13px; color: var(--text);">${e.category} • ${e.title}</div>
+      <p style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">${e.description || ''}</p>
+      <div style="font-size: 10px; color: #818cf8; margin-top: 6px;">Erstellt von: ${e.creator_email ? e.creator_email.split('@')[0] : 'Anonym'}</div>
+    </div>
+  `).join('');
+}
+
+function toggleModal(show) {
+  alert('Modal öffnen / erstellen');
 }
