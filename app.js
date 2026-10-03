@@ -276,7 +276,7 @@ const translations = {
     socialCardSub: "Share your achievements on WhatsApp / Insta for Hype points.",
     writeReviewBtn: "+ Write Review",
     profGuideSub: "Past exam tips, professor experiences, and difficulty levels.",
-    reviewFormTitle: "✍️️ Share New Experience",
+    reviewFormTitle: "✍ Share New Experience",
     profNamePlaceholder: "Professor Name (e.g. Prof. Müller)",
     profSubjectPlaceholder: "Module / Lecture (e.g. Analysis 1)",
     ratingLabel: "Rating:",
@@ -696,7 +696,7 @@ const translations = {
     socialCardSub: "Başarılarını WhatsApp / Insta'da paylaş, Hype puanları kazan.",
     writeReviewBtn: "+ İnceleme Yaz",
     profGuideSub: "Geçmiş sınav ipuçları, profesör deneyimleri ve zorluk dereceleri.",
-    reviewFormTitle: "✍️ Yeni Deneyim Paylaş",
+    reviewFormTitle: "✍️️ Yeni Deneyim Paylaş",
     profNamePlaceholder: "Profesör Adı (örn. Prof. Müller)",
     profSubjectPlaceholder: "Ders / Modül (örn. Analiz 1)",
     ratingLabel: "Değerlendirme:",
@@ -1465,7 +1465,7 @@ function changeLanguage(langCode) {
   const btnAdmin = document.getElementById('btn-tab-admin');
   if (btnAdmin) btnAdmin.innerText = `🛡️ ${t.tabAdmin}`;
 
-  // Update all elements with data-i18n attribute across the DOM (including modals, sub-navs, buttons)
+  // Update all elements with data-i18n attribute across the DOM
   document.querySelectorAll('[data-i18n]').forEach(el => {
     const key = el.getAttribute('data-i18n');
     if (t[key]) {
@@ -1571,6 +1571,38 @@ window.addEventListener('DOMContentLoaded', async () => {
     }
   });
 });
+
+function logout() {
+  localStorage.removeItem('campus_email');
+  currentUserEmail = '';
+  userPoints = 0;
+  
+  document.getElementById('main-app')?.classList.add('hidden');
+  document.getElementById('auth-gate')?.classList.remove('hidden');
+  document.getElementById('logout-btn')?.classList.add('hidden');
+  document.getElementById('header-profile-btn')?.classList.add('hidden');
+  
+  const emailInput = document.getElementById('email');
+  const passInput = document.getElementById('password');
+  if (emailInput) emailInput.value = '';
+  if (passInput) passInput.value = '';
+  
+  window.location.reload();
+}
+
+function togglePasswordVisibility() {
+  const pw = document.getElementById('password');
+  const toggleBtn = document.getElementById('toggle-pw-btn');
+  if (pw) {
+    if (pw.type === 'password') {
+      pw.type = 'text';
+      if (toggleBtn) toggleBtn.innerText = '🔒';
+    } else {
+      pw.type = 'password';
+      if (toggleBtn) toggleBtn.innerText = '👁️';
+    }
+  }
+}
 
 function toggleLectureMode() {
   const appCard = document.querySelector('.app-card');
@@ -2743,21 +2775,6 @@ async function submitConfessionPost() {
   closeUploadModal();
   loadMediaPosts();
   alert('Confession anonym gepostet! 🤫✨');
-}
-
-// Behobene Passwort-Toggle Funktion für das Auge-Icon
-function togglePasswordVisibility() {
-  const pw = document.getElementById('password');
-  const toggleBtn = document.getElementById('toggle-pw-btn');
-  if (pw) {
-    if (pw.type === 'password') {
-      pw.type = 'text';
-      if (toggleBtn) toggleBtn.innerText = '🔒';
-    } else {
-      pw.type = 'password';
-      if (toggleBtn) toggleBtn.innerText = '👁️';
-    }
-  }
 }
 
 function selectCreateCategory(el, cat) {
