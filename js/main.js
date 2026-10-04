@@ -1,12 +1,15 @@
 // js/main.js
 import { state } from './state.js';
 import { changeLanguage } from './i18n.js';
-import { handleForgotPassword } from './auth.js';
+import { handleLogin, handleSignup, resetUser, handleForgotPassword } from './auth.js';
 import { toggleLectureMode } from './features/lecture.js';
 import { initQuiz } from './features/quiz.js';
 import { openProfGuideModal, closeProfGuideModal } from './features/profguide.js';
 
 // Funktionen global verfügbar machen (für HTML onclick-Attribute)
+window.handleLogin = handleLogin;
+window.handleSignup = handleSignup;
+window.resetUser = resetUser;
 window.handleForgotPassword = handleForgotPassword;
 window.toggleLectureMode = toggleLectureMode;
 window.openProfGuideModal = openProfGuideModal;
@@ -22,8 +25,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Quiz initialisieren
     initQuiz();
 
-    // Event-Listener für Sprachauswahl (falls vorhanden)
-    const langSelector = document.getElementById('language-selector');
+    // Event-Listener für Sprachauswahl
+    const langSelector = document.getElementById('languageSelect');
     if (langSelector) {
         langSelector.value = savedLang;
         langSelector.addEventListener('change', (e) => {
