@@ -76,3 +76,15 @@ export async function handleForgotPassword() {
         console.error('Fehler:', error);
     }
 }
+
+// NEU: Funktion für das Auge-Symbol im Passwortfeld
+export function togglePasswordVisibility() {
+    const passwordInput = document.getElementById('password');
+    if (passwordInput) {
+        if (passwordInput.type === 'password') {
+            passwordInput.type = 'text';
+        } else {
+            passwordInput.type = 'password';
+        }
+    }
+}
