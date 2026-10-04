@@ -1,0 +1,33 @@
+// js/main.js
+import { state } from './state.js';
+import { changeLanguage } from './i18n.js';
+import { handleForgotPassword } from './auth.js';
+import { toggleLectureMode } from './features/lecture.js';
+import { initQuiz } from './features/quiz.js';
+import { openProfGuideModal, closeProfGuideModal } from './features/profguide.js';
+
+// Funktionen global verfügbar machen (für HTML onclick-Attribute)
+window.handleForgotPassword = handleForgotPassword;
+window.toggleLectureMode = toggleLectureMode;
+window.openProfGuideModal = openProfGuideModal;
+window.closeProfGuideModal = closeProfGuideModal;
+
+document.addEventListener('DOMContentLoaded', () => {
+    console.log("PURE LOGIC • GenZ Campus erfolgreich modular geladen.");
+    
+    // Gespeicherte Sprache beim Start laden
+    const savedLang = localStorage.getItem('preferred_lang') || 'de';
+    changeLanguage(savedLang);
+
+    // Quiz initialisieren
+    initQuiz();
+
+    // Event-Listener für Sprachauswahl (falls vorhanden)
+    const langSelector = document.getElementById('language-selector');
+    if (langSelector) {
+        langSelector.value = savedLang;
+        langSelector.addEventListener('change', (e) => {
+            changeLanguage(e.target.value);
+        });
+    }
+});
