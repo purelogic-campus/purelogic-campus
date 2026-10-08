@@ -1,5 +1,5 @@
 // js/auth.js
-import { SUPABASE_URL } from './config.js';
+import { _supabase } from './config.js';
 
 export async function handleLogin() {
     const email = document.getElementById('email')?.value.trim();
@@ -18,7 +18,7 @@ export async function handleLogin() {
         const { data, error } = await _supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         console.log('Erfolgreich eingeloggt:', data);
-        location.reload(); // Seite neu laden, um die App-Ansicht zu aktivieren
+        location.reload(); 
     } catch (error) {
         console.error('Login-Fehler:', error.message);
         if (msgBox) {
@@ -77,14 +77,9 @@ export async function handleForgotPassword() {
     }
 }
 
-// NEU: Funktion für das Auge-Symbol im Passwortfeld
 export function togglePasswordVisibility() {
     const passwordInput = document.getElementById('password');
     if (passwordInput) {
-        if (passwordInput.type === 'password') {
-            passwordInput.type = 'text';
-        } else {
-            passwordInput.type = 'password';
-        }
+        passwordInput.type = passwordInput.type === 'password' ? 'text' : 'password';
     }
 }

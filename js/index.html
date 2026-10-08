@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#1a0512">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>PURE LOGIC • GenZ Campus</title>
+  
+  <!-- Supabase & Leaflet & jsPDF -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <!-- Eigenes Stylesheet -->
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div class="app-card">
+  <div class="header">
+    <div class="logo">PURE LOGIC</div>
+    <div class="header-right" id="header-right-container">
+      <div style="position: relative;">
+        <div class="points-badge" id="score" onclick="togglePointsDropdown(event)">0 P</div>
+        <div id="points-dropdown-menu" class="points-dropdown hidden">
+          <div class="points-dropdown-item" onclick="openActiveSpotsModal()" data-i18n="activeSpotsTitle">📍 Aktuelle Partner-Spots</div>
+          <div class="points-dropdown-item" onclick="openProfGuideModal()" data-i18n="profGuideTitle">📚 Prof-Rating & Survival Guide</div>
+          <div class="points-dropdown-item" onclick="toggleLectureMode()" data-i18n="lectureModeTitle">🎓 Lecture Mode (Fokus)</div>
+          <div class="points-dropdown-item" onclick="openMorePointsModal()" data-i18n="morePointsTitle">🎁 Mehr Punkte sammeln</div>
+        </div>
+      </div>
+
+      <button class="header-profile-btn hidden" id="header-profile-btn" onclick="switchTab('profile')">
+        <img id="header-avatar-preview" class="header-avatar-sm" src="" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'24\' height=\'24\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%2394a3b8\' stroke-width=\'2\'><path d=\'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2\'></path><circle cx=\'12\' cy=\'7\' r=\'4\'></circle></svg>'" alt="Profil">
+        <span class="header-profile-text" data-i18n="tabProfile">Profil</span>
+      </button>
+      <button class="btn-logout hidden" id="logout-btn" onclick="resetUser()" title="Abmelden" data-i18n="logoutBtn">🚪 Logout</button>
+
+      <select id="languageSelect" class="language-select" onchange="changeLanguage(this.value)">
+        <option value="de" selected>🇩🇪 DE</option>
+        <option value="en">🇬🇧 EN</option>
+        <option value="it">🇮🇹 IT</option>
+        <option value="bks">🇭🇷 BKS</option>
+        <option value="tr">🇹🇷 TR</option>
+        <option value="es">🇪🇸 ES</option>
+        <option value="fr">🇫🇷 FR</option>
+        <option value="pl">🇵🇱 PL</option>
+        <option value="hu">🇭🇺 HU</option>
+        <option value="uk">🇺🇦 UK</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="match-banner" id="match-banner" onclick="openCrushModal()" data-i18n="matchBanner">
+    💖 MATCH-MITTWOCH • FIND YOUR CRUSH! [Klick fürs Radar 💘]
+  </div>
+
+  <div id="auth-gate" class="tab-content" style="justify-content: center; align-items: center;">
+    <div style="width: 100%; max-width: 380px;">
+      <h2 style="margin-bottom: 4px; font-size: 22px; font-weight: 800;" data-i18n="authWelcome">Hey there 👋</h2>
+      <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 14px;" data-i18n="authSubtitle">Logge dich ein oder starte direkt durch:</p>
+      
+      <div id="auth-msg" class="msg-box hidden"></div>
+
+      <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);" data-i18n="emailLabel">E-Mail-Adresse:</label>
+      <input type="email" id="email" placeholder="deine.mail@uni.at" data-i18n="emailPlaceholder">
+      
+      <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);" data-i18n="passwordLabel">Passwort:</label>
+      <div class="password-container">
+        <input type="password" id="password" placeholder="Dein geheimes Passwort" data-i18n="passwordPlaceholder">
+        <button type="button" class="password-toggle" id="toggle-pw-btn" onclick="togglePasswordVisibility()">👁️</button>
+      </div>
+      
+      <a class="forgot-password" onclick="handleForgotPassword()" data-i18n="forgotPw">Passwort vergessen?</a>
+
+      <button class="btn" onclick="handleLogin()" data-i18n="loginBtn">Einloggen</button>
+      <button class="btn btn-secondary" onclick="handleSignup()" data-i18n="signupBtn">Account erstellen</button>
+    </div>
+  </div>
+
+  <div id="main-app" class="hidden" style="flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0;">
+    
+    <div id="campus-drop-banner" class="flash-banner-active" style="display:none; width: 100%; background: linear-gradient(135deg, #f59e0b, #ec4899); color: white; padding: 10px 14px; border-radius: 12px; margin-bottom: 6px; text-align: center; cursor: pointer; flex-shrink: 0; border: 2px solid rgba(255, 255, 255, 0.6);" onclick="claimActiveDrop()">
+      <div style="font-weight: 900; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; text-shadow: 0 2px 4px rgba(0,0,0,0.2);" id="drop-title-text" data-i18n="flashDropTitle">⚡ FLASH DROP: 50 Extra-Punkte!</div>
+      <div style="font-size: 10px; opacity: 0.95; margin-top: 2px; font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,0.2);" id="drop-timer-text" data-i18n="flashDropTimer">Nur für kurze Zeit verfügbar! [Jetzt tippen 🎁]</div>
+    </div>
+
+    <div id="uni-duell-container" style="display: flex; gap: 8px; margin-bottom: 6px; flex-shrink: 0;">
+      <button class="btn" onclick="switchTab('ranking')" data-i18n="uniDuellBtn" style="margin-top: 0; padding: 8px 12px; font-size: 12px; font-weight: 800; background: var(--gradient-main); display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);">
+        🏆 Zum Wiener Uni-Duell & Rangliste
+      </button>
+    </div>
+
+    <div class="tab-content-wrapper">
+      
+      <div id="tab-lecture-mode" class="lecture-mode-view">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <div>
+            <h3 style="font-size: 15px; font-weight: 800; color: #94a3b8;" data-i18n="lectureModeHeader">🎓 Hörsaal-Fokusmodus</h3>
+            <span style="font-size: 10px; color: #64748b;" data-i18n="lectureModeSub">Ablenkungsfrei & Akku-schonend</span>
+          </div>
+          <button class="btn btn-secondary" style="width: auto; margin-top: 0; padding: 6px 12px; font-size: 11px;" onclick="toggleLectureMode()" data-i18n="lectureModeExit">Modus beenden ✕</button>
+        </div>
+
+        <textarea id="lecture-notes-input" class="lecture-notepad" placeholder="Schreibe hier deine Vorlesungsnotizen mit..." data-i18n="lectureNotesPlaceholder"></textarea>
+
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; padding: 10px; margin-top: 4px; flex-shrink: 0;">
+          <div style="font-size: 11px; font-weight: 700; color: #cbd5e1; margin-bottom: 6px;" data-i18n="saveNotesTitle">💾 Notiz auf Gerät speichern:</div>
+          <div style="display: flex; gap: 6px; margin-bottom: 6px;">
+            <input type="text" id="lecture-file-name" placeholder="Dateiname (z.B. Vorlesung_Mathe)" style="margin: 0; flex: 2; font-size: 11px; padding: 8px 10px;" data-i18n="fileNamePlaceholder">
+            <input type="date" id="lecture-file-date" style="margin: 0; flex: 1; font-size: 11px; padding: 8px 10px; background: var(--card); color: white; border: 1px solid var(--border); border-radius: 12px;">
+          </div>
+          
+          <div style="display: flex; gap: 6px; margin-bottom: 6px; align-items: center;">
+            <label style="font-size: 11px; font-weight: 600; color: var(--text-muted); white-space: nowrap;" data-i18n="formatLabel">Format:</label>
+            <select id="lecture-file-format" style="margin: 0; font-size: 11px; padding: 8px 10px; background: var(--card); color: white; border: 1px solid var(--border); border-radius: 12px;">
+              <option value="txt" data-i18n="formatTxt">.txt (Textdatei)</option>
+              <option value="pdf" data-i18n="formatPdf">.pdf (Dokument)</option>
+            </select>
+          </div>
+
+          <button class="btn" onclick="saveLectureNotesToFile()" style="margin: 0; padding: 9px; font-size: 11px; font-weight: 800;" data-i18n="downloadFileBtn">📥 Als Datei herunterladen</button>
+        </div>
+      </div>
+
+      <div id="tab-live" class="tab-content hidden">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px; flex-shrink:0; gap: 6px;">
+          <h3 style="font-size: 16px; font-weight: 800;" data-i18n="liveHeader">🔴 Campus Live & Mods</h3>
+          <div style="display:flex; gap:6px;">
+            <button class="btn btn-secondary" style="width:auto; margin-top:0; padding: 6px 10px; font-size: 11px;" onclick="openStreamHelpModal()" data-i18n="helpBtn">💡 Hilfe</button>
+            <button class="btn" id="start-stream-btn" style="width:auto; margin-top:0; padding: 6px 12px; font-size: 11px;" onclick="handlePreLiveCheck()" data-i18n="startStreamBtn">+ Stream starten</button>
+          </div>
+        </div>
+
+        <div class="category-group" id="live-filter-group">
+          <div class="cat-pill active" onclick="setLiveFilter(this, 'Alle')" data-i18n="liveFilterAll">Alle Live</div>
+          <div class="cat-pill" onclick="setLiveFilter(this, '🎮 Gaming')" data-i18n="liveFilterGaming">🎮 Gaming</div>
+          <div class="cat-pill" onclick="setLiveFilter(this, '🎵 Musik')" data-i18n="liveFilterMusic">🎵 Musik</div>
+          <div class="cat-pill" onclick="setLiveFilter(this, '💬 Plaudern')" data-i18n="liveFilterChat">💬 Plaudern</div>
+          <div class="cat-pill" onclick="setLiveFilter(this, '🔬 Lernen & Wissenschaft')" data-i18n="liveFilterScience">🔬 Lernen & Wissenschaft</div>
+        </div>
+
+        <div id="live-streams-list" style="overflow-y:auto; flex:1;">
+          <p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;" data-i18n="loadingStreams">Lade Live-Streams...</p>
+        </div>
+      </div>
+
+      <div id="tab-reels" class="tab-content">
+        <div class="reels-subnav">
+          <div class="reel-pill" id="reel-filter-discover" onclick="setReelFilter('discover')" data-i18n="subDiscover">🔥 Entdecken</div>
+          <div class="reel-pill active" id="reel-filter-foryou" onclick="setReelFilter('foryou')" data-i18n="subForYou">✨ Für dich</div>
+          <div class="reel-pill" id="reel-filter-following" onclick="setReelFilter('following')" data-i18n="subFollowing">👥 Gefolgt</div>
+          <div class="reel-pill" id="reel-filter-live" onclick="switchTab('live')" data-i18n="tabLive">🔴 Live</div>
+        </div>
+
+        <div class="reel-card-wrapper" id="reels-list">
+          <p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;" data-i18n="loadingFeeds">Lade Campus-Feeds...</p>
+        </div>
+      </div>
+
+      <div id="tab-feed" class="tab-content hidden">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px; flex-shrink:0;">
+          <h3 style="font-size: 16px; font-weight: 800;" data-i18n="meetupsHeader">Spontane Treffen</h3>
+          <button class="btn" style="width:auto; margin-top:0; padding: 6px 12px; font-size: 12px;" onclick="toggleModal(true)" data-i18n="createBtn">+ Erstellen</button>
+        </div>
+
+        <div class="category-group" id="filter-group">
+          <div class="cat-pill active" onclick="setFilter(this, 'Alle')" data-i18n="filterAll">Alle</div>
+          <div class="cat-pill" onclick="setFilter(this, '☕ Kaffee')" data-i18n="filterCoffee">☕ Kaffee</div>
+          <div class="cat-pill" onclick="setFilter(this, '📖 Lernen')" data-i18n="filterStudy">📖 Lernen</div>
+          <div class="cat-pill" onclick="setFilter(this, '🍺 Bier')" data-i18n="filterBeer">🍺 Bier</div>
+          <div class="cat-pill" onclick="setFilter(this, '🏀 Sport')" data-i18n="filterSport">🏀 Sport</div>
+        </div>
+
+        <div id="feed-list" style="overflow-y:auto; flex:1;">
+          <p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;" data-i18n="loadingMeetups">Lade Treffen...</p>
+        </div>
+      </div>
+
+      <div id="tab-ranking" class="tab-content hidden">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px; flex-shrink:0;">
+          <h3 style="font-size: 16px; font-weight: 800;" data-i18n="rankingHeader">🏆 Uni-Duell & Top 100</h3>
+          <span style="font-size: 10px; color: var(--text-muted);" data-i18n="rankingReset">Reset So. 23:59</span>
+        </div>
+
+        <div style="background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 12px; margin-bottom: 12px;">
+          <h4 style="font-size: 13px; font-weight: 800; margin-bottom: 6px; color: #818cf8;" data-i18n="wienerDuellBoxTitle">🎓 Wiener Uni-Duell (Pro-Kopf)</h4>
+          <div id="uni-duell-list" style="display: flex; flex-direction: column; gap: 6px;">
+            <p style="color: var(--text-muted); font-size: 12px;" data-i18n="loadingUniDuell">Berechne Uni-Wertung...</p>
+          </div>
+        </div>
+
+        <h4 style="font-size: 13px; font-weight: 800; margin-bottom: 6px;" data-i18n="wallOfFameTitle">⭐ Wall of Fame (Top Creator)</h4>
+        <div id="top-creators-list" style="display: flex; flex-direction: column; gap: 6px; padding-bottom: 20px;">
+          <p style="color: var(--text-muted); font-size: 12px;" data-i18n="loadingTopCreators">Lade Top Creator...</p>
+        </div>
+      </div>
+
+      <div id="tab-global" class="tab-content hidden">
+        <div class="chat-container">
+          <div class="messages-list" id="global-chat-list">
+            <p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;" data-i18n="loadingChat">Lade Campus-Chat...</p>
+          </div>
+          <div class="chat-input-area">
+            <input type="text" id="global-chat-input" placeholder="Nachricht an alle..." data-i18n="chatPlaceholder" onkeydown="if(event.key==='Enter') sendGlobalMessage()">
+            <button class="btn" style="width: auto; margin:0; padding: 0 16px;" onclick="sendGlobalMessage()" data-i18n="sendBtn">Senden</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="tab-inbox" class="tab-content hidden">
+        <div class="chat-container">
+          <label style="font-size: 10px; font-weight: 600; color: var(--text-muted); flex-shrink:0;" data-i18n="recipientLabel">Empfänger (E-Mail):</label>
+          <input type="email" id="dm-recipient" placeholder="kommilitone@uni.at" data-i18n="recipientPlaceholder" style="margin-bottom: 6px; flex-shrink:0; max-width: 400px;" onchange="loadDirectMessages()">
+          
+          <div class="messages-list" id="dm-chat-list">
+            <p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;" data-i18n="inboxPrompt">Gib oben eine E-Mail ein, um zu schreiben.</p>
+          </div>
+          <div class="chat-input-area">
+            <input type="text" id="dm-input" placeholder="Direktnachricht..." data-i18n="dmPlaceholder" onkeydown="if(event.key==='Enter') sendDirectMessage()">
+            <button class="btn" style="width: auto; margin:0; padding: 0 16px;" onclick="sendDirectMessage()" data-i18n="sendBtn">Senden</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="tab-profile" class="tab-content hidden">
+        <div style="overflow-y: auto; flex: 1; padding-right: 2px; min-height: 0;">
+          <div class="profile-header-card">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <img id="my-profile-avatar-preview" class="profile-avatar-lg" src="" onclick="changeAvatarDirectly()" title="Klicken, um das Profilbild zu ändern" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'64\' height=\'64\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%2394a3b8\' stroke-width=\'2\'><path d=\'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2\'></path><circle cx=\'12\' cy=\'7\' r=\'4\'></circle></svg>'" alt="Avatar">
+              <div>
+                <h3 id="my-profile-display-name" style="font-size: 16px; font-weight: 800; margin-bottom: 2px;">Dein Name</h3>
+                <p id="my-profile-handle-preview" style="font-size: 12px; color: #818cf8; font-weight: 700;">@benutzername</p>
+                <div id="profile-rank-badge" style="display: inline-block; background: rgba(99,102,241,0.2); color: #818cf8; border: 1px solid rgba(99,102,241,0.4); padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 800; margin-top: 3px;">☕ Frischer Erstie</div>
+                <div style="font-size: 10px; color: var(--text-muted); margin-top: 3px; font-weight: 600;" id="follower-stats" data-i18n="followerStatsDefault">0 Follower • 0 Gefolgt</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(236,72,153,0.15)); border: 1px solid var(--border); border-radius: 16px; padding: 14px; margin-bottom: 12px; max-width: 600px; text-align: center;">
+            <h4 style="font-size: 13px; font-weight: 800; margin-bottom: 4px; color: var(--text);" data-i18n="shareCardHeader">🚀 Zeig dein Campus-Level!</h4>
+            <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 10px;" data-i18n="shareCardText">Teile deinen Status in deiner WhatsApp-Status oder Insta-Story und hol dir Extrapunkte!</p>
+            <button class="btn" onclick="shareProfileCard()" style="margin-top: 0; background: var(--gradient-main); font-size: 12px; padding: 8px 14px;" data-i18n="shareBtn">📲 Profil in WhatsApp / Insta teilen</button>
+          </div>
+
+          <div style="max-width: 600px;">
+            <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);" data-i18n="labelUsername">Benutzername (Handle):</label>
+            <input type="text" id="profile-username" placeholder="z. B. johndoe">
+
+            <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);" data-i18n="labelFullname">Anzeigename:</label>
+            <input type="text" id="profile-fullname" placeholder="z. B. John Doe">
+
+            <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);" data-i18n="labelUniversity">Deine Universität:</label>
+            <select id="profile-university">
+              <option value="Universität Wien">Universität Wien</option>
+              <option value="TU Wien">TU Wien</option>
+              <option value="Wirtschaftsuniversität Wien (WU)">WU Wien</option>
+              <option value="MedUni Wien">MedUni Wien</option>
+              <option value="boku">BOKU Wien</option>
+              <option value="FH Wien">FH Wien</option>
+            </select>
+
+            <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);" data-i18n="labelBio">Bio / Über mich:</label>
+            <textarea id="profile-bio" rows="2" placeholder="Dein Studiengang, Vibe, Hobbys..."></textarea>
+
+            <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);" data-i18n="labelAvatar">Profilbild URL:</label>
+            <input type="text" id="profile-avatar" placeholder="https://beispiel.de/bild.jpg" oninput="document.getElementById('my-profile-avatar-preview').src = this.value; document.getElementById('header-avatar-preview').src = this.value;">
+
+            <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);" data-i18n="labelInterests">Interessen (mit Komma getrennt):</label>
+            <input type="text" id="profile-interests" placeholder="Programmieren, Kaffee, Fitness, Musik">
+
+            <button class="btn" onclick="saveMyProfile()" style="margin-bottom: 14px;" data-i18n="saveProfileBtn">Profil speichern (+10 P)</button>
+
+            <h4 style="font-size: 14px; font-weight: 800; margin-top: 14px; margin-bottom: 6px;" data-i18n="myPostsHeader">Deine Beiträge</h4>
+            <div id="my-profile-posts-grid" class="profile-grid"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="tab-admin" class="tab-content hidden">
+        <div style="max-width: 600px; padding-bottom: 20px;">
+          <h3 style="font-size: 16px; font-weight: 800; margin-bottom: 4px; color: var(--admin);" data-i18n="adminHeader">⚡ Admin-Interface: Campus-Drops & Test-Tools</h3>
+          <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;" data-i18n="adminSub">Verwalte hier Drops und teste dein Punktekonto im Admin-Modus.</p>
+
+          <div style="background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); border-radius: 12px; padding: 12px; margin-bottom: 14px;">
+            <h4 style="font-size: 13px; font-weight: 800; color: var(--admin); margin-bottom: 4px;" data-i18n="adminTestPointsHeader">🧪 Admin Test-Modus: Punkte simulieren</h4>
+            <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;" data-i18n="adminTestPointsSub">Da du als Admin bist, kannst du hier deinen Test-Punktestand direkt anpassen:</p>
+            <div style="display: flex; gap: 8px;">
+              <input type="number" id="admin-test-points-input" placeholder="z. B. 45" style="margin: 0; flex: 1;">
+              <button class="btn" onclick="adminSetTestPoints()" style="margin: 0; width: auto; background: var(--admin); color: #000; font-weight: 800; padding: 0 14px;" data-i18n="setPointsBtn">Punkte setzen</button>
+            </div>
+          </div>
+
+          <h4 style="font-size: 14px; font-weight: 800; margin-bottom: 6px; color: var(--admin);" data-i18n="createDropHeader">📍 Neuen Campus-Drop erstellen</h4>
+          <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);" data-i18n="dropTitleLabel">Drop Titel / Info:</label>
+          <input type="text" id="admin-drop-title" placeholder="z. B. 50 Punkte im Lokal X!">
+
+          <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);" data-i18n="rewardTypeLabel">Belohnungs-Typ:</label>
+          <select id="admin-drop-reward-type">
+            <option value="points" data-i18n="rewardPoints">Punkte (z. B. 50)</option>
+            <option value="badge" data-i18n="rewardBadge">Spezial-Badge</option>
+          </select>
+
+          <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);" data-i18n="rewardValueLabel">Wert (Punktzahl oder Badge-Name):</label>
+          <input type="text" id="admin-drop-reward-value" placeholder="50">
+
+          <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);" data-i18n="startTimeLabel">Startzeitpunkt (Datum & Uhrzeit):</label>
+          <input type="datetime-local" id="admin-drop-start-time">
+
+          <label style="font-size: 11px; font-weight: 600; color: var(--text-muted); display: block; margin-top: 6px;" data-i18n="mapSelectLabel">📍 Spot auf Karte auswählen (Klick setzt Marker):</label>
+          <div id="admin-map" style="width: 100%; height: 220px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 8px; z-index: 1;"></div>
+
+          <div style="display: flex; gap: 8px;">
+            <div style="flex: 1;">
+              <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);" data-i18n="latLabel">Latitude (Breitengrad):</label>
+              <input type="number" step="any" id="admin-drop-lat" placeholder="48.2082">
+            </div>
+            <div style="flex: 1;">
+              <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);" data-i18n="lngLabel">Longitude (Längengrad):</label>
+              <input type="number" step="any" id="admin-drop-lng" placeholder="16.3738">
+            </div>
+          </div>
+
+          <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);" data-i18n="radiusLabel">Radius in Metern (z. B. 100m vor Ort):</label>
+          <input type="number" id="admin-drop-radius" placeholder="100" value="100">
+
+          <button class="btn" onclick="handleCreateCampusDrop()" style="background: var(--admin); color: #000; font-weight: 900;" data-i18n="createDropBtn">Drop mit GPS-Bindung freigeben 🚀</button>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="nav-tabs" id="bottom-nav-bar">
+      <button class="tab-btn active" onclick="switchTab('reels')" id="btn-tab-reels">📱 Feed</button>
+      <button class="tab-btn" onclick="switchTab('feed')" id="btn-tab-feed">💬 Treffen</button>
+      
+      <div class="tab-btn-action-container">
+        <button class="tab-btn-action" onclick="openUploadModal()" title="Beitrag erstellen">+</button>
+      </div>
+
+      <button class="tab-btn" onclick="switchTab('global')" id="btn-tab-global">⚡ Chat</button>
+      <button class="tab-btn" onclick="switchTab('inbox')" id="btn-tab-inbox">📬 Postfach</button>
+    </div>
+
+    <div class="footer-links">
+      <span onclick="openReportModal()" data-i18n="footerReport">🚨 Inhalt melden</span>
+      <span>•</span>
+      <span onclick="openImpressumModal()" data-i18n="footerImpressum">Impressum</span>
+      <span>•</span>
+      <span onclick="openAgbModal()" data-i18n="footerAgb">AGB</span>
+    </div>
+
+  </div>
+
+  <div id="more-points-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.92); z-index: 100;">
+    <div style="width: 100%; max-width: 400px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 18px; margin: 10px;">
+      <h3 style="margin-bottom: 4px; font-weight: 900; color: var(--primary);" data-i18n="morePointsModalTitle">🎁 Mehr Punkte sammeln</h3>
+      <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 14px; line-height: 1.4;" data-i18n="morePointsModalSub">Wähle eine Methode, um deinen Punktestand und dein Uni-Ranking zu pushen:</p>
+      
+      <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px;">
+        <div onclick="closeMorePointsModal(); openCampusQuizModal();" style="background: rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.3); padding: 12px; border-radius: 12px; cursor: pointer;">
+          <div style="font-weight: 800; font-size: 13px; color: #818cf8; margin-bottom: 2px;" data-i18n="quizCardTitle">🧠 Tägliches Campus- & Allgemein-Quiz</div>
+          <div style="font-size: 11px; color: var(--text-muted);" data-i18n="quizCardSub">Teste dein Wissen in 15 Sek. pro Frage & hol dir Bonuspunkte!</div>
+        </div>
+
+        <div onclick="closeMorePointsModal(); openActiveSpotsModal();" style="background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.3); padding: 12px; border-radius: 12px; cursor: pointer;">
+          <div style="font-weight: 800; font-size: 13px; color: var(--admin); margin-bottom: 2px;" data-i18n="spotsCardTitle">📍 Vor-Ort Campus-Drops</div>
+          <div style="font-size: 11px; color: var(--text-muted);" data-i18n="spotsCardSub">Checke aktive Partner-Spots in Wien ab.</div>
+        </div>
+
+        <div onclick="closeMorePointsModal(); switchTab('profile');" style="background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); padding: 12px; border-radius: 12px; cursor: pointer;">
+          <div style="font-weight: 800; font-size: 13px; color: var(--success); margin-bottom: 2px;" data-i18n="socialCardTitle">📲 Profil & Social Sharing</div>
+          <div style="font-size: 11px; color: var(--text-muted);" data-i18n="socialCardSub">Teile deine Erfolge in WhatsApp / Insta für Hype-Punkte.</div>
+        </div>
+      </div>
+      <button class="btn btn-secondary" onclick="closeMorePointsModal()" data-i18n="close">Schließen</button>
+    </div>
+  </div>
+
+  <div id="prof-guide-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.95); z-index: 120;">
+    <div style="width: 100%; max-width: 480px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 18px; margin: 10px; max-height: 85vh; display: flex; flex-direction: column;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <h3 style="font-weight: 900; color: #818cf8; font-size: 16px;" data-i18n="profGuideTitle">📚 Prof-Rating & Survival Guide</h3>
+        <button class="btn btn-secondary" style="width: auto; padding: 4px 10px; font-size: 11px; margin-top: 0;" onclick="toggleProfForm()" data-i18n="writeReviewBtn">+ Review schreiben</button>
+      </div>
+      <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;" data-i18n="profGuideSub">Altklausuren-Tipps, Prof-Erfahrungen und Schwierigkeitsgrade.</p>
+      
+      <div id="prof-review-form-container" class="hidden" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 12px;">
+        <h4 style="font-size: 13px; font-weight: 800; margin-bottom: 6px; color: var(--text);" data-i18n="reviewFormTitle">✍️ Neue Erfahrung teilen</h4>
+        <input type="text" id="prof-name-input" placeholder="Name des Professors (z. B. Prof. Müller)" data-i18n="profNamePlaceholder" style="margin-bottom: 6px;">
+        <input type="text" id="prof-subject-input" placeholder="Modul / Vorlesung (z. B. Analysis 1)" data-i18n="profSubjectPlaceholder" style="margin-bottom: 6px;">
+        
+        <div style="display: flex; gap: 8px; margin-bottom: 6px;">
+          <div style="flex: 1;">
+            <label style="font-size: 10px; color: var(--text-muted);" data-i18n="ratingLabel">Bewertung:</label>
+            <select id="prof-rating-select" style="margin: 2px 0 6px 0;">
+              <option value="5">⭐⭐⭐⭐⭐ (Top)</option>
+              <option value="4">⭐⭐⭐⭐ (Gut)</option>
+              <option value="3">⭐⭐⭐ (Okay)</option>
+              <option value="2">⭐⭐ (Schwer)</option>
+              <option value="1">⭐ (Vorsicht!)</option>
+            </select>
+          </div>
+          <div style="flex: 1;">
+            <label style="font-size: 10px; color: var(--text-muted);" data-i18n="difficultyLabel">Schwierigkeit:</label>
+            <select id="prof-difficulty-select" style="margin: 2px 0 6px 0;">
+              <option value="1">1 - Chillig</option>
+              <option value="2">2 - Machbar</option>
+              <option value="3">3 - Mittel</option>
+              <option value="4">4 - Anspruchsvoll</option>
+              <option value="5">5 - Killer-Klausur</option>
+            </select>
+          </div>
+        </div>
+        <textarea id="prof-comment-input" rows="3" placeholder="Insider-Tipps, Altklausuren..." data-i18n="profCommentPlaceholder" style="margin-bottom: 8px; resize: none;"></textarea>
+        <div style="display: flex; gap: 6px;">
+          <button class="btn" onclick="submitProfReview()" style="margin-top: 0; padding: 8px;" data-i18n="submitReviewBtn">Abschicken (+15 P) 🚀</button>
+          <button class="btn btn-secondary" onclick="toggleProfForm()" style="margin-top: 0; padding: 8px; width: auto;" data-i18n="cancel">Abbrechen</button>
+        </div>
+      </div>
+
+      <input type="text" id="prof-search-input" placeholder="🔍 Nach Prof oder Fach suchen..." data-i18n="profSearchPlaceholder" oninput="filterProfReviews()" style="margin-bottom: 10px;">
+      <div id="prof-reviews-list" style="overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;">
+        <p style="font-size: 12px; color: var(--text-muted); text-align: center; padding: 20px;" data-i18n="loadingReviews">Lade Bewertungen...</p>
+      </div>
+      <button class="btn btn-secondary" onclick="closeProfGuideModal()" data-i18n="close">Schließen</button>
+    </div>
+  </div>
+
+  <div id="quiz-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.95); z-index: 110;">
+    <div style="width: 100%; max-width: 400px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 18px; margin: 10px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+        <h3 style="font-weight: 900; color: #818cf8; font-size: 15px;" id="quiz-title" data-i18n="quizModalTitle">🧠 Campus & Allgemein Quiz</h3>
+        <span id="quiz-timer-badge" style="background: rgba(236,72,153,0.2); color: var(--accent); border: 1px solid rgba(236,72,153,0.4); padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 800;">⏱️ 15s</span>
+      </div>
+      <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;" id="quiz-subtitle" data-i18n="quizSubLoading">Frage laden...</p>
+      <div id="quiz-question-container" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 12px; font-size: 13px; font-weight: 700; line-height: 1.4;" data-i18n="quizQuestionsLoading">Lade Fragen...</div>
+      <div id="quiz-options-container" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px;"></div>
+      <button class="btn btn-secondary" onclick="closeCampusQuizModal()" data-i18n="cancel">Abbrechen</button>
+    </div>
+  </div>
+
+  <div id="active-spots-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.92); z-index: 100;">
+    <div style="width: 100%; max-width: 400px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 18px; margin: 10px; max-height: 80vh; display: flex; flex-direction: column;">
+      <h3 style="margin-bottom: 4px; font-weight: 900; color: var(--admin);" data-i18n="activeSpotsModalTitle">📍 Aktuelle Campus- & Partner-Spots</h3>
+      <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px; line-height: 1.4;" data-i18n="activeSpotsModalSub">Gehe zum Spot vor Ort, um Punkte einzusammeln!</p>
+      <div id="modal-active-spots-list" style="overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;"></div>
+      <button class="btn btn-secondary" onclick="closeActiveSpotsModal()" data-i18n="close">Schließen</button>
+    </div>
+  </div>
+
+  <div id="crush-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.92); z-index: 100;">
+    <div style="width: 100%; max-width: 400px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 18px; margin: 10px;">
+      <h3 style="margin-bottom: 4px; font-weight: 900; color: var(--accent);" data-i18n="crushModalTitle">💖 Anonymes Crush Radar</h3>
+      <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px; line-height: 1.4;" data-i18n="crushModalSub">Trage deinen Campus-Crush ein. Bei gegenseitigem Match gibt es ein Blind-Date!</p>
+      <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);" data-i18n="crushTargetLabel">Crush (E-Mail oder @handle):</label>
+      <input type="text" id="crush-target-input" placeholder="crush@uni.at oder @username" data-i18n="crushTargetPlaceholder">
+      <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);" data-i18n="crushHintLabel">Geheimer Hinweis (optional):</label>
+      <input type="text" id="crush-hint-input" placeholder="z.b. Bib Reihe 4..." data-i18n="crushHintPlaceholder">
+      <button class="btn" onclick="submitCrush()" data-i18n="crushSubmitBtn">Abschicken & Hoffen 💘</button>
+      <div id="crush-matches-box" style="margin-top: 12px; font-size: 11px;"></div>
+      <button class="btn btn-secondary" onclick="closeCrushModal()" data-i18n="close">Schließen</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- NEU: Modulares ES6 Skript anstelle der alten app.js -->
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

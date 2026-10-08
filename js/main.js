@@ -1,4 +1,5 @@
 // js/main.js
+import './config.js'; // <-- WICHTIG: Initialisiert Supabase als Erstes
 import { state } from './state.js';
 import { changeLanguage } from './i18n.js';
 import { handleLogin, handleSignup, resetUser, handleForgotPassword, togglePasswordVisibility } from './auth.js';
