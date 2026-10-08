@@ -17,7 +17,38 @@ window.toggleLectureMode = toggleLectureMode;
 window.openProfGuideModal = openProfGuideModal;
 window.closeProfGuideModal = closeProfGuideModal;
 
-// Prüft beim Start, ob der Nutzer eingeloggt ist
+window.switchTab = function(tabId) {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+    const target = document.getElementById('tab-' + tabId);
+    if (target) target.classList.remove('hidden');
+
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    const activeBtn = document.getElementById('btn-tab-' + tabId);
+    if (activeBtn) activeBtn.classList.add('active');
+};
+
+window.togglePointsDropdown = function(event) {
+    event.stopPropagation();
+    const dropdown = document.getElementById('points-dropdown-menu');
+    if (dropdown) dropdown.classList.toggle('hidden');
+};
+
+document.addEventListener('click', () => {
+    const dropdown = document.getElementById('points-dropdown-menu');
+    if (dropdown) dropdown.classList.add('hidden');
+});
+
+window.openActiveSpotsModal = () => document.getElementById('active-spots-modal')?.classList.remove('hidden');
+window.closeActiveSpotsModal = () => document.getElementById('active-spots-modal')?.classList.add('hidden');
+window.openMorePointsModal = () => document.getElementById('more-points-modal')?.classList.remove('hidden');
+window.closeMorePointsModal = () => document.getElementById('more-points-modal')?.classList.add('hidden');
+window.openCrushModal = () => document.getElementById('crush-modal')?.classList.remove('hidden');
+window.closeCrushModal = () => document.getElementById('crush-modal')?.classList.add('hidden');
+window.openUploadModal = () => alert('Upload-Funktion wird geöffnet...');
+window.openReportModal = () => alert('Inhalt melden Modal');
+window.openImpressumModal = () => alert('Impressum: Pure Logic Campus');
+window.openAgbModal = () => alert('AGB: Pure Logic Campus');
+
 async function checkAuthSession() {
     try {
         const { data: { session } } = await _supabase.auth.getSession();
@@ -32,6 +63,21 @@ async function checkAuthSession() {
             if (mainApp) mainApp.classList.remove('hidden');
             if (profileBtn) profileBtn.classList.remove('hidden');
             if (logoutBtn) logoutBtn.classList.remove('hidden');
+
+            const { data: userData } = await _supabase
+                .from('users')
+                .select('is_admin, logic_score')
+                .eq('email', session.user.email)
+                .single();
+
+            if (userData && userData.is_admin) {
+                const badge = document.getElementById('score');
+                if (badge) {
+                    badge.classList.add('admin-badge');
+                    badge.textContent = '👑 Admin';
+                    badge.onclick = () => window.switchTab('admin');
+                }
+            }
         } else {
             state.currentUserEmail = null;
             if (authGate) authGate.classList.remove('hidden');
@@ -45,19 +91,11 @@ async function checkAuthSession() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    console.log("PURE LOGIC • GenZ Campus erfolgreich modular geladen.");
-    
-    // Session prüfen
     checkAuthSession();
-
-    // Gespeicherte Sprache beim Start laden
     const savedLang = localStorage.getItem('preferred_lang') || 'de';
     changeLanguage(savedLang);
-
-    // Quiz initialisieren
     initQuiz();
 
-    // Event-Listener für Sprachauswahl
     const langSelector = document.getElementById('languageSelect');
     if (langSelector) {
         langSelector.value = savedLang;
