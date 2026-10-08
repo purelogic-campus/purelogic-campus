@@ -2,8 +2,8 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
 export const SUPABASE_URL = 'https://ykyfdrnkxqfvhasfbehe.supabase.co';
-// Ersetze diesen String mit deinem vollständigen Publishable Key aus dem Supabase Dashboard:
-export const SUPABASE_ANON_KEY = 'sb_publishable_2bLjUm02NS5XDAJMVvDGTa_rSzQK...';
+// Trage hier den klassischen JWT-Schlüssel aus dem Supabase-Reiter "Legacy anon" ein:
+export const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...';
 
 export const _supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 window._supabase = _supabase;
