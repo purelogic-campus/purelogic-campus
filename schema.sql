@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS live_events (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Automatischer Trigger für User-Erstellung
+-- Automatischer Trigger, der bei Registrierung einen User-Datensatz anlegt
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
