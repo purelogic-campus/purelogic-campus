@@ -2,11 +2,10 @@
 
 export const translations = {
     de: {
-        // Kopiere hier den deutschen Teil deiner Übersetzungen aus der alten app.js hinein
-        // Beispiel: welcome: "Willkommen auf dem GenZ Campus"
+        welcome: "Willkommen auf dem GenZ Campus"
     },
     en: {
-        // Kopiere hier den englischen Teil deiner Übersetzungen hinein
+        welcome: "Welcome to the GenZ Campus"
     }
 };
 
