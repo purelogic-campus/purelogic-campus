@@ -128,7 +128,9 @@ export const translations = {
         morePointsTitle: "🎁 Mehr Punkte sammeln",
         footerReport: "🚨 Inhalt melden",
         footerImpressum: "Impressum",
-        footerAgb: "AGB"
+        footerAgb: "AGB",
+        footerChat: "⚡ Chat",
+        inboxTab: "📬 Postfach"
     },
     en: {
         authWelcome: "Hey there 👋",
@@ -257,7 +259,9 @@ export const translations = {
         morePointsTitle: "🎁 Earn More Points",
         footerReport: "🚨 Report content",
         footerImpressum: "Imprint",
-        footerAgb: "Terms"
+        footerAgb: "Terms",
+        footerChat: "⚡ Chat",
+        inboxTab: "📬 Inbox"
     },
     it: {
         authWelcome: "Ciao 👋",
@@ -386,7 +390,9 @@ export const translations = {
         morePointsTitle: "🎁 Guadagna più punti",
         footerReport: "🚨 Segnala contenuto",
         footerImpressum: "Note legali",
-        footerAgb: "Termini"
+        footerAgb: "Termini",
+        footerChat: "⚡ Chat",
+        inboxTab: "📬 Posta"
     },
     bks: {
         authWelcome: "Ćao 👋",
@@ -515,7 +521,9 @@ export const translations = {
         morePointsTitle: "🎁 Zaradi više poena",
         footerReport: "🚨 Prijavi sadržaj",
         footerImpressum: "Impresum",
-        footerAgb: "Uslovi koriscenja"
+        footerAgb: "Uslovi korišćenja",
+        footerChat: "⚡ Chat",
+        inboxTab: "📬 Postansko sanduce"
     },
     tr: {
         authWelcome: "Merhaba 👋",
@@ -644,7 +652,9 @@ export const translations = {
         morePointsTitle: "🎁 Daha Fazla Puan Kazan",
         footerReport: "🚨 İçeriği bildir",
         footerImpressum: "Künye",
-        footerAgb: "Şartlar"
+        footerAgb: "Şartlar",
+        footerChat: "⚡ Sohbet",
+        inboxTab: "📬 Gelen Kutusu"
     },
     es: {
         authWelcome: "Hola 👋",
@@ -773,7 +783,9 @@ export const translations = {
         morePointsTitle: "🎁 Gana más puntos",
         footerReport: "🚨 Reportar contenido",
         footerImpressum: "Aviso legal",
-        footerAgb: "Términos"
+        footerAgb: "Términos",
+        footerChat: "⚡ Chat",
+        inboxTab: "📬 Mensajes"
     },
     fr: {
         authWelcome: "Salut 👋",
@@ -902,7 +914,9 @@ export const translations = {
         morePointsTitle: "🎁 Gagnez plus de points",
         footerReport: "🚨 Signaler un contenu",
         footerImpressum: "Mentions légales",
-        footerAgb: "Conditions"
+        footerAgb: "Conditions",
+        footerChat: "⚡ Chat",
+        inboxTab: "📬 Boîte de réception"
     },
     pl: {
         authWelcome: "Cześć 👋",
@@ -1031,7 +1045,9 @@ export const translations = {
         morePointsTitle: "🎁 Zdobądź więcej punktów",
         footerReport: "🚨 Zgłoś treść",
         footerImpressum: "Stopka redakcyjna",
-        footerAgb: "Regulamin"
+        footerAgb: "Regulamin",
+        footerChat: "⚡ Czat",
+        inboxTab: "📬 Skrzynka"
     },
     hu: {
         authWelcome: "Szia 👋",
@@ -1160,7 +1176,9 @@ export const translations = {
         morePointsTitle: "🎁 Szerezz több pontot",
         footerReport: "🚨 Tartalom jelentése",
         footerImpressum: "Impresszum",
-        footerAgb: "ÁSZF"
+        footerAgb: "ÁSZF",
+        footerChat: "⚡ Csevegés",
+        inboxTab: "📬 Postafiók"
     },
     uk: {
         authWelcome: "Привіт 👋",
@@ -1289,7 +1307,9 @@ export const translations = {
         morePointsTitle: "🎁 Заробити більше балів",
         footerReport: "🚨 Поскаржитися",
         footerImpressum: "Імпресум",
-        footerAgb: "Умови"
+        footerAgb: "Умови",
+        footerChat: "⚡ Чат",
+        inboxTab: "📬 Повідомлення"
     }
 };
 
