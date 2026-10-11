@@ -1,6 +1,6 @@
 // js/config.js
 const SUPABASE_URL = 'https://ykyfdrnkxqfvhasfbehe.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlreWZkcm5kcm5reHFmdmhhc2ZiZWhlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjcyNjczNzAsImV4cCI6MjA4Mjg0MzM3MH0.1vL7jJtC5v7B_V8C9kX2x5M6n3Q4W1s0A9z8E7r6T5o';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlreWZkcm5reHFmdmhhc2ZiZWhlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc3Nzc5ODQsImV4cCI6MjEwMzM1Mzk4NH0.KaFc9dUmxR_5rFTDWUHwk4YqPKvYF0uqkqxB4QB5gKQ';
 
 export const _supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 export const supabase = _supabase;
