@@ -1316,8 +1316,21 @@ export const translations = {
 export function changeLanguage(langCode) {
     localStorage.setItem('preferred_lang', langCode);
     const t = translations[langCode] || translations['de'];
+    
+    // 1. Alle Texte mit data-i18n übersetzen
     document.querySelectorAll('[data-i18n]').forEach(el => {
         const key = el.getAttribute('data-i18n');
-        if (t[key]) el.textContent = t[key];
+        if (t[key]) {
+            el.textContent = t[key];
+        }
+    });
+
+    // 2. Alle Placeholder mit data-i18n übersetzen (für Input-Felder)
+    document.querySelectorAll('input[placeholder], textarea[placeholder]').forEach(el => {
+        // Optional: Falls ein data-i18n-Attribut für den Platzhalter existiert oder direkt gemappt wird
+        const key = el.getAttribute('data-i18n-placeholder');
+        if (key && t[key]) {
+            el.placeholder = t[key];
+        }
     });
 }
