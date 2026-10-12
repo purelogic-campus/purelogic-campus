@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>PURE LOGIC • GenZ Campus</title>
   
-  <!-- PWA Manifest & Icons (Punkt 16) -->
+  <!-- PWA Manifest & Icons -->
   <link rel="manifest" href="manifest.json">
   <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/icon-512.png">
@@ -35,7 +35,6 @@
           <div class="points-dropdown-item" onclick="openProfGuideModal()" data-i18n="profGuideTitle">📚 Prof-Rating & Survival Guide</div>
           <div class="points-dropdown-item" onclick="toggleLectureMode()" data-i18n="lectureModeTitle">🎓 Lecture Mode (Fokus)</div>
           <div class="points-dropdown-item" onclick="openMorePointsModal()" data-i18n="morePointsTitle">🎁 Mehr Punkte sammeln</div>
-          <!-- Neuer Installieren-Button im Dropdown -->
           <div class="points-dropdown-item hidden" id="install-app-dropdown-btn" onclick="installPWA()" data-i18n="installAppTitle" style="background: rgba(99, 102, 241, 0.15); color: #818cf8;">📲 App auf Gerät installieren</div>
         </div>
       </div>
@@ -86,7 +85,6 @@
       <button class="btn" onclick="handleLogin()" data-i18n="loginBtn">Einloggen</button>
       <button class="btn btn-secondary" onclick="handleSignup()" data-i18n="signupBtn">Account erstellen</button>
       
-      <!-- Neuer Installieren-Button im Auth-Gate -->
       <button class="btn btn-secondary hidden" id="install-app-auth-btn" onclick="installPWA()" style="margin-top: 10px; background: rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.4); color: #818cf8; font-weight: 800;" data-i18n="installAppBtn">📲 App für Homescreen herunterladen</button>
     </div>
   </div>
@@ -158,7 +156,8 @@
         </div>
       </div>
 
-      <div id="tab-reels" class="tab-content">
+      <!-- HIER ANGEPASST: Flex-Layout für sauberes Snap-Scrolling direkt im Container -->
+      <div id="tab-reels" class="tab-content" style="display: flex; flex-direction: column; height: 100%; max-height: 100%; overflow: hidden;">
         <div class="reels-subnav">
           <div class="reel-pill" id="reel-filter-discover" onclick="setReelFilter('discover')" data-i18n="subDiscover">🔥 Entdecken</div>
           <div class="reel-pill active" id="reel-filter-foryou" onclick="setReelFilter('foryou')" data-i18n="subForYou">✨ Für dich</div>
@@ -475,32 +474,30 @@
       <button class="btn btn-secondary" onclick="closeCrushModal()" data-i18n="close">Schließen</button>
     </div>
   </div>
-<!-- PUNKT 17: Modales Fenster für direkten Medien-Upload & Video-Prüfung -->
-    <div id="media-upload-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.95); z-index: 150;">
-      <div style="width: 100%; max-width: 440px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 18px; margin: 10px;">
-        <h3 style="margin-bottom: 4px; font-weight: 900; color: var(--primary);">🎬 Direktes Video & Medien hochladen</h3>
-        <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;">Wähle ein Video oder Foto aus. Videos werden automatisch auf max. 30 Sekunden überprüft.</p>
-        
-        <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Datei auswählen (Video/Bild):</label>
-        <input type="file" id="media-file-input" accept="video/*,image/*" onchange="handleMediaSelection(event)" style="margin-bottom: 10px; background: rgba(255,255,255,0.05); padding: 8px; border-radius: 8px;">
 
-        <!-- Vorschau-Container -->
-        <div id="trimmer-container" class="hidden" style="margin-bottom: 12px;">
-          <video id="trim-video-preview" controls style="width: 100%; max-height: 180px; border-radius: 8px; background: #000; margin-bottom: 6px;"></video>
-          <div style="font-size: 10px; color: var(--text-muted);" id="video-duration-info">Dauer: 0s</div>
-        </div>
+  <div id="media-upload-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.95); z-index: 150;">
+    <div style="width: 100%; max-width: 440px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 18px; margin: 10px;">
+      <h3 style="margin-bottom: 4px; font-weight: 900; color: var(--primary);">🎬 Direktes Video & Medien hochladen</h3>
+      <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;">Wähle ein Video oder Foto aus. Videos werden automatisch auf max. 30 Sekunden überprüft.</p>
+      
+      <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Datei auswählen (Video/Bild):</label>
+      <input type="file" id="media-file-input" accept="video/*,image/*" onchange="handleMediaSelection(event)" style="margin-bottom: 10px; background: rgba(255,255,255,0.05); padding: 8px; border-radius: 8px;">
 
-        <input type="text" id="media-caption-input" placeholder="Beschreibung zum Beitrag..." style="margin-bottom: 12px;">
+      <div id="trimmer-container" class="hidden" style="margin-bottom: 12px;">
+        <video id="trim-video-preview" controls style="width: 100%; max-height: 180px; border-radius: 8px; background: #000; margin-bottom: 6px;"></video>
+        <div style="font-size: 10px; color: var(--text-muted);" id="video-duration-info">Dauer: 0s</div>
+      </div>
 
-        <div style="display: flex; gap: 8px;">
-          <button class="btn" onclick="uploadTrimmedMedia()" style="margin-top: 0;">Beitrag hochladen 🚀</button>
-          <button class="btn btn-secondary" onclick="closeMediaUploadModal()" style="margin-top: 0; width: auto;">Abbrechen</button>
-        </div>
+      <input type="text" id="media-caption-input" placeholder="Beschreibung zum Beitrag..." style="margin-bottom: 12px;">
+
+      <div style="display: flex; gap: 8px;">
+        <button class="btn" onclick="uploadTrimmedMedia()" style="margin-top: 0;">Beitrag hochladen 🚀</button>
+        <button class="btn btn-secondary" onclick="closeMediaUploadModal()" style="margin-top: 0; width: auto;">Abbrechen</button>
       </div>
     </div>
+  </div>
 </div>
 
-<!-- Modulares ES6 Skript -->
 <script type="module" src="js/main.js"></script>
 </body>
 </html>

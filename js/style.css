@@ -1,4 +1,4 @@
-/* style.css - Vollständige angepasste Datei mit Snap-Scroll */
+/* style.css - Vollständige Datei mit Snap-Scroll & 10% Rand-Sichtbarkeit */
 
 :root {
   --primary: #6366f1;
@@ -258,7 +258,7 @@ input:focus, textarea:focus, select:focus {
   font-weight: 600;
 }
 
-/* FEED & SNAP-SCROLL LOGIK */
+/* TIKTOK/TWITTER SNAP-SCROLL CONTAINER */
 #tab-reels {
   display: flex !important;
   flex-direction: column !important;
@@ -293,37 +293,35 @@ input:focus, textarea:focus, select:focus {
   color: #818cf8;
 }
 
-/* Snap-Scroll Container */
 .reel-card-wrapper {
   flex: 1 !important;
-  height: auto !important;
-  max-height: none !important;
+  height: 100% !important;
   overflow-y: scroll !important;
   scroll-snap-type: y mandatory !important;
   scroll-behavior: smooth;
-  padding: 12px 12px 90px 12px !important;
+  padding: 16px 12px 100px 12px !important;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
   box-sizing: border-box;
 }
 
-/* Einzelne Karte mit 10% Sichtbarkeit von Nachbarn */
 .reel-post-card {
   scroll-snap-align: center !important;
   scroll-snap-stop: always !important;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.06);
   border: 1px solid var(--border);
   border-radius: 20px;
-  padding: 14px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   flex-shrink: 0;
   width: 100%;
-  max-height: 72vh;
+  height: 68vh; /* Höhe so gewählt, dass ca. 10% vom vorherigen und nächsten Post sichtbar sind */
   box-sizing: border-box;
   justify-content: space-between;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
 }
 
 .category-group {
