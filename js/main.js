@@ -26,6 +26,11 @@ window.switchTab = function(tabId) {
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
     const activeBtn = document.getElementById('btn-tab-' + tabId);
     if (activeBtn) activeBtn.classList.add('active');
+
+    // Wenn der Profil-Tab geöffnet wird, eigene Beiträge laden
+    if (tabId === 'profile' && typeof window.loadMyProfilePosts === 'function') {
+        window.loadMyProfilePosts();
+    }
 };
 
 window.togglePointsDropdown = function(event) {
@@ -203,8 +208,93 @@ window.uploadTrimmedMedia = async function() {
     }
     
     const caption = document.getElementById('media-caption-input')?.value || '';
-    console.log('Starte Upload für:', selectedMediaFile.name, 'mit Beschreibung:', caption);
-    
-    alert('Mediendatei erfolgreich für den Campus-Feed verarbeitet! 🚀');
-    window.closeMediaUploadModal();
+    const fileExt = selectedMediaFile.name.split('.').pop();
+    const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
+    const filePath = `campus-uploads/${fileName}`;
+
+    try {
+        // 1. Datei in Supabase Storage hochladen
+        const { error: uploadError } = await _supabase.storage
+            .from('media')
+            .upload(filePath, selectedMediaFile);
+
+        if (uploadError) {
+            console.error('Upload-Fehler:', uploadError.message);
+            alert('Fehler beim Hochladen der Datei.');
+            return;
+        }
+
+        // 2. Öffentliche URL der Datei abrufen
+        const { data: publicURLData } = _supabase.storage
+            .from('media')
+            .getPublicUrl(filePath);
+
+        const mediaUrl = publicURLData.publicUrl;
+
+        // 3. Beitrag in der Datenbank speichern
+        const { error: dbError } = await _supabase
+            .from('posts')
+            .insert([
+                { 
+                    email: state.currentUserEmail, 
+                    caption: caption, 
+                    media_url: mediaUrl, 
+                    media_type: selectedMediaFile.type.startsWith('video/') ? 'video' : 'image',
+                    created_at: new Date()
+                }
+            ]);
+
+        if (dbError) {
+            console.error('Datenbank-Fehler:', dbError.message);
+        }
+
+        alert('Erfolgreich hochgeladen! Du kannst deinen Beitrag jetzt im Profil sehen 🚀');
+        window.closeMediaUploadModal();
+        
+        // Profil-Beiträge aktualisieren
+        if (typeof window.loadMyProfilePosts === 'function') {
+            window.loadMyProfilePosts();
+        }
+
+    } catch (err) {
+        console.error('Unerwarteter Fehler:', err);
+        alert('Ein unerwarteter Fehler ist aufgetreten.');
+    }
+};
+
+// Eigene Beiträge im Profil laden und anzeigen
+window.loadMyProfilePosts = async function() {
+    const grid = document.getElementById('my-profile-posts-grid');
+    if (!grid || !state.currentUserEmail) return;
+
+    grid.innerHTML = '<p style="font-size: 11px; color: var(--text-muted);">Lade deine Beiträge...</p>';
+
+    const { data: posts, error } = await _supabase
+        .from('posts')
+        .select('*')
+        .eq('email', state.currentUserEmail)
+        .order('created_at', { ascending: false });
+
+    if (error || !posts || posts.length === 0) {
+        grid.innerHTML = '<p style="font-size: 11px; color: var(--text-muted);">Noch keine eigenen Beiträge vorhanden.</p>';
+        return;
+    }
+
+    grid.innerHTML = '';
+    posts.forEach(post => {
+        const item = document.createElement('div');
+        item.style.cssText = 'background: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; display: flex; flex-direction: column;';
+        
+        if (post.media_type === 'video') {
+            item.innerHTML = `<video src="${post.media_url}" controls style="width: 100%; height: 100px; object-fit: cover; background: #000;"></video>`;
+        } else {
+            item.innerHTML = `<img src="${post.media_url}" style="width: 100%; height: 100px; object-fit: cover;" alt="Post">`;
+        }
+        
+        if (post.caption) {
+            item.innerHTML += `<div style="padding: 6px; font-size: 10px; color: var(--text);">${post.caption}</div>`;
+        }
+        
+        grid.appendChild(item);
+    });
 };
