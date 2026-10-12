@@ -15,7 +15,8 @@
       "purpose": "any maskable"
     }
   ],
-  "start_url": "/",
+  "start_url": "/purelogic-campus/",
+  "scope": "/purelogic-campus/",
   "background_color": "#090d16",
   "theme_color": "#090d16",
   "display": "standalone",
