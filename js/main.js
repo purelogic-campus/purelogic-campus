@@ -107,3 +107,42 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+// ==========================================
+// PWA INSTALLATION (DOWNLOAD BUTTON LOGIK)
+// ==========================================
+let deferredPrompt = null;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    
+    const installAuthBtn = document.getElementById('install-app-auth-btn');
+    const installDropdownBtn = document.getElementById('install-app-dropdown-btn');
+    
+    if (installAuthBtn) installAuthBtn.classList.remove('hidden');
+    if (installDropdownBtn) installDropdownBtn.classList.remove('hidden');
+});
+
+window.installPWA = async function() {
+    if (!deferredPrompt) {
+        alert('Die App kann in diesem Browser nicht direkt installiert werden oder ist bereits installiert.');
+        return;
+    }
+    
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    console.log(`Installation Ergebnis: ${outcome}`);
+    
+    deferredPrompt = null;
+    
+    const installAuthBtn = document.getElementById('install-app-auth-btn');
+    const installDropdownBtn = document.getElementById('install-app-dropdown-btn');
+    
+    if (installAuthBtn) installAuthBtn.classList.add('hidden');
+    if (installDropdownBtn) installDropdownBtn.classList.add('hidden');
+};
+
+window.addEventListener('appinstalled', () => {
+    console.log('App wurde erfolgreich auf dem Gerät installiert!');
+});
