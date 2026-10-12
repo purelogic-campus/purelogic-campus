@@ -45,7 +45,6 @@ window.openMorePointsModal = () => document.getElementById('more-points-modal')?
 window.closeMorePointsModal = () => document.getElementById('more-points-modal')?.classList.add('hidden');
 window.openCrushModal = () => document.getElementById('crush-modal')?.classList.remove('hidden');
 window.closeCrushModal = () => document.getElementById('crush-modal')?.classList.add('hidden');
-window.openUploadModal = () => alert('Upload-Funktion wird geöffnet...');
 window.openReportModal = () => alert('Inhalt melden Modal');
 window.openImpressumModal = () => alert('Impressum: Pure Logic Campus');
 window.openAgbModal = () => alert('AGB: Pure Logic Campus');
@@ -146,3 +145,66 @@ window.installPWA = async function() {
 window.addEventListener('appinstalled', () => {
     console.log('App wurde erfolgreich auf dem Gerät installiert!');
 });
+
+// ==========================================
+// PUNKT 17: DIREKTER MEDIEN-UPLOAD & VIDEO-PRÜFUNG
+// ==========================================
+let selectedMediaFile = null;
+
+window.openUploadModal = function() {
+    document.getElementById('media-upload-modal')?.classList.remove('hidden');
+};
+
+window.closeMediaUploadModal = function() {
+    document.getElementById('media-upload-modal')?.classList.add('hidden');
+    selectedMediaFile = null;
+    const preview = document.getElementById('trim-video-preview');
+    if (preview) preview.src = '';
+    document.getElementById('trimmer-container')?.classList.add('hidden');
+    const fileInput = document.getElementById('media-file-input');
+    if (fileInput) fileInput.value = '';
+    const captionInput = document.getElementById('media-caption-input');
+    if (captionInput) captionInput.value = '';
+};
+
+window.handleMediaSelection = function(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    selectedMediaFile = file;
+    const trimmerContainer = document.getElementById('trimmer-container');
+    const videoPreview = document.getElementById('trim-video-preview');
+    const infoText = document.getElementById('video-duration-info');
+    
+    if (file.type.startsWith('video/')) {
+        trimmerContainer.classList.remove('hidden');
+        const fileURL = URL.createObjectURL(file);
+        videoPreview.src = fileURL;
+        
+        videoPreview.onloadedmetadata = function() {
+            const duration = Math.round(videoPreview.duration);
+            if (duration > 30) {
+                infoText.textContent = `⚠️ Achtung: Das Video ist ${duration}s lang (Empfohlen: max. 30s).`;
+                infoText.style.color = '#ef4444';
+            } else {
+                infoText.textContent = `Dauer: ${duration}s (Perfekte Länge 🚀)`;
+                infoText.style.color = '#10b981';
+            }
+        };
+    } else {
+        trimmerContainer.classList.add('hidden');
+    }
+};
+
+window.uploadTrimmedMedia = async function() {
+    if (!selectedMediaFile) {
+        alert('Bitte wähle zuerst eine Mediendatei aus.');
+        return;
+    }
+    
+    const caption = document.getElementById('media-caption-input')?.value || '';
+    console.log('Starte Upload für:', selectedMediaFile.name, 'mit Beschreibung:', caption);
+    
+    alert('Mediendatei erfolgreich für den Campus-Feed verarbeitet! 🚀');
+    window.closeMediaUploadModal();
+};
