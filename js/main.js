@@ -240,7 +240,7 @@ window.uploadTrimmedMedia = async function() {
 
         const mediaUrl = publicURLData.publicUrl;
 
-        // 3. Beitrag in 'media_posts' mit der exakten Spalte 'author_email' und UUID speichern
+        // 3. Beitrag in 'media_posts' inklusive des vom Trigger erwarteten Feldes 'message' speichern
         const { error: dbError } = await _supabase
             .from('media_posts')
             .insert([
@@ -248,6 +248,7 @@ window.uploadTrimmedMedia = async function() {
                     id: crypto.randomUUID(),
                     author_email: state.currentUserEmail || 'student@uni.at', 
                     caption: caption, 
+                    message: caption, // Erfüllt den Datenbank-Trigger der Tabelle
                     media_url: mediaUrl, 
                     media_type: selectedMediaFile.type.startsWith('video/') ? 'video' : 'image',
                     created_at: new Date().toISOString()
