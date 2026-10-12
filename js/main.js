@@ -292,22 +292,28 @@ window.loadCampusFeed = async function() {
     }
 
     feedList.innerHTML = '';
+    
+    // Container-Styling für sauberes Scrollen
+    feedList.style.cssText = 'display: flex; flex-direction: column; gap: 16px; overflow-y: auto; padding: 10px 4px 80px 4px; height: 100%;';
+
     posts.forEach(post => {
         const card = document.createElement('div');
-        card.style.cssText = 'background: var(--card); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; margin-bottom: 12px; padding: 10px; display: flex; flex-direction: column; gap: 8px;';
+        card.style.cssText = 'background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border); border-radius: 16px; padding: 12px; display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; width: 100%; box-sizing: border-box;';
         
         let mediaHtml = '';
         if (post.media_type === 'video') {
-            mediaHtml = `<video src="${post.media_url}" controls style="width: 100%; max-height: 320px; object-fit: cover; border-radius: 12px; background: #000;"></video>`;
-        } else {
-            mediaHtml = `<img src="${post.media_url}" style="width: 100%; max-height: 320px; object-fit: cover; border-radius: 12px;" alt="Post">`;
+            mediaHtml = `<video src="${post.media_url}" controls style="width: 100%; max-height: 420px; object-fit: contain; border-radius: 12px; background: #000;"></video>`;
+        } else if (post.media_url) {
+            mediaHtml = `<img src="${post.media_url}" style="width: 100%; max-height: 420px; object-fit: cover; border-radius: 12px;" alt="Post">`;
         }
 
         card.innerHTML = `
-            <div style="font-size: 11px; font-weight: 700; color: #818cf8;">👤 ${post.author_email || 'Anonym'}</div>
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+                <span style="font-size: 12px; font-weight: 800; color: #818cf8;">👤 ${post.author_email || 'Anonym'}</span>
+                <span style="font-size: 10px; color: var(--text-muted);">${new Date(post.created_at).toLocaleDateString()}</span>
+            </div>
             ${mediaHtml}
-            ${post.caption ? `<div style="font-size: 12px; color: var(--text);">${post.caption}</div>` : ''}
-            <div style="font-size: 10px; color: var(--text-muted);">${new Date(post.created_at).toLocaleString()}</div>
+            ${post.caption ? `<div style="font-size: 13px; color: var(--text); font-weight: 500; line-height: 1.4;">${post.caption}</div>` : ''}
         `;
         
         feedList.appendChild(card);
