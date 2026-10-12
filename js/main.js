@@ -31,6 +31,10 @@ window.switchTab = function(tabId) {
     if (tabId === 'profile' && typeof window.loadMyProfilePosts === 'function') {
         window.loadMyProfilePosts();
     }
+    // Wenn der Reels/Feed-Tab geöffnet wird, alle Beiträge laden
+    if (tabId === 'reels' && typeof window.loadCampusFeed === 'function') {
+        window.loadCampusFeed();
+    }
 };
 
 window.togglePointsDropdown = function(event) {
@@ -102,6 +106,11 @@ document.addEventListener('DOMContentLoaded', () => {
     changeLanguage(savedLang);
 
     initQuiz();
+    
+    // Beim Start direkt den Feed laden
+    if (typeof window.loadCampusFeed === 'function') {
+        window.loadCampusFeed();
+    }
 
     const langSelector = document.getElementById('languageSelect');
     if (langSelector) {
@@ -231,7 +240,7 @@ window.uploadTrimmedMedia = async function() {
 
         const mediaUrl = publicURLData.publicUrl;
 
-        // 3. Beitrag in der vorhandenen Tabelle 'media_posts' speichern
+        // 3. Beitrag in der Tabelle 'media_posts' speichern
         const { error: dbError } = await _supabase
             .from('media_posts')
             .insert([
@@ -250,13 +259,12 @@ window.uploadTrimmedMedia = async function() {
             return;
         }
 
-        alert('Erfolgreich hochgeladen! Du kannst deinen Beitrag jetzt im Profil sehen 🚀');
+        alert('Erfolgreich hochgeladen! Dein Beitrag ist jetzt im Feed & Profil sichtbar 🚀');
         window.closeMediaUploadModal();
         
-        // Profil-Beiträge aktualisieren
-        if (typeof window.loadMyProfilePosts === 'function') {
-            window.loadMyProfilePosts();
-        }
+        // Feed und Profil direkt aktualisieren
+        if (typeof window.loadCampusFeed === 'function') window.loadCampusFeed();
+        if (typeof window.loadMyProfilePosts === 'function') window.loadMyProfilePosts();
 
     } catch (err) {
         console.error('Unerwarteter Fehler:', err);
@@ -264,7 +272,47 @@ window.uploadTrimmedMedia = async function() {
     }
 };
 
-// Eigene Beiträge im Profil laden und anzeigen (aus 'media_posts')
+// Beiträge im Campus-Feed (Reels-Tab) anzeigen
+window.loadCampusFeed = async function() {
+    const feedList = document.getElementById('reels-list');
+    if (!feedList) return;
+
+    feedList.innerHTML = '<p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;">Lade Campus-Feeds...</p>';
+
+    const { data: posts, error } = await _supabase
+        .from('media_posts')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+    if (error || !posts || posts.length === 0) {
+        feedList.innerHTML = '<p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;">Noch keine Beiträge im Campus-Feed vorhanden.</p>';
+        return;
+    }
+
+    feedList.innerHTML = '';
+    posts.forEach(post => {
+        const card = document.createElement('div');
+        card.style.cssText = 'background: var(--card); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; margin-bottom: 12px; padding: 10px; display: flex; flex-direction: column; gap: 8px;';
+        
+        let mediaHtml = '';
+        if (post.media_type === 'video') {
+            mediaHtml = `<video src="${post.media_url}" controls style="width: 100%; max-height: 320px; object-fit: cover; border-radius: 12px; background: #000;"></video>`;
+        } else {
+            mediaHtml = `<img src="${post.media_url}" style="width: 100%; max-height: 320px; object-fit: cover; border-radius: 12px;" alt="Post">`;
+        }
+
+        card.innerHTML = `
+            <div style="font-size: 11px; font-weight: 700; color: #818cf8;">👤 ${post.email || 'Anonym'}</div>
+            ${mediaHtml}
+            ${post.caption ? `<div style="font-size: 12px; color: var(--text);">${post.caption}</div>` : ''}
+            <div style="font-size: 10px; color: var(--text-muted);">${new Date(post.created_at).toLocaleString()}</div>
+        `;
+        
+        feedList.appendChild(card);
+    });
+};
+
+// Eigene Beiträge im Profil laden und anzeigen
 window.loadMyProfilePosts = async function() {
     const grid = document.getElementById('my-profile-posts-grid');
     if (!grid || !state.currentUserEmail) return;
