@@ -1,4 +1,4 @@
-// js/main.js
+// js/main.js - Vollständige angepasste Datei
 import { _supabase } from './config.js';
 import { state } from './state.js';
 import { changeLanguage } from './i18n.js';
@@ -274,7 +274,7 @@ window.uploadTrimmedMedia = async function() {
     }
 };
 
-// Beiträge im Campus-Feed (Reels/For You Tab) anzeigen
+// Beiträge im Campus-Feed mit Snap-Scroll anzeigen
 window.loadCampusFeed = async function() {
     const feedList = document.getElementById('reels-list');
     if (!feedList) return;
@@ -292,19 +292,16 @@ window.loadCampusFeed = async function() {
     }
 
     feedList.innerHTML = '';
-    
-    // Container-Styling für sauberes Scrollen
-    feedList.style.cssText = 'display: flex; flex-direction: column; gap: 16px; overflow-y: auto; padding: 10px 4px 80px 4px; height: 100%;';
 
     posts.forEach(post => {
         const card = document.createElement('div');
-        card.style.cssText = 'background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border); border-radius: 16px; padding: 12px; display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; width: 100%; box-sizing: border-box;';
+        card.className = 'reel-post-card';
         
         let mediaHtml = '';
         if (post.media_type === 'video') {
-            mediaHtml = `<video src="${post.media_url}" controls style="width: 100%; max-height: 420px; object-fit: contain; border-radius: 12px; background: #000;"></video>`;
+            mediaHtml = `<video src="${post.media_url}" controls style="width: 100%; max-height: 48vh; object-fit: contain; border-radius: 14px; background: #000;"></video>`;
         } else if (post.media_url) {
-            mediaHtml = `<img src="${post.media_url}" style="width: 100%; max-height: 420px; object-fit: cover; border-radius: 12px;" alt="Post">`;
+            mediaHtml = `<img src="${post.media_url}" style="width: 100%; max-height: 48vh; object-fit: cover; border-radius: 14px;" alt="Post">`;
         }
 
         card.innerHTML = `
