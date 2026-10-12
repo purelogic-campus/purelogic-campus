@@ -220,7 +220,7 @@ window.uploadTrimmedMedia = async function() {
 
         if (uploadError) {
             console.error('Upload-Fehler:', uploadError.message);
-            alert('Fehler beim Hochladen der Datei.');
+            alert('Fehler beim Hochladen der Datei in den Speicher.');
             return;
         }
 
@@ -231,9 +231,9 @@ window.uploadTrimmedMedia = async function() {
 
         const mediaUrl = publicURLData.publicUrl;
 
-        // 3. Beitrag in der Datenbank speichern
+        // 3. Beitrag in der vorhandenen Tabelle 'media_posts' speichern
         const { error: dbError } = await _supabase
-            .from('posts')
+            .from('media_posts')
             .insert([
                 { 
                     email: state.currentUserEmail, 
@@ -246,6 +246,8 @@ window.uploadTrimmedMedia = async function() {
 
         if (dbError) {
             console.error('Datenbank-Fehler:', dbError.message);
+            alert('Datei im Storage, aber Datenbank-Speicherung fehlgeschlagen.');
+            return;
         }
 
         alert('Erfolgreich hochgeladen! Du kannst deinen Beitrag jetzt im Profil sehen 🚀');
@@ -262,7 +264,7 @@ window.uploadTrimmedMedia = async function() {
     }
 };
 
-// Eigene Beiträge im Profil laden und anzeigen
+// Eigene Beiträge im Profil laden und anzeigen (aus 'media_posts')
 window.loadMyProfilePosts = async function() {
     const grid = document.getElementById('my-profile-posts-grid');
     if (!grid || !state.currentUserEmail) return;
@@ -270,7 +272,7 @@ window.loadMyProfilePosts = async function() {
     grid.innerHTML = '<p style="font-size: 11px; color: var(--text-muted);">Lade deine Beiträge...</p>';
 
     const { data: posts, error } = await _supabase
-        .from('posts')
+        .from('media_posts')
         .select('*')
         .eq('email', state.currentUserEmail)
         .order('created_at', { ascending: false });
