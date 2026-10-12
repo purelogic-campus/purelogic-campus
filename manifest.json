@@ -3,15 +3,22 @@
   "name": "Pure Logic - Campus Network",
   "icons": [
     {
-      "src": "icon.png",
+      "src": "icons/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
       "type": "image/png",
       "sizes": "512x512",
       "purpose": "any maskable"
     }
   ],
   "start_url": "/",
-  "background_color": "#0D0D0E",
-  "theme_color": "#0D0D0E",
+  "background_color": "#090d16",
+  "theme_color": "#090d16",
   "display": "standalone",
   "orientation": "portrait"
 }
+```[cite: 3]
