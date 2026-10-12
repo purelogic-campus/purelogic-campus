@@ -240,26 +240,27 @@ window.uploadTrimmedMedia = async function() {
 
         const mediaUrl = publicURLData.publicUrl;
 
-        // 3. Beitrag in der Tabelle 'media_posts' speichern
+        // 3. Beitrag in 'media_posts' mit der exakten Spalte 'author_email' und UUID speichern
         const { error: dbError } = await _supabase
             .from('media_posts')
             .insert([
                 { 
-                    email: state.currentUserEmail, 
+                    id: crypto.randomUUID(),
+                    author_email: state.currentUserEmail || 'student@uni.at', 
                     caption: caption, 
                     media_url: mediaUrl, 
                     media_type: selectedMediaFile.type.startsWith('video/') ? 'video' : 'image',
-                    created_at: new Date()
+                    created_at: new Date().toISOString()
                 }
             ]);
 
         if (dbError) {
             console.error('Datenbank-Fehler:', dbError.message);
-            alert('Datei im Storage, aber Datenbank-Speicherung fehlgeschlagen.');
+            alert('Fehler beim Speichern in der Datenbank: ' + dbError.message);
             return;
         }
 
-        alert('Erfolgreich hochgeladen! Dein Beitrag ist jetzt im Feed & Profil sichtbar 🚀');
+        alert('Erfolgreich hochgeladen! Dein Beitrag ist jetzt sichtbar 🚀');
         window.closeMediaUploadModal();
         
         // Feed und Profil direkt aktualisieren
@@ -302,7 +303,7 @@ window.loadCampusFeed = async function() {
         }
 
         card.innerHTML = `
-            <div style="font-size: 11px; font-weight: 700; color: #818cf8;">👤 ${post.email || 'Anonym'}</div>
+            <div style="font-size: 11px; font-weight: 700; color: #818cf8;">👤 ${post.author_email || 'Anonym'}</div>
             ${mediaHtml}
             ${post.caption ? `<div style="font-size: 12px; color: var(--text);">${post.caption}</div>` : ''}
             <div style="font-size: 10px; color: var(--text-muted);">${new Date(post.created_at).toLocaleString()}</div>
@@ -322,7 +323,7 @@ window.loadMyProfilePosts = async function() {
     const { data: posts, error } = await _supabase
         .from('media_posts')
         .select('*')
-        .eq('email', state.currentUserEmail)
+        .eq('author_email', state.currentUserEmail)
         .order('created_at', { ascending: false });
 
     if (error || !posts || posts.length === 0) {
