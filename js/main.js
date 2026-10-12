@@ -31,7 +31,7 @@ window.switchTab = function(tabId) {
     if (tabId === 'profile' && typeof window.loadMyProfilePosts === 'function') {
         window.loadMyProfilePosts();
     }
-    // Wenn der Reels/Feed-Tab geöffnet wird, alle Beiträge laden
+    // Wenn der Reels/Feed-Tab geöffnet wird, Feed laden
     if (tabId === 'reels' && typeof window.loadCampusFeed === 'function') {
         window.loadCampusFeed();
     }
@@ -240,7 +240,7 @@ window.uploadTrimmedMedia = async function() {
 
         const mediaUrl = publicURLData.publicUrl;
 
-        // 3. Beitrag in 'media_posts' inklusive des vom Trigger erwarteten Feldes 'message' speichern
+        // 3. Beitrag in 'media_posts' speichern
         const { error: dbError } = await _supabase
             .from('media_posts')
             .insert([
@@ -248,7 +248,7 @@ window.uploadTrimmedMedia = async function() {
                     id: crypto.randomUUID(),
                     author_email: state.currentUserEmail || 'student@uni.at', 
                     caption: caption, 
-                    message: caption, // Erfüllt den Datenbank-Trigger der Tabelle
+                    message: caption, 
                     media_url: mediaUrl, 
                     media_type: selectedMediaFile.type.startsWith('video/') ? 'video' : 'image',
                     created_at: new Date().toISOString()
@@ -261,7 +261,7 @@ window.uploadTrimmedMedia = async function() {
             return;
         }
 
-        alert('Erfolgreich hochgeladen! Dein Beitrag ist jetzt sichtbar 🚀');
+        alert('Erfolgreich hochgeladen! Dein Beitrag ist jetzt im Feed & Profil sichtbar 🚀');
         window.closeMediaUploadModal();
         
         // Feed und Profil direkt aktualisieren
@@ -274,7 +274,7 @@ window.uploadTrimmedMedia = async function() {
     }
 };
 
-// Beiträge im Campus-Feed (Reels-Tab) anzeigen
+// Beiträge im Campus-Feed (Reels/For You Tab) anzeigen
 window.loadCampusFeed = async function() {
     const feedList = document.getElementById('reels-list');
     if (!feedList) return;
