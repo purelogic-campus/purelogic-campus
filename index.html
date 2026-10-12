@@ -35,6 +35,8 @@
           <div class="points-dropdown-item" onclick="openProfGuideModal()" data-i18n="profGuideTitle">📚 Prof-Rating & Survival Guide</div>
           <div class="points-dropdown-item" onclick="toggleLectureMode()" data-i18n="lectureModeTitle">🎓 Lecture Mode (Fokus)</div>
           <div class="points-dropdown-item" onclick="openMorePointsModal()" data-i18n="morePointsTitle">🎁 Mehr Punkte sammeln</div>
+          <!-- Neuer Installieren-Button im Dropdown -->
+          <div class="points-dropdown-item hidden" id="install-app-dropdown-btn" onclick="installPWA()" data-i18n="installAppTitle" style="background: rgba(99, 102, 241, 0.15); color: #818cf8;">📲 App auf Gerät installieren</div>
         </div>
       </div>
 
@@ -83,6 +85,9 @@
 
       <button class="btn" onclick="handleLogin()" data-i18n="loginBtn">Einloggen</button>
       <button class="btn btn-secondary" onclick="handleSignup()" data-i18n="signupBtn">Account erstellen</button>
+      
+      <!-- Neuer Installieren-Button im Auth-Gate -->
+      <button class="btn btn-secondary hidden" id="install-app-auth-btn" onclick="installPWA()" style="margin-top: 10px; background: rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.4); color: #818cf8; font-weight: 800;" data-i18n="installAppBtn">📲 App für Homescreen herunterladen</button>
     </div>
   </div>
 
