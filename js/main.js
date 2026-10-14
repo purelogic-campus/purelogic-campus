@@ -1,4 +1,4 @@
-// js/main.js - Vollständige angepasste Datei[cite: 6]
+// js/main.js - Vollständige angepasste Datei mit PC-Mausrad-Snap-Scroll
 import { _supabase } from './config.js';
 import { state } from './state.js';
 import { changeLanguage } from './i18n.js';
@@ -120,6 +120,42 @@ document.addEventListener('DOMContentLoaded', () => {
         langSelector.addEventListener('change', (e) => {
             changeLanguage(e.target.value);
         });
+    }
+
+    // PC-Mausrad-Snap-Scroll für den Feed-Container optimieren
+    const feedWrapper = document.getElementById('reels-list');
+    if (feedWrapper) {
+        let isScrolling = false;
+        feedWrapper.addEventListener('wheel', (e) => {
+            if (window.innerWidth < 768) return; // Nur auf dem PC aktiv
+            e.preventDefault();
+            if (isScrolling) return;
+
+            const items = feedWrapper.querySelectorAll('.reel-item');
+            if (!items.length) return;
+
+            // Finde das aktuell sichtbare Reel anhand der Scroll-Position
+            let currentIndex = 0;
+            let minDistance = Infinity;
+            items.forEach((item, index) => {
+                const rect = item.getBoundingClientRect();
+                const distance = Math.abs(rect.top);
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    currentIndex = index;
+                }
+            });
+
+            if (e.deltaY > 0 && currentIndex < items.length - 1) {
+                currentIndex++;
+            } else if (e.deltaY < 0 && currentIndex > 0) {
+                currentIndex--;
+            }
+
+            isScrolling = true;
+            items[currentIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setTimeout(() => { isScrolling = false; }, 400);
+        }, { passive: false });
     }
 });
 
@@ -310,7 +346,7 @@ window.loadCampusFeed = async function() {
             ${mediaHtml}
             <div class="reel-overlay" style="justify-content: flex-end; align-items: flex-start; text-align: left; background: linear-gradient(0deg, rgba(9,13,22,0.9) 0%, rgba(9,13,22,0.2) 60%, transparent 100%);">
                 <div style="font-size: 12px; font-weight: 800; color: #818cf8; margin-bottom: 2px;">👤 ${post.author_email || 'Anonym'}</div>
-                ${post.caption ? `<div style="font-size: 13px; color: #fff; font-weight: 600;">${post.caption}</div>` : ''}
+                ${post.caption ? `<div style="font-size: 13px; color: #fff; font-weight: 600;">\${post.caption}</div>` : ''}
             </div>
         `;
         
