@@ -1,4 +1,4 @@
-// js/main.js - Vollständige angepasste Datei
+// js/main.js - Vollständige angepasste Datei[cite: 6]
 import { _supabase } from './config.js';
 import { state } from './state.js';
 import { changeLanguage } from './i18n.js';
@@ -57,6 +57,8 @@ window.closeCrushModal = () => document.getElementById('crush-modal')?.classList
 window.openReportModal = () => alert('Inhalt melden Modal');
 window.openImpressumModal = () => alert('Impressum: Pure Logic Campus');
 window.openAgbModal = () => alert('AGB: Pure Logic Campus');
+window.openCampusQuizModal = () => document.getElementById('quiz-modal')?.classList.remove('hidden');
+window.closeCampusQuizModal = () => document.getElementById('quiz-modal')?.classList.add('hidden');
 
 async function checkAuthSession() {
     try {
@@ -161,7 +163,7 @@ window.addEventListener('appinstalled', () => {
 });
 
 // ==========================================
-// PUNKT 17: DIREKTER MEDIEN-UPLOAD & VIDEO-PRÜFUNG
+// DIREKTER MEDIEN-UPLOAD & VIDEO-PRÜFUNG
 // ==========================================
 let selectedMediaFile = null;
 
@@ -274,7 +276,7 @@ window.uploadTrimmedMedia = async function() {
     }
 };
 
-// Beiträge im Campus-Feed mit Snap-Scroll anzeigen
+// Beiträge im Campus-Feed mit Snap-Scroll anzeigen (.reel-item Klasse)
 window.loadCampusFeed = async function() {
     const feedList = document.getElementById('reels-list');
     if (!feedList) return;
@@ -294,26 +296,25 @@ window.loadCampusFeed = async function() {
     feedList.innerHTML = '';
 
     posts.forEach(post => {
-        const card = document.createElement('div');
-        card.className = 'reel-post-card';
+        const item = document.createElement('div');
+        item.className = 'reel-item'; // <--- Korrekte Klasse für das Snap-Scrolling
         
         let mediaHtml = '';
         if (post.media_type === 'video') {
-            mediaHtml = `<video src="${post.media_url}" controls style="width: 100%; max-height: 48vh; object-fit: contain; border-radius: 14px; background: #000;"></video>`;
+            mediaHtml = `<video src="${post.media_url}" controls class="reel-media"></video>`;
         } else if (post.media_url) {
-            mediaHtml = `<img src="${post.media_url}" style="width: 100%; max-height: 48vh; object-fit: cover; border-radius: 14px;" alt="Post">`;
+            mediaHtml = `<img src="${post.media_url}" class="reel-media" alt="Post">`;
         }
 
-        card.innerHTML = `
-            <div style="display: flex; align-items: center; justify-content: space-between;">
-                <span style="font-size: 12px; font-weight: 800; color: #818cf8;">👤 ${post.author_email || 'Anonym'}</span>
-                <span style="font-size: 10px; color: var(--text-muted);">${new Date(post.created_at).toLocaleDateString()}</span>
-            </div>
+        item.innerHTML = `
             ${mediaHtml}
-            ${post.caption ? `<div style="font-size: 13px; color: var(--text); font-weight: 500; line-height: 1.4;">${post.caption}</div>` : ''}
+            <div class="reel-overlay" style="justify-content: flex-end; align-items: flex-start; text-align: left; background: linear-gradient(0deg, rgba(9,13,22,0.9) 0%, rgba(9,13,22,0.2) 60%, transparent 100%);">
+                <div style="font-size: 12px; font-weight: 800; color: #818cf8; margin-bottom: 2px;">👤 ${post.author_email || 'Anonym'}</div>
+                ${post.caption ? `<div style="font-size: 13px; color: #fff; font-weight: 600;">${post.caption}</div>` : ''}
+            </div>
         `;
         
-        feedList.appendChild(card);
+        feedList.appendChild(item);
     });
 };
 
