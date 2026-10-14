@@ -33,18 +33,25 @@
 .flash-banner-active { animation: goldPinkFlash 0.9s infinite ease-in-out; }
 
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-html, body {
+
+html {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+body {
   background-color: var(--bg);
   color: var(--text);
   font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  height: 100vh;
-  height: 100dvh;
-  width: 100vw;
+  height: 100%;
+  width: 100%;
   overflow: hidden;
+  position: fixed;
+  inset: 0;
   display: flex;
   justify-content: center;
   align-items: center;
-  position: fixed;
 }
 
 .match-wednesday::before {
@@ -72,9 +79,8 @@ html, body {
   border: none;
   border-radius: 0;
   padding: 10px 14px;
-  width: 100vw;
-  height: 100vh;
-  height: 100dvh;
+  width: 100%;
+  height: 100%;
   display: flex;
   flex-direction: column;
   padding-top: calc(8px + env(safe-area-inset-top));
@@ -287,10 +293,10 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--p
 .reel-pill.active { background: rgba(99, 102, 241, 0.15); color: #818cf8; }
 .match-wednesday .reel-pill.active { background: rgba(255, 0, 127, 0.25); color: #ff66b2; box-shadow: 0 0 8px rgba(255,0,127,0.3); }
 
-/* SNAP-SCROLL & VOLLBILD-OPTIMIERUNG FÜR MOBILE & DESKTOP */
+/* SNAP-SCROLL & VOLLBILD-OPTIMIERUNG FÜR MOBILE (TOUCH-FIXED) */
 .reel-card-wrapper { 
   flex: 1 !important; 
-  height: 100dvh !important;
+  height: 100% !important;
   overflow-y: scroll !important; 
   scroll-snap-type: y mandatory !important; 
   -webkit-overflow-scrolling: touch !important; 
@@ -299,6 +305,7 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--p
   gap: 0 !important; 
   padding: 0 !important; 
   min-height: 0; 
+  touch-action: pan-y;
 }
 
 .reel-item { 
