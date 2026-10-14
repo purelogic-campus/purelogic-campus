@@ -73,18 +73,18 @@ html, body {
   background: var(--bg);
   border: none;
   border-radius: 0;
-  padding: 8px 12px;
+  padding: 6px 10px;
   width: 100vw;
   height: 100vh;
   height: 100dvh;
   display: flex;
   flex-direction: column;
-  padding-top: calc(6px + env(safe-area-inset-top));
-  padding-bottom: calc(4px + env(safe-area-inset-bottom));
+  padding-top: calc(4px + env(safe-area-inset-top));
+  padding-bottom: calc(2px + env(safe-area-inset-bottom));
   overflow: hidden;
   position: relative;
   z-index: 1;
-}
+}}
 
 .header {
   display: flex;
