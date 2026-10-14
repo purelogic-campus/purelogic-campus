@@ -97,6 +97,7 @@ html, body {
 .logo { 
   font-weight: 900; font-size: 20px; letter-spacing: -0.5px; 
   background: var(--gradient-main); -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  cursor: pointer;
 }
 
 .match-wednesday .logo { filter: drop-shadow(0 0 10px rgba(255, 0, 127, 0.6)); }
@@ -286,42 +287,41 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--p
 .reel-pill.active { background: rgba(99, 102, 241, 0.15); color: #818cf8; }
 .match-wednesday .reel-pill.active { background: rgba(255, 0, 127, 0.25); color: #ff66b2; box-shadow: 0 0 8px rgba(255,0,127,0.3); }
 
-/* SNAP-SCROLL & 10% RAND-SICHTBARKEIT PERFEKT ABGESTIMMT AUF .reel-item */
+/* SNAP-SCROLL & VOLLBILD-OPTIMIERUNG FÜR MOBILE & DESKTOP */
 .reel-card-wrapper { 
   flex: 1 !important; 
+  height: 100dvh !important;
   overflow-y: scroll !important; 
   scroll-snap-type: y mandatory !important; 
-  -webkit-overflow-scrolling: touch; 
+  -webkit-overflow-scrolling: touch !important; 
   display: flex; 
   flex-direction: column; 
-  gap: 16px; 
-  padding: 10px 0 80px 0 !important; 
+  gap: 0 !important; 
+  padding: 0 !important; 
   min-height: 0; 
 }
 
 .reel-item { 
-  scroll-snap-align: center !important; 
+  scroll-snap-align: start !important; 
   scroll-snap-stop: always !important; 
-  height: calc(100% - 60px) !important; 
-  min-height: 320px; 
-  max-height: calc(100% - 60px) !important; 
+  height: 100% !important; 
+  min-height: 100% !important; 
+  max-height: 100% !important; 
   background: #000; 
-  border-radius: 16px; 
-  border: 1px solid var(--border); 
+  border-radius: 0 !important; 
+  border: none !important; 
   position: relative; 
   overflow: hidden; 
   display: flex; 
   flex-direction: column; 
   justify-content: center; 
   align-items: center; 
-  max-width: 420px; 
-  margin: 0 auto; 
-  width: 100%; 
-  box-shadow: 0 8px 24px rgba(0,0,0,0.5); 
-  flex: 0 0 calc(100% - 60px) !important; 
+  width: 100% !important; 
+  margin: 0 !important; 
+  flex: 0 0 100% !important; 
 }
 
-.match-wednesday .reel-item { border-color: rgba(255, 0, 127, 0.4); box-shadow: 0 8px 30px rgba(255, 0, 127, 0.25); }
+.match-wednesday .reel-item { border: none !important; }
 
 .reel-media { 
   position: absolute; 
