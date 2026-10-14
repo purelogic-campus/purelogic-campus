@@ -293,7 +293,7 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--p
 .reel-pill.active { background: rgba(99, 102, 241, 0.15); color: #818cf8; }
 .match-wednesday .reel-pill.active { background: rgba(255, 0, 127, 0.25); color: #ff66b2; box-shadow: 0 0 8px rgba(255,0,127,0.3); }
 
-/* SNAP-SCROLL & VOLLBILD-OPTIMIERUNG FÜR MOBILE (TOUCH-FIXED) */
+/* SNAP-SCROLL & VOLLBILD-OPTIMIERUNG (VOLLSTÄNDIG SICHTBARER FOOTER & NAVIGATION) */
 .reel-card-wrapper { 
   flex: 1 !important; 
   height: 100% !important;
@@ -330,13 +330,15 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--p
 
 .match-wednesday .reel-item { border: none !important; }
 
+/* BILDER & VIDEOS WERDEN VOLLSTÄNDIG OHNE BESCHNITT ANGEZEIGT */
 .reel-media { 
   position: absolute; 
   top: 0; 
   left: 0; 
   width: 100%; 
   height: 100%; 
-  object-fit: cover; 
+  object-fit: contain !important; 
+  background: #000;
   z-index: 1; 
 }
 
@@ -347,16 +349,16 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--p
   width: 100%; 
   height: 100%; 
   z-index: 2; 
-  background: rgba(9, 13, 22, 0.75); 
+  background: rgba(9, 13, 22, 0.45); 
   padding: 24px; 
   display: flex; 
   flex-direction: column; 
   align-items: center; 
-  justify-content: center; 
+  justify-content: flex-end; 
   text-align: center; 
 }
 
-.footer-links { display: flex; justify-content: center; gap: 8px; padding: 4px 0 0 0; font-size: 10px; color: var(--text-muted); flex-shrink: 0; }
+.footer-links { display: flex; justify-content: center; gap: 8px; padding: 4px 0 0 0; font-size: 10px; color: var(--text-muted); flex-shrink: 0; z-index: 12; }
 .footer-links span { cursor: pointer; transition: color 0.2s; }
 .footer-links span:hover { color: #818cf8; text-decoration: underline; }
 .match-wednesday .footer-links span:hover { color: #ff66b2; }
