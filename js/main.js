@@ -1,395 +1,397 @@
-// js/main.js - Vollständige angepasste Datei mit PC-Mausrad-Snap-Scroll
-import { _supabase } from './config.js';
-import { state } from './state.js';
-import { changeLanguage } from './i18n.js';
-import { handleLogin, handleSignup, resetUser, handleForgotPassword, togglePasswordVisibility } from './auth.js';
-import { toggleLectureMode } from './features/lecture.js';
-import { initQuiz } from './features/quiz.js';
-import { openProfGuideModal, closeProfGuideModal } from './features/profguide.js';
-
-// Global verfügbar machen für HTML onclick-Attribute
-window.handleLogin = handleLogin;
-window.handleSignup = handleSignup;
-window.resetUser = resetUser;
-window.handleForgotPassword = handleForgotPassword;
-window.togglePasswordVisibility = togglePasswordVisibility;
-window.toggleLectureMode = toggleLectureMode;
-window.openProfGuideModal = openProfGuideModal;
-window.closeProfGuideModal = closeProfGuideModal;
-
-// UI Hilfsfunktionen
-window.switchTab = function(tabId) {
-    document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-    const target = document.getElementById('tab-' + tabId);
-    if (target) target.classList.remove('hidden');
-
-    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-    const activeBtn = document.getElementById('btn-tab-' + tabId);
-    if (activeBtn) activeBtn.classList.add('active');
-
-    // Wenn der Profil-Tab geöffnet wird, eigene Beiträge laden
-    if (tabId === 'profile' && typeof window.loadMyProfilePosts === 'function') {
-        window.loadMyProfilePosts();
-    }
-    // Wenn der Reels/Feed-Tab geöffnet wird, Feed laden
-    if (tabId === 'reels' && typeof window.loadCampusFeed === 'function') {
-        window.loadCampusFeed();
-    }
-};
-
-window.togglePointsDropdown = function(event) {
-    event.stopPropagation();
-    const dropdown = document.getElementById('points-dropdown-menu');
-    if (dropdown) dropdown.classList.toggle('hidden');
-};
-
-document.addEventListener('click', () => {
-    const dropdown = document.getElementById('points-dropdown-menu');
-    if (dropdown) dropdown.classList.add('hidden');
-});
-
-window.openActiveSpotsModal = () => document.getElementById('active-spots-modal')?.classList.remove('hidden');
-window.closeActiveSpotsModal = () => document.getElementById('active-spots-modal')?.classList.add('hidden');
-window.openMorePointsModal = () => document.getElementById('more-points-modal')?.classList.remove('hidden');
-window.closeMorePointsModal = () => document.getElementById('more-points-modal')?.classList.add('hidden');
-window.openCrushModal = () => document.getElementById('crush-modal')?.classList.remove('hidden');
-window.closeCrushModal = () => document.getElementById('crush-modal')?.classList.add('hidden');
-window.openReportModal = () => alert('Inhalt melden Modal');
-window.openImpressumModal = () => alert('Impressum: Pure Logic Campus');
-window.openAgbModal = () => alert('AGB: Pure Logic Campus');
-window.openCampusQuizModal = () => document.getElementById('quiz-modal')?.classList.remove('hidden');
-window.closeCampusQuizModal = () => document.getElementById('quiz-modal')?.classList.add('hidden');
-
-async function checkAuthSession() {
-    try {
-        const { data: { session } } = await _supabase.auth.getSession();
-        const authGate = document.getElementById('auth-gate');
-        const mainApp = document.getElementById('main-app');
-        const profileBtn = document.getElementById('header-profile-btn');
-        const logoutBtn = document.getElementById('logout-btn');
-
-        if (session) {
-            state.currentUserEmail = session.user.email;
-            if (authGate) authGate.classList.add('hidden');
-            if (mainApp) mainApp.classList.remove('hidden');
-            if (profileBtn) profileBtn.classList.remove('hidden');
-            if (logoutBtn) logoutBtn.classList.remove('hidden');
-
-            const { data: userData } = await _supabase
-                .from('users')
-                .select('is_admin, logic_score')
-                .eq('email', session.user.email)
-                .single();
-
-            if (userData && userData.is_admin) {
-                const badge = document.getElementById('score');
-                if (badge) {
-                    badge.classList.add('admin-badge');
-                    badge.textContent = '👑 Admin';
-                    badge.onclick = () => window.switchTab('admin');
-                }
-            }
-        } else {
-            state.currentUserEmail = null;
-            if (authGate) authGate.classList.remove('hidden');
-            if (mainApp) mainApp.classList.add('hidden');
-            if (profileBtn) profileBtn.classList.add('hidden');
-            if (logoutBtn) logoutBtn.classList.add('hidden');
-        }
-    } catch (err) {
-        console.error('Session-Check Fehler:', err);
-    }
+:root {
+  --bg: #090d16;
+  --card: #131c31;
+  --card-glass: rgba(19, 28, 49, 0.85);
+  --border: rgba(255, 255, 255, 0.08);
+  --text: #f1f5f9;
+  --text-muted: #94a3b8;
+  --primary: #6366f1;
+  --primary-hover: #4f46e5;
+  --accent: #ec4899;
+  --success: #10b981;
+  --admin: #f59e0b;
+  --gradient-main: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    checkAuthSession();
+.match-wednesday {
+  --bg: #220217 !important;
+  --card: #3c092f !important;
+  --card-glass: rgba(60, 9, 47, 0.9) !important;
+  --primary: #ff007f !important;
+  --primary-hover: #d9006c !important;
+  --accent: #ff007f !important;
+  --text: #ffffff !important;
+  --border: rgba(255, 0, 127, 0.4) !important;
+  --gradient-main: linear-gradient(135deg, #ff007f 0%, #ff66b2 50%, #ffeb3b 100%) !important;
+}
 
-    const savedLang = localStorage.getItem('preferred_lang') || 'de';
-    changeLanguage(savedLang);
+@keyframes goldPinkFlash {
+  0% { transform: scale(1); box-shadow: 0 4px 15px rgba(245, 158, 11, 0.6); filter: brightness(1); }
+  50% { transform: scale(1.025); box-shadow: 0 0 30px 10px rgba(236, 72, 153, 0.95), 0 0 15px 5px rgba(251, 191, 36, 0.8); filter: brightness(1.2); }
+  100% { transform: scale(1); box-shadow: 0 4px 15px rgba(245, 158, 11, 0.6); filter: brightness(1); }
+}
+.flash-banner-active { animation: goldPinkFlash 0.9s infinite ease-in-out; }
 
-    initQuiz();
-    
-    // Beim Start direkt den Feed laden
-    if (typeof window.loadCampusFeed === 'function') {
-        window.loadCampusFeed();
-    }
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
-    const langSelector = document.getElementById('languageSelect');
-    if (langSelector) {
-        langSelector.value = savedLang;
-        langSelector.addEventListener('change', (e) => {
-            changeLanguage(e.target.value);
-        });
-    }
+html, body {
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  position: fixed;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
 
-    // PC-Mausrad-Snap-Scroll für den Feed-Container optimieren
-    const feedWrapper = document.getElementById('reels-list');
-    if (feedWrapper) {
-        let isScrolling = false;
-        feedWrapper.addEventListener('wheel', (e) => {
-            if (window.innerWidth < 768) return; // Nur auf dem PC aktiv
-            e.preventDefault();
-            if (isScrolling) return;
+.match-wednesday::before {
+  content: "💖 💘 💕 💖 💗 💓 💞 💖 💘";
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  font-size: 24px;
+  opacity: 0.12;
+  z-index: 0;
+  pointer-events: none;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-around;
+  align-content: space-around;
+  animation: floatHearts 10s infinite alternate ease-in-out;
+}
 
-            const items = feedWrapper.querySelectorAll('.reel-item');
-            if (!items.length) return;
+@keyframes floatHearts {
+  0% { transform: translateY(0) scale(1); }
+  100% { transform: translateY(-15px) scale(1.05); }
+}
 
-            // Finde das aktuell sichtbare Reel anhand der Scroll-Position
-            let currentIndex = 0;
-            let minDistance = Infinity;
-            items.forEach((item, index) => {
-                const rect = item.getBoundingClientRect();
-                const distance = Math.abs(rect.top);
-                if (distance < minDistance) {
-                    minDistance = distance;
-                    currentIndex = index;
-                }
-            });
+.app-card {
+  background: var(--bg);
+  border: none;
+  border-radius: 0;
+  padding: 6px 12px;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding-top: calc(4px + env(safe-area-inset-top));
+  padding-bottom: calc(4px + env(safe-area-inset-bottom));
+  overflow: hidden;
+  position: relative;
+  z-index: 1;
+}
 
-            if (e.deltaY > 0 && currentIndex < items.length - 1) {
-                currentIndex++;
-            } else if (e.deltaY < 0 && currentIndex > 0) {
-                currentIndex--;
-            }
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 4px;
+  flex-shrink: 0;
+  position: relative;
+}
+.logo { 
+  font-weight: 900; font-size: 18px; letter-spacing: -0.5px; 
+  background: var(--gradient-main); -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  cursor: pointer;
+}
 
-            isScrolling = true;
-            items[currentIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
-            setTimeout(() => { isScrolling = false; }, 400);
-        }, { passive: false });
-    }
-});
+.match-wednesday .logo { filter: drop-shadow(0 0 10px rgba(255, 0, 127, 0.6)); }
+.match-wednesday .logo::after {
+  content: " 💖✨";
+  -webkit-text-fill-color: initial;
+  animation: pulseGlow 1.5s infinite;
+}
 
-// ==========================================
-// PWA INSTALLATION (DOWNLOAD BUTTON LOGIK)
-// ==========================================
-let deferredPrompt = null;
+.header-right { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; flex-shrink: 0; position: relative; }
 
-window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    deferredPrompt = e;
-    
-    const installAuthBtn = document.getElementById('install-app-auth-btn');
-    const installDropdownBtn = document.getElementById('install-app-dropdown-btn');
-    
-    if (installAuthBtn) installAuthBtn.classList.remove('hidden');
-    if (installDropdownBtn) installDropdownBtn.classList.remove('hidden');
-});
+.points-badge { 
+  background: rgba(99, 102, 241, 0.15); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.3);
+  padding: 4px 8px; border-radius: 30px; font-size: 11px; font-weight: 700; cursor: pointer; transition: transform 0.2s;
+}
+.points-badge:hover { transform: scale(1.05); }
+.match-wednesday .points-badge {
+  background: rgba(255, 0, 127, 0.25); color: #ff66b2; border: 1px solid rgba(255, 0, 127, 0.6);
+  box-shadow: 0 0 12px rgba(255, 0, 127, 0.7); font-weight: 800;
+}
+.points-badge.admin-badge { background: rgba(245, 158, 11, 0.15); color: var(--admin); border: 1px solid rgba(245, 158, 11, 0.3); }
 
-window.installPWA = async function() {
-    if (!deferredPrompt) {
-        alert('Die App kann in diesem Browser nicht direkt installiert werden oder ist bereits installiert.');
-        return;
-    }
-    
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    console.log(`Installation Ergebnis: ${outcome}`);
-    
-    deferredPrompt = null;
-    
-    const installAuthBtn = document.getElementById('install-app-auth-btn');
-    const installDropdownBtn = document.getElementById('install-app-dropdown-btn');
-    
-    if (installAuthBtn) installAuthBtn.classList.add('hidden');
-    if (installDropdownBtn) installDropdownBtn.classList.add('hidden');
-};
+.points-dropdown {
+  position: absolute; top: 34px; right: 0; width: 230px;
+  background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5); z-index: 1000;
+  display: flex; flex-direction: column; padding: 6px; gap: 4px;
+}
+.points-dropdown-item {
+  background: rgba(255,255,255,0.03); border: 1px solid var(--border); color: var(--text);
+  padding: 8px 10px; border-radius: 10px; font-size: 11px; font-weight: 700; cursor: pointer;
+  text-align: left; transition: background 0.2s; display: flex; align-items: center; gap: 6px;
+}
+.points-dropdown-item:hover { background: rgba(99, 102, 241, 0.2); color: #818cf8; }
 
-window.addEventListener('appinstalled', () => {
-    console.log('App wurde erfolgreich auf dem Gerät installiert!');
-});
+.header-profile-btn {
+  background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border); padding: 2px 6px 2px 2px;
+  border-radius: 30px; display: flex; align-items: center; gap: 4px; cursor: pointer; transition: all 0.2s;
+}
+.header-profile-btn:hover { background: rgba(255, 255, 255, 0.1); }
+.header-avatar-sm {
+  width: 18px; height: 18px; border-radius: 50%; object-fit: cover; background: var(--border);
+  display: flex; align-items: center; justify-content: center; font-size: 9px; color: var(--text-muted);
+}
+.header-profile-text { font-size: 11px; font-weight: 600; color: var(--text); }
 
-// ==========================================
-// DIREKTER MEDIEN-UPLOAD & VIDEO-PRÜFUNG
-// ==========================================
-let selectedMediaFile = null;
+.btn-logout {
+  background: rgba(236, 72, 153, 0.1); color: var(--accent); border: 1px solid rgba(236, 72, 153, 0.25);
+  padding: 4px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap;
+}
 
-window.openUploadModal = function() {
-    document.getElementById('media-upload-modal')?.classList.remove('hidden');
-};
+.language-select {
+  background: var(--card); border: 1px solid var(--border); color: var(--text);
+  padding: 4px 6px; border-radius: 10px; font-size: 11px; font-weight: 600; cursor: pointer; outline: none; transition: all 0.2s;
+}
+.language-select:hover { background: rgba(255, 255, 255, 0.1); }
+.language-select option { background: var(--bg); color: var(--text); }
 
-window.closeMediaUploadModal = function() {
-    document.getElementById('media-upload-modal')?.classList.add('hidden');
-    selectedMediaFile = null;
-    const preview = document.getElementById('trim-video-preview');
-    if (preview) preview.src = '';
-    document.getElementById('trimmer-container')?.classList.add('hidden');
-    const fileInput = document.getElementById('media-file-input');
-    if (fileInput) fileInput.value = '';
-    const captionInput = document.getElementById('media-caption-input');
-    if (captionInput) captionInput.value = '';
-};
+.match-banner {
+  display: none; background: linear-gradient(90deg, #ff007f, #ff758c, #ff007f); background-size: 200% auto;
+  color: white; text-align: center; padding: 4px; font-size: 11px; font-weight: 900; border-radius: 10px;
+  margin-bottom: 4px; box-shadow: 0 0 15px rgba(255, 0, 127, 0.6); animation: gradientMove 3s linear infinite, pulseGlow 2s infinite;
+  letter-spacing: 0.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; cursor: pointer;
+}
+.match-wednesday .match-banner { display: block; }
 
-window.handleMediaSelection = function(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-    
-    selectedMediaFile = file;
-    const trimmerContainer = document.getElementById('trimmer-container');
-    const videoPreview = document.getElementById('trim-video-preview');
-    const infoText = document.getElementById('video-duration-info');
-    
-    if (file.type.startsWith('video/')) {
-        trimmerContainer.classList.remove('hidden');
-        const fileURL = URL.createObjectURL(file);
-        videoPreview.src = fileURL;
-        
-        videoPreview.onloadedmetadata = function() {
-            const duration = Math.round(videoPreview.duration);
-            if (duration > 30) {
-                infoText.textContent = `⚠️ Achtung: Das Video ist ${duration}s lang (Empfohlen: max. 30s).`;
-                infoText.style.color = '#ef4444';
-            } else {
-                infoText.textContent = `Dauer: ${duration}s (Perfekte Länge 🚀)`;
-                infoText.style.color = '#10b981';
-            }
-        };
-    } else {
-        trimmerContainer.classList.add('hidden');
-    }
-};
+@keyframes gradientMove {
+  0% { background-position: 0% center; }
+  100% { background-position: 200% center; }
+}
 
-window.uploadTrimmedMedia = async function() {
-    if (!selectedMediaFile) {
-        alert('Bitte wähle zuerst eine Mediendatei aus.');
-        return;
-    }
-    
-    const caption = document.getElementById('media-caption-input')?.value || '';
-    const fileExt = selectedMediaFile.name.split('.').pop();
-    const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
-    const filePath = `campus-uploads/${fileName}`;
+.nav-tabs {
+  display: flex; align-items: center; justify-content: space-between; gap: 4px; margin-top: 4px; flex-shrink: 0;
+  background: var(--card-glass); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  padding: 4px 6px; border-radius: 20px; border: 1px solid var(--border); position: relative; overflow: visible; z-index: 10;
+}
+.tab-btn {
+  flex: 1; background: none; border: none; color: var(--text-muted); padding: 6px 2px; font-size: 11px; font-weight: 700;
+  cursor: pointer; border-radius: 12px; transition: all 0.25s; text-align: center; white-space: nowrap;
+}
+.tab-btn.active { background: rgba(99, 102, 241, 0.15); color: #818cf8; }
+.match-wednesday .tab-btn.active { background: rgba(255, 0, 127, 0.3); color: #ff66b2; box-shadow: inset 0 0 8px rgba(255, 0, 127, 0.4); }
 
-    try {
-        // 1. Datei in Supabase Storage hochladen
-        const { error: uploadError } = await _supabase.storage
-            .from('media')
-            .upload(filePath, selectedMediaFile);
+.tab-btn-action-container { flex: 0 0 auto; position: relative; width: 48px; height: 10px; margin: 0 2px; z-index: 11; }
+.tab-btn-action {
+  position: absolute; bottom: 0px; left: 50%; transform: translateX(-50%); width: 48px; height: 48px;
+  border-radius: 50%; background: var(--gradient-main); color: white; border: 3px solid var(--bg); font-size: 24px;
+  font-weight: 900; display: flex; align-items: center; justify-content: center; cursor: pointer;
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.65); transition: transform 0.2s, box-shadow 0.2s;
+}
+.match-wednesday .tab-btn-action { box-shadow: 0 0 22px rgba(255, 0, 127, 0.9); }
+.tab-btn-action:active { transform: translateX(-50%) scale(0.92); }
 
-        if (uploadError) {
-            console.error('Upload-Fehler:', uploadError.message);
-            alert('Fehler beim Hochladen der Datei in den Speicher.');
-            return;
-        }
+.tab-content-wrapper { flex: 1; overflow: hidden; display: flex; flex-direction: column; position: relative; min-height: 0; }
+.tab-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; min-height: 0; }
+.hidden { display: none !important; }
 
-        // 2. Öffentliche URL der Datei abrufen
-        const { data: publicURLData } = _supabase.storage
-            .from('media')
-            .getPublicUrl(filePath);
+.btn {
+  background: var(--gradient-main); color: white; border: none; padding: 10px; border-radius: 12px; cursor: pointer;
+  width: 100%; font-weight: 700; font-size: 13px; box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35); transition: all 0.2s; margin-top: 4px;
+}
+.match-wednesday .btn { box-shadow: 0 4px 18px rgba(255, 0, 127, 0.6); }
+.btn:active { transform: scale(0.97); }
+.btn:disabled { background: #334155 !important; opacity: 0.5 !important; cursor: not-allowed !important; box-shadow: none !important; color: #94a3b8 !important; }
+.btn-secondary { background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border); color: var(--text); box-shadow: none; }
 
-        const mediaUrl = publicURLData.publicUrl;
+input, textarea, select {
+  width: 100%; padding: 10px 12px; margin: 3px 0 8px; background: var(--card); border: 1px solid var(--border);
+  color: white; border-radius: 12px; font-size: 13px; font-family: inherit; transition: border-color 0.2s;
+}
+input:focus, textarea:focus, select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15); }
 
-        // 3. Beitrag exakt passend zum Supabase-Schema 'media_posts' speichern
-        const { error: dbError } = await _supabase
-            .from('media_posts')
-            .insert([
-                { 
-                    id: crypto.randomUUID(),
-                    author_email: state.currentUserEmail || 'student@uni.at', 
-                    caption: caption, 
-                    media_url: mediaUrl, 
-                    media_type: selectedMediaFile.type.startsWith('video/') ? 'video' : 'image',
-                    created_at: new Date().toISOString()
-                }
-            ]);
+.password-container { position: relative; }
+.password-toggle { position: absolute; right: 12px; top: 12px; background: none; border: none; cursor: pointer; font-size: 16px; color: var(--text-muted); }
+.forgot-password { display: block; text-align: right; font-size: 11px; color: #818cf8; text-decoration: none; margin-top: -4px; margin-bottom: 8px; cursor: pointer; font-weight: 600; }
+.match-wednesday .forgot-password { color: #ff66b2; }
 
-        if (dbError) {
-            console.error('Datenbank-Fehler:', dbError.message);
-            alert('Fehler beim Speichern in der Datenbank: ' + dbError.message);
-            return;
-        }
+.category-group { display: flex; gap: 6px; margin-bottom: 6px; overflow-x: auto; padding-bottom: 2px; flex-shrink: 0; }
+.cat-pill {
+  background: var(--card); border: 1px solid var(--border); color: var(--text-muted); padding: 5px 12px;
+  border-radius: 30px; font-size: 11px; cursor: pointer; white-space: nowrap; font-weight: 600; transition: all 0.2s;
+}
+.cat-pill.active { background: rgba(99, 102, 241, 0.2); border-color: var(--primary); color: #818cf8; }
 
-        alert('Erfolgreich hochgeladen! Dein Beitrag ist jetzt im Feed & Profil sichtbar 🚀');
-        window.closeMediaUploadModal();
-        
-        // Feed und Profil direkt aktualisieren
-        if (typeof window.loadCampusFeed === 'function') window.loadCampusFeed();
-        if (typeof window.loadMyProfilePosts === 'function') window.loadMyProfilePosts();
+.event-card, .live-card {
+  background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 12px; margin-bottom: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+}
+.match-wednesday .event-card, .match-wednesday .live-card { box-shadow: 0 4px 18px rgba(255, 0, 127, 0.2); border-color: rgba(255, 0, 127, 0.3); }
+.event-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px; }
+.event-title { font-size: 14px; font-weight: 700; }
+.event-meta { font-size: 11px; color: var(--text-muted); margin-bottom: 8px; }
+.event-footer { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); padding-top: 6px; }
+.btn-join { background: rgba(16, 185, 129, 0.15); color: var(--success); border: 1px solid rgba(16, 185, 129, 0.3); padding: 4px 10px; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer; }
 
-    } catch (err) {
-        console.error('Unerwarteter Fehler:', err);
-        alert('Ein unerwarteter Fehler ist aufgetreten.');
-    }
-};
+.chat-container { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.messages-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 2px; margin-bottom: 8px; min-height: 0; }
+.msg-bubble { background: var(--card); border: 1px solid var(--border); padding: 8px 10px; border-radius: 12px; font-size: 12px; max-width: 650px; }
+.chat-input-area { display: flex; gap: 6px; flex-shrink: 0; }
+.chat-input-area input { margin: 0; }
 
-// Beiträge im Campus-Feed mit Snap-Scroll anzeigen (.reel-item Klasse)
-window.loadCampusFeed = async function() {
-    const feedList = document.getElementById('reels-list');
-    if (!feedList) return;
+.profile-header-card { display: flex; align-items: center; justify-content: space-between; background: var(--card); border: 1px solid var(--border); padding: 12px; border-radius: 16px; margin-bottom: 10px; max-width: 600px; }
+.profile-avatar-lg { 
+  width: 56px; height: 56px; border-radius: 50%; background: var(--border); object-fit: cover; 
+  display: flex; align-items: center; justify-content: center; font-size: 24px; color: var(--text-muted); 
+  border: 2px solid var(--primary); flex-shrink: 0; cursor: pointer; transition: transform 0.2s, opacity 0.2s; 
+}
+.match-wednesday .profile-avatar-lg { border-color: #ff007f; box-shadow: 0 0 12px rgba(255,0,127,0.6); }
 
-    feedList.innerHTML = '<p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;">Lade Campus-Feeds...</p>';
+.verified-badge {
+  background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.4);
+  padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 800; display: inline-flex; align-items: center; gap: 3px; margin-top: 4px;
+}
 
-    const { data: posts, error } = await _supabase
-        .from('media_posts')
-        .select('*')
-        .order('created_at', { ascending: false });
+#tab-reels {
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100% !important;
+  overflow: hidden !important;
+}
 
-    if (error || !posts || posts.length === 0) {
-        feedList.innerHTML = '<p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;">Noch keine Beiträge im Campus-Feed vorhanden.</p>';
-        return;
-    }
+.reels-subnav { 
+  display: flex; gap: 6px; width: 100%; flex-shrink: 0; margin-bottom: 4px; 
+  background: var(--card-glass); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  padding: 4px 6px; border-radius: 20px; border: 1px solid var(--border);
+}
+.reel-pill { 
+  flex: 1; background: none; border: 1px solid transparent; color: var(--text-muted); 
+  padding: 6px 2px; border-radius: 14px; font-size: 11px; cursor: pointer; font-weight: 700; 
+  text-align: center; white-space: nowrap; transition: all 0.25s; overflow: hidden; text-overflow: ellipsis; 
+}
+.reel-pill.active { background: rgba(99, 102, 241, 0.15); color: #818cf8; }
 
-    feedList.innerHTML = '';
+/* FEED CONTAINER MIT MITTIGER RASTUNG (10% VORSCHAU OBEN & UNTEN) */
+.reel-card-wrapper { 
+  flex: 1 !important; 
+  height: calc(100dvh - 120px) !important;
+  max-height: calc(100dvh - 120px) !important;
+  overflow-y: scroll !important; 
+  scroll-snap-type: y mandatory !important; 
+  -webkit-overflow-scrolling: touch !important; 
+  display: flex !important; 
+  flex-direction: column !important; 
+  gap: 12px !important; 
+  padding: 10% 0 !important; 
+  margin: 0 !important;
+  min-height: 0 !important; 
+  touch-action: pan-y !important;
+  scroll-behavior: smooth !important;
+}
 
-    posts.forEach(post => {
-        const item = document.createElement('div');
-        item.className = 'reel-item'; // Korrekte Klasse für das Snap-Scrolling
-        
-        let mediaHtml = '';
-        if (post.media_type === 'video') {
-            mediaHtml = `<video src="${post.media_url}" controls class="reel-media"></video>`;
-        } else if (post.media_url) {
-            mediaHtml = `<img src="${post.media_url}" class="reel-media" alt="Post">`;
-        }
+.reel-item { 
+  scroll-snap-align: center !important; 
+  scroll-snap-stop: always !important; 
+  height: 80% !important; 
+  min-height: 80% !important; 
+  max-height: 80% !important; 
+  background: #000; 
+  border-radius: 16px !important; 
+  border: 1px solid var(--border) !important; 
+  position: relative; 
+  overflow: hidden; 
+  display: flex; 
+  flex-direction: column; 
+  justify-content: center; 
+  align-items: center; 
+  width: 100% !important; 
+  max-width: 440px !important; 
+  margin: 0 auto !important; 
+  flex: 0 0 80% !important; 
+  box-shadow: 0 8px 24px rgba(0,0,0,0.7);
+}
 
-        // Filtert alten fehlerhaften Text '\${post.caption}' aus der Anzeige
-        const cleanCaption = (post.caption && !post.caption.includes('\${post.caption}')) ? post.caption : '';
+.match-wednesday .reel-item { border-color: rgba(255, 0, 127, 0.4) !important; }
 
-        item.innerHTML = `
-            ${mediaHtml}
-            <div class="reel-overlay" style="justify-content: flex-end; align-items: flex-start; text-align: left; background: linear-gradient(0deg, rgba(9,13,22,0.9) 0%, rgba(9,13,22,0.2) 60%, transparent 100%);">
-                <div style="font-size: 12px; font-weight: 800; color: #818cf8; margin-bottom: 2px;">👤 ${post.author_email || 'Anonym'}</div>
-                ${cleanCaption ? `<div style="font-size: 13px; color: #fff; font-weight: 600;">\${cleanCaption}</div>` : ''}
-            </div>
-        `;
-        
-        feedList.appendChild(item);
-    });
-};
+/* BILDER WERDEN NATIV OHNE ABSCHNEIDEN VORBEREITET */
+.reel-media { 
+  position: absolute; 
+  top: 0; 
+  left: 0; 
+  width: 100%; 
+  height: 100%; 
+  object-fit: contain !important; 
+  background: #090d16;
+  z-index: 1; 
+}
 
-// Eigene Beiträge im Profil laden und anzeigen
-window.loadMyProfilePosts = async function() {
-    const grid = document.getElementById('my-profile-posts-grid');
-    if (!grid || !state.currentUserEmail) return;
+.reel-overlay { 
+  position: absolute; 
+  top: 0; 
+  left: 0; 
+  width: 100%; 
+  height: 100%; 
+  z-index: 2; 
+  background: linear-gradient(0deg, rgba(9,13,22,0.9) 0%, rgba(9,13,22,0.1) 60%, transparent 100%); 
+  padding: 16px; 
+  display: flex; 
+  flex-direction: column; 
+  align-items: flex-start; 
+  justify-content: flex-end; 
+  text-align: left; 
+  pointer-events: none;
+}
 
-    grid.innerHTML = '<p style="font-size: 11px; color: var(--text-muted);">Lade deine Beiträge...</p>';
+.footer-links { 
+  display: flex; 
+  justify-content: center; 
+  gap: 8px; 
+  padding: 2px 0 2px 0; 
+  font-size: 10px; 
+  color: var(--text-muted); 
+  flex-shrink: 0; 
+  z-index: 12; 
+}
+.footer-links span { cursor: pointer; transition: color 0.2s; }
+.footer-links span:hover { color: #818cf8; text-decoration: underline; }
+.match-wednesday .footer-links span:hover { color: #ff66b2; }
 
-    const { data: posts, error } = await _supabase
-        .from('media_posts')
-        .select('*')
-        .eq('author_email', state.currentUserEmail)
-        .order('created_at', { ascending: false });
+.profile-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 8px; }
+.profile-grid-item { aspect-ratio: 1; background: var(--card); border-radius: 8px; overflow: hidden; border: 1px solid var(--border); position: relative; }
+.profile-grid-item img, .profile-grid-item video { width: 100%; height: 100%; object-fit: cover; }
 
-    if (error || !posts || posts.length === 0) {
-        grid.innerHTML = '<p style="font-size: 11px; color: var(--text-muted);">Noch keine eigenen Beiträge vorhanden.</p>';
-        return;
-    }
+.tutorial-step { display: none; }
+.tutorial-step.active { display: block; }
 
-    grid.innerHTML = '';
-    posts.forEach(post => {
-        const item = document.createElement('div');
-        item.style.cssText = 'background: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; display: flex; flex-direction: column;';
-        
-        if (post.media_type === 'video') {
-            item.innerHTML = `<video src="${post.media_url}" controls style="width: 100%; height: 100px; object-fit: cover; background: #000;"></video>`;
-        } else {
-            item.innerHTML = `<img src="${post.media_url}" style="width: 100%; height: 100px; object-fit: cover;" alt="Post">`;
-        }
-        
-        const cleanCaption = (post.caption && !post.caption.includes('\${post.caption}')) ? post.caption : '';
-        if (cleanCaption) {
-            item.innerHTML += `<div style="padding: 6px; font-size: 10px; color: var(--text);">${cleanCaption}</div>`;
-        }
-        
-        grid.appendChild(item);
-    });
-};
+.app-card.lecture-mode {
+  background: #000000 !important;
+  --card: #0c0c0c !important;
+  --border: rgba(255, 255, 255, 0.05) !important;
+}
+.app-card.lecture-mode .header-right > *:not(#score),
+.app-card.lecture-mode .match-banner,
+.app-card.lecture-mode #campus-drop-banner,
+.app-card.lecture-mode #uni-duell-container,
+.app-card.lecture-mode .nav-tabs,
+.app-card.lecture-mode .footer-links,
+.app-card.lecture-mode .tab-content-wrapper > *:not(#tab-lecture-mode) {
+  display: none !important;
+}
+
+.lecture-mode-view { display: none; flex-direction: column; height: 100%; padding: 8px 0; }
+.app-card.lecture-mode .lecture-mode-view { display: flex; }
+.lecture-notepad {
+  flex: 1; background: #0c0c0c; border: 1px solid var(--border); border-radius: 14px;
+  padding: 12px; color: #e2e8f0; font-size: 13px; resize: none; font-family: inherit; line-height: 1.5; margin-bottom: 6px;
+}
+.lecture-notepad:focus { border-color: #333; box-shadow: none; }
+
+@keyframes pulseGlow {
+  0% { opacity: 0.8; text-shadow: 0 0 8px rgba(255, 0, 127, 0.6); }
+  50% { opacity: 1; text-shadow: 0 0 20px rgba(255, 0, 127, 1); }
+  100% { opacity: 0.8; text-shadow: 0 0 8px rgba(255, 0, 127, 0.6); }
+}
+
+@media (min-width: 768px) { 
+  .app-card { padding: 16px 20px; } 
+  #tab-profile, #auth-gate > div { max-width: 500px; } 
+}
