@@ -333,7 +333,7 @@ window.loadCampusFeed = async function() {
 
     posts.forEach(post => {
         const item = document.createElement('div');
-        item.className = 'reel-item'; // <--- Korrekte Klasse für das Snap-Scrolling
+        item.className = 'reel-item'; // Korrekte Klasse für das Snap-Scrolling
         
         let mediaHtml = '';
         if (post.media_type === 'video') {
@@ -342,11 +342,14 @@ window.loadCampusFeed = async function() {
             mediaHtml = `<img src="${post.media_url}" class="reel-media" alt="Post">`;
         }
 
+        // Filtert alten fehlerhaften Text '\${post.caption}' aus der Anzeige
+        const cleanCaption = (post.caption && !post.caption.includes('\${post.caption}')) ? post.caption : '';
+
         item.innerHTML = `
             ${mediaHtml}
             <div class="reel-overlay" style="justify-content: flex-end; align-items: flex-start; text-align: left; background: linear-gradient(0deg, rgba(9,13,22,0.9) 0%, rgba(9,13,22,0.2) 60%, transparent 100%);">
                 <div style="font-size: 12px; font-weight: 800; color: #818cf8; margin-bottom: 2px;">👤 ${post.author_email || 'Anonym'}</div>
-                ${post.caption ? `<div style="font-size: 13px; color: #fff; font-weight: 600;">\${post.caption}</div>` : ''}
+                ${cleanCaption ? `<div style="font-size: 13px; color: #fff; font-weight: 600;">\${cleanCaption}</div>` : ''}
             </div>
         `;
         
@@ -383,8 +386,9 @@ window.loadMyProfilePosts = async function() {
             item.innerHTML = `<img src="${post.media_url}" style="width: 100%; height: 100px; object-fit: cover;" alt="Post">`;
         }
         
-        if (post.caption) {
-            item.innerHTML += `<div style="padding: 6px; font-size: 10px; color: var(--text);">${post.caption}</div>`;
+        const cleanCaption = (post.caption && !post.caption.includes('\${post.caption}')) ? post.caption : '';
+        if (cleanCaption) {
+            item.innerHTML += `<div style="padding: 6px; font-size: 10px; color: var(--text);">${cleanCaption}</div>`;
         }
         
         grid.appendChild(item);
