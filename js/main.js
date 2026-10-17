@@ -1,4 +1,4 @@
-// js/main.js - Vollständige angepasste Datei mit Canvas-Standardizer & PC-Mausrad-Snap-Scroll
+// js/main.js - Vollständige angepasste Datei mit Canvas-Standardizer, Modal-Seiten & interaktiver Subnav
 import { _supabase } from './config.js';
 import { state } from './state.js';
 import { changeLanguage } from './i18n.js';
@@ -17,7 +17,7 @@ window.toggleLectureMode = toggleLectureMode;
 window.openProfGuideModal = openProfGuideModal;
 window.closeProfGuideModal = closeProfGuideModal;
 
-// UI Hilfsfunktionen & Modals
+// UI Hilfsfunktionen & Tab-Steuerung
 window.switchTab = function(tabId) {
     document.querySelectorAll('.tab-content').forEach(el => {
         if (!['more-points-modal', 'prof-guide-modal', 'quiz-modal', 'active-spots-modal', 'crush-modal', 'media-upload-modal', 'impressum-modal', 'agb-modal', 'report-modal'].includes(el.id)) {
@@ -35,7 +35,7 @@ window.switchTab = function(tabId) {
         window.loadMyProfilePosts();
     }
     if (tabId === 'reels' && typeof window.loadCampusFeed === 'function') {
-        window.loadCampusFeed();
+        window.loadCampusFeed(state.currentReelFilter || 'foryou');
     }
 };
 
@@ -50,6 +50,7 @@ document.addEventListener('click', () => {
     if (dropdown) dropdown.classList.add('hidden');
 });
 
+// Modals
 window.openActiveSpotsModal = () => document.getElementById('active-spots-modal')?.classList.remove('hidden');
 window.closeActiveSpotsModal = () => document.getElementById('active-spots-modal')?.classList.add('hidden');
 window.openMorePointsModal = () => document.getElementById('more-points-modal')?.classList.remove('hidden');
@@ -57,22 +58,34 @@ window.closeMorePointsModal = () => document.getElementById('more-points-modal')
 window.openCrushModal = () => document.getElementById('crush-modal')?.classList.remove('hidden');
 window.closeCrushModal = () => document.getElementById('crush-modal')?.classList.add('hidden');
 
+// Rechtliche & Melde-Modals (Öffnen sich wie neue Seiten)
 window.openReportModal = () => document.getElementById('report-modal')?.classList.remove('hidden');
-window.submitReport = () => {
-    alert('Vielen Dank. Die Meldung wurde an das Moderatoren-Team weitergeleitet.');
-    document.getElementById('report-modal')?.classList.add('hidden');
-};
-
 window.openImpressumModal = () => document.getElementById('impressum-modal')?.classList.remove('hidden');
 window.openAgbModal = () => document.getElementById('agb-modal')?.classList.remove('hidden');
+
+window.submitReportWithEvidence = async () => {
+    const reason = document.getElementById('report-reason')?.value;
+    const details = document.getElementById('report-details')?.value;
+    const fileInput = document.getElementById('report-screenshot-input');
+    
+    alert(`Meldung eingereicht!\nGrund: ${reason}\nDetails: ${details || 'Keine'}\nScreenshot: ${fileInput?.files[0]?.name || 'Keiner angehängt'}`);
+    
+    document.getElementById('report-modal')?.classList.add('hidden');
+    if(document.getElementById('report-details')) document.getElementById('report-details').value = '';
+    if(fileInput) fileInput.value = '';
+};
 
 window.openCampusQuizModal = () => document.getElementById('quiz-modal')?.classList.remove('hidden');
 window.closeCampusQuizModal = () => document.getElementById('quiz-modal')?.classList.add('hidden');
 
+// Subnav Filter-Logik für "Entdecken", "Für dich" und "Gefolgt"
 window.setReelFilter = function(filterType) {
+    state.currentReelFilter = filterType;
     document.querySelectorAll('.reel-pill').forEach(p => p.classList.remove('active'));
+    
     const pill = document.getElementById('reel-filter-' + filterType);
     if (pill) pill.classList.add('active');
+    
     window.loadCampusFeed(filterType);
 };
 
@@ -202,11 +215,7 @@ window.installPWA = async function() {
     
     if (installAuthBtn) installAuthBtn.classList.add('hidden');
     if (installDropdownBtn) installDropdownBtn.classList.add('hidden');
-});
-
-window.addEventListener('appinstalled', () => {
-    console.log('App wurde erfolgreich auf dem Gerät installiert!');
-});
+};
 
 let selectedMediaFile = null;
 
@@ -357,10 +366,10 @@ window.uploadTrimmedMedia = async function() {
             return;
         }
 
-        alert('Erfolgreich hochgeladen! Dein Beitrag ist jetzt im Feed & Profil sichtbar 🚀');
+        alert('Erfolgreich hochgeladen! Dein Beitrag / deine Confession ist jetzt im Feed sichtbar 🚀');
         window.closeMediaUploadModal();
         
-        if (typeof window.loadCampusFeed === 'function') window.loadCampusFeed('foryou');
+        if (typeof window.loadCampusFeed === 'function') window.loadCampusFeed(state.currentReelFilter || 'foryou');
         if (typeof window.loadMyProfilePosts === 'function') window.loadMyProfilePosts();
 
     } catch (err) {
@@ -375,10 +384,15 @@ window.loadCampusFeed = async function(filter = 'foryou') {
 
     feedList.innerHTML = '<p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;">Lade Campus-Feeds...</p>';
 
-    let query = _supabase.from('media_posts').select('*').order('created_at', { ascending: false });
+    let query = _supabase.from('media_posts').select('*');
 
     if (filter === 'following' && state.currentUserEmail) {
         query = query.eq('author_email', state.currentUserEmail);
+    } else if (filter === 'discover') {
+        // Entdecken sortiert nach Zufall/neuesten
+        query = query.order('created_at', { ascending: false }).limit(20);
+    } else {
+        query = query.order('created_at', { ascending: false });
     }
 
     const { data: posts, error } = await query;
@@ -406,8 +420,8 @@ window.loadCampusFeed = async function(filter = 'foryou') {
         item.innerHTML = `
             ${mediaHtml}
             <div class="reel-overlay" style="justify-content: flex-end; align-items: flex-start; text-align: left; background: linear-gradient(0deg, rgba(9,13,22,0.9) 0%, rgba(9,13,22,0.2) 60%, transparent 100%);">
-                <div style="font-size: 12px; font-weight: 800; color: #818cf8; margin-bottom: 2px;">👤 ${post.author_email || 'Anonym'}</div>
-                ${cleanCaption ? `<div style="font-size: 13px; color: #fff; font-weight: 600;">\${cleanCaption}</div>` : ''}
+                <div style="font-size: 12px; font-weight: 800; color: #818cf8; margin-bottom: 2px;">👤 ${post.author_email || 'Anonyme Confession'}</div>
+                ${cleanCaption ? `<div style="font-size: 13px; color: #fff; font-weight: 600; background: rgba(0,0,0,0.5); padding: 4px 8px; border-radius: 6px;">💬 \${cleanCaption}</div>` : ''}
             </div>
         `;
         
