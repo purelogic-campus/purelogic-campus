@@ -26,7 +26,7 @@
 
 <div class="app-card">
   <div class="header">
-    <div class="logo">PURE LOGIC</div>
+    <div class="logo" onclick="switchTab('reels')" title="Zur Startseite">PURE LOGIC</div>
     <div class="header-right" id="header-right-container">
       <div style="position: relative;">
         <div class="points-badge" id="score" onclick="togglePointsDropdown(event)">0 P</div>
@@ -156,7 +156,6 @@
         </div>
       </div>
 
-      <!-- HIER ANGEPASST: Flex-Layout für sauberes Snap-Scrolling direkt im Container -->
       <div id="tab-reels" class="tab-content" style="display: flex; flex-direction: column; height: 100%; max-height: 100%; overflow: hidden;">
         <div class="reels-subnav">
           <div class="reel-pill" id="reel-filter-discover" onclick="setReelFilter('discover')" data-i18n="subDiscover">🔥 Entdecken</div>
@@ -355,15 +354,16 @@
     </div>
 
     <div class="footer-links">
-      <span onclick="openReportModal()" data-i18n="footerReport">🚨 Inhalt melden</span>
+      <span onclick="openReportModal()">🚨 Inhalt melden</span>
       <span>•</span>
-      <span onclick="openImpressumModal()" data-i18n="footerImpressum">Impressum</span>
+      <span onclick="openImpressumModal()">Impressum</span>
       <span>•</span>
-      <span onclick="openAgbModal()" data-i18n="footerAgb">AGB</span>
+      <span onclick="openAgbModal()">AGB</span>
     </div>
 
   </div>
 
+  <!-- MODALS -->
   <div id="more-points-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.92); z-index: 100;">
     <div style="width: 100%; max-width: 400px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 18px; margin: 10px;">
       <h3 style="margin-bottom: 4px; font-weight: 900; color: var(--primary);" data-i18n="morePointsModalTitle">🎁 Mehr Punkte sammeln</h3>
@@ -496,6 +496,51 @@
       </div>
     </div>
   </div>
+
+  <!-- IMPRESSUM MODAL -->
+  <div id="impressum-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.95); z-index: 200;">
+    <div style="width: 100%; max-width: 440px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 20px; margin: 10px; max-height: 85vh; overflow-y: auto;">
+      <h3 style="margin-bottom: 8px; font-weight: 900; color: var(--primary);">Impressum</h3>
+      <p style="font-size: 12px; color: var(--text-muted); line-height: 1.5; margin-bottom: 14px;">
+        <strong>Pure Logic • GenZ Campus</strong><br>
+        Dienstanbieter & Entwicklung: Domenic Zöchling<br>
+        St. Christophen, Österreich<br>
+        E-Mail: office@pure-logic.at
+      </p>
+      <button class="btn btn-secondary" onclick="document.getElementById('impressum-modal').classList.add('hidden')">Schließen</button>
+    </div>
+  </div>
+
+  <!-- AGB MODAL -->
+  <div id="agb-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.95); z-index: 200;">
+    <div style="width: 100%; max-width: 440px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 20px; margin: 10px; max-height: 85vh; overflow-y: auto;">
+      <h3 style="margin-bottom: 8px; font-weight: 900; color: var(--primary);">AGB & Nutzungsbedingungen</h3>
+      <p style="font-size: 12px; color: var(--text-muted); line-height: 1.5; margin-bottom: 14px;">
+        Durch die Nutzung von Pure Logic GenZ Campus verpflichtest du dich zu einem respektvollen Miteinander. Rassistische, beleidigende oder rechtwidrige Inhalte werden automatisch gefiltert oder durch Moderatoren entfernt. Sämtliche Rechte vorbehalten.
+      </p>
+      <button class="btn btn-secondary" onclick="document.getElementById('agb-modal').classList.add('hidden')">Schließen</button>
+    </div>
+  </div>
+
+  <!-- REPORT MODAL -->
+  <div id="report-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.95); z-index: 200;">
+    <div style="width: 100%; max-width: 400px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 20px; margin: 10px;">
+      <h3 style="margin-bottom: 8px; font-weight: 900; color: var(--accent);">🚨 Inhalt melden</h3>
+      <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">Wähle den Grund für die Meldung:</p>
+      <select id="report-reason" style="margin-bottom: 12px;">
+        <option value="spam">Spam oder Werbung</option>
+        <option value="harassment">Belästigung oder Mobbing</option>
+        <option value="hate">Hassrede oder Diskriminierung</option>
+        <option value="other">Sonstiger Verstoß</option>
+      </select>
+      <textarea id="report-details" rows="3" placeholder="Optionale Details..." style="margin-bottom: 12px; resize: none;"></textarea>
+      <div style="display: flex; gap: 8px;">
+        <button class="btn" onclick="submitReport()" style="margin-top:0; background: var(--accent);">Meldung abschicken</button>
+        <button class="btn btn-secondary" onclick="document.getElementById('report-modal').classList.add('hidden')" style="margin-top:0; width:auto;">Abbrechen</button>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <script type="module" src="js/main.js"></script>

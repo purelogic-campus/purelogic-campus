@@ -17,9 +17,13 @@ window.toggleLectureMode = toggleLectureMode;
 window.openProfGuideModal = openProfGuideModal;
 window.closeProfGuideModal = closeProfGuideModal;
 
-// UI Hilfsfunktionen
+// UI Hilfsfunktionen & Modals
 window.switchTab = function(tabId) {
-    document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+    document.querySelectorAll('.tab-content').forEach(el => {
+        if (!['more-points-modal', 'prof-guide-modal', 'quiz-modal', 'active-spots-modal', 'crush-modal', 'media-upload-modal', 'impressum-modal', 'agb-modal', 'report-modal'].includes(el.id)) {
+            el.classList.add('hidden');
+        }
+    });
     const target = document.getElementById('tab-' + tabId);
     if (target) target.classList.remove('hidden');
 
@@ -52,11 +56,25 @@ window.openMorePointsModal = () => document.getElementById('more-points-modal')?
 window.closeMorePointsModal = () => document.getElementById('more-points-modal')?.classList.add('hidden');
 window.openCrushModal = () => document.getElementById('crush-modal')?.classList.remove('hidden');
 window.closeCrushModal = () => document.getElementById('crush-modal')?.classList.add('hidden');
-window.openReportModal = () => alert('Inhalt melden Modal');
-window.openImpressumModal = () => alert('Impressum: Pure Logic Campus');
-window.openAgbModal = () => alert('AGB: Pure Logic Campus');
+
+window.openReportModal = () => document.getElementById('report-modal')?.classList.remove('hidden');
+window.submitReport = () => {
+    alert('Vielen Dank. Die Meldung wurde an das Moderatoren-Team weitergeleitet.');
+    document.getElementById('report-modal')?.classList.add('hidden');
+};
+
+window.openImpressumModal = () => document.getElementById('impressum-modal')?.classList.remove('hidden');
+window.openAgbModal = () => document.getElementById('agb-modal')?.classList.remove('hidden');
+
 window.openCampusQuizModal = () => document.getElementById('quiz-modal')?.classList.remove('hidden');
 window.closeCampusQuizModal = () => document.getElementById('quiz-modal')?.classList.add('hidden');
+
+window.setReelFilter = function(filterType) {
+    document.querySelectorAll('.reel-pill').forEach(p => p.classList.remove('active'));
+    const pill = document.getElementById('reel-filter-' + filterType);
+    if (pill) pill.classList.add('active');
+    window.loadCampusFeed(filterType);
+};
 
 async function checkAuthSession() {
     try {
@@ -108,7 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initQuiz();
     
     if (typeof window.loadCampusFeed === 'function') {
-        window.loadCampusFeed();
+        window.loadCampusFeed('foryou');
     }
 
     const langSelector = document.getElementById('languageSelect');
@@ -184,7 +202,7 @@ window.installPWA = async function() {
     
     if (installAuthBtn) installAuthBtn.classList.add('hidden');
     if (installDropdownBtn) installDropdownBtn.classList.add('hidden');
-};
+});
 
 window.addEventListener('appinstalled', () => {
     console.log('App wurde erfolgreich auf dem Gerät installiert!');
@@ -342,7 +360,7 @@ window.uploadTrimmedMedia = async function() {
         alert('Erfolgreich hochgeladen! Dein Beitrag ist jetzt im Feed & Profil sichtbar 🚀');
         window.closeMediaUploadModal();
         
-        if (typeof window.loadCampusFeed === 'function') window.loadCampusFeed();
+        if (typeof window.loadCampusFeed === 'function') window.loadCampusFeed('foryou');
         if (typeof window.loadMyProfilePosts === 'function') window.loadMyProfilePosts();
 
     } catch (err) {
@@ -351,16 +369,19 @@ window.uploadTrimmedMedia = async function() {
     }
 };
 
-window.loadCampusFeed = async function() {
+window.loadCampusFeed = async function(filter = 'foryou') {
     const feedList = document.getElementById('reels-list');
     if (!feedList) return;
 
     feedList.innerHTML = '<p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;">Lade Campus-Feeds...</p>';
 
-    const { data: posts, error } = await _supabase
-        .from('media_posts')
-        .select('*')
-        .order('created_at', { ascending: false });
+    let query = _supabase.from('media_posts').select('*').order('created_at', { ascending: false });
+
+    if (filter === 'following' && state.currentUserEmail) {
+        query = query.eq('author_email', state.currentUserEmail);
+    }
+
+    const { data: posts, error } = await query;
 
     if (error || !posts || posts.length === 0) {
         feedList.innerHTML = '<p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;">Noch keine Beiträge im Campus-Feed vorhanden.</p>';
