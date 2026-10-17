@@ -278,7 +278,7 @@ window.uploadTrimmedMedia = async function() {
 
         const mediaUrl = publicURLData.publicUrl;
 
-        // 3. Beitrag in 'media_posts' speichern
+        // 3. Beitrag exakt passend zum Supabase-Schema 'media_posts' speichern
         const { error: dbError } = await _supabase
             .from('media_posts')
             .insert([
@@ -286,7 +286,6 @@ window.uploadTrimmedMedia = async function() {
                     id: crypto.randomUUID(),
                     author_email: state.currentUserEmail || 'student@uni.at', 
                     caption: caption, 
-                    message: caption, 
                     media_url: mediaUrl, 
                     media_type: selectedMediaFile.type.startsWith('video/') ? 'video' : 'image',
                     created_at: new Date().toISOString()
