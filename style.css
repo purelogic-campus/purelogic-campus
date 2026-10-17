@@ -270,30 +270,32 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--p
 }
 .reel-pill.active { background: rgba(99, 102, 241, 0.15); color: #818cf8; }
 
-/* OPTIMIERT FÜR MOBILE TOUCH & DESKTOP SNAP-SCROLL */
+/* FEED CONTAINER MIT MITTIGER RASTUNG (10% VORSCHAU OBEN & UNTEN) */
 .reel-card-wrapper { 
   flex: 1 !important; 
-  height: 100% !important;
+  height: calc(100dvh - 120px) !important;
+  max-height: calc(100dvh - 120px) !important;
   overflow-y: scroll !important; 
   scroll-snap-type: y mandatory !important; 
   -webkit-overflow-scrolling: touch !important; 
   display: flex !important; 
   flex-direction: column !important; 
   gap: 12px !important; 
-  padding: 4px 0 !important; 
+  padding: 10% 0 !important; 
+  margin: 0 !important;
   min-height: 0 !important; 
   touch-action: pan-y !important;
   scroll-behavior: smooth !important;
 }
 
 .reel-item { 
-  scroll-snap-align: start !important; 
+  scroll-snap-align: center !important; 
   scroll-snap-stop: always !important; 
-  height: 100% !important; 
-  min-height: 100% !important; 
-  max-height: 100% !important; 
+  height: 80% !important; 
+  min-height: 80% !important; 
+  max-height: 80% !important; 
   background: #000; 
-  border-radius: 14px !important; 
+  border-radius: 16px !important; 
   border: 1px solid var(--border) !important; 
   position: relative; 
   overflow: hidden; 
@@ -304,20 +306,21 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--p
   width: 100% !important; 
   max-width: 440px !important; 
   margin: 0 auto !important; 
-  flex: 0 0 100% !important; 
-  box-shadow: 0 6px 20px rgba(0,0,0,0.6);
+  flex: 0 0 80% !important; 
+  box-shadow: 0 8px 24px rgba(0,0,0,0.7);
 }
 
 .match-wednesday .reel-item { border-color: rgba(255, 0, 127, 0.4) !important; }
 
+/* BILDER WERDEN NATIV OHNE ABSCHNEIDEN VORBEREITET */
 .reel-media { 
   position: absolute; 
   top: 0; 
   left: 0; 
   width: 100%; 
   height: 100%; 
-  object-fit: cover !important; 
-  background: #000;
+  object-fit: contain !important; 
+  background: #090d16;
   z-index: 1; 
 }
 
@@ -328,13 +331,14 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--p
   width: 100%; 
   height: 100%; 
   z-index: 2; 
-  background: linear-gradient(0deg, rgba(9,13,22,0.85) 0%, rgba(9,13,22,0.1) 60%, transparent 100%); 
+  background: linear-gradient(0deg, rgba(9,13,22,0.9) 0%, rgba(9,13,22,0.1) 60%, transparent 100%); 
   padding: 16px; 
   display: flex; 
   flex-direction: column; 
   align-items: flex-start; 
   justify-content: flex-end; 
   text-align: left; 
+  pointer-events: none;
 }
 
 .footer-links { 
