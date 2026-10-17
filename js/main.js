@@ -1,4 +1,4 @@
-// js/main.js - Vollständige angepasste Datei mit Canvas-Standardizer, Modal-Seiten & interaktiver Subnav
+// js/main.js - Vollständige angepasste Datei mit korrigiertem Live-Laden, Modals & Subnav-Filtern
 import { _supabase } from './config.js';
 import { state } from './state.js';
 import { changeLanguage } from './i18n.js';
@@ -37,6 +37,9 @@ window.switchTab = function(tabId) {
     if (tabId === 'reels' && typeof window.loadCampusFeed === 'function') {
         window.loadCampusFeed(state.currentReelFilter || 'foryou');
     }
+    if (tabId === 'live' && typeof window.loadLiveStreams === 'function') {
+        window.loadLiveStreams();
+    }
 };
 
 window.togglePointsDropdown = function(event) {
@@ -58,7 +61,7 @@ window.closeMorePointsModal = () => document.getElementById('more-points-modal')
 window.openCrushModal = () => document.getElementById('crush-modal')?.classList.remove('hidden');
 window.closeCrushModal = () => document.getElementById('crush-modal')?.classList.add('hidden');
 
-// Rechtliche & Melde-Modals (Öffnen sich wie neue Seiten)
+// Rechtliche & Melde-Modals (Öffnen sich als eigene Seiten)
 window.openReportModal = () => document.getElementById('report-modal')?.classList.remove('hidden');
 window.openImpressumModal = () => document.getElementById('impressum-modal')?.classList.remove('hidden');
 window.openAgbModal = () => document.getElementById('agb-modal')?.classList.remove('hidden');
@@ -87,6 +90,43 @@ window.setReelFilter = function(filterType) {
     if (pill) pill.classList.add('active');
     
     window.loadCampusFeed(filterType);
+};
+
+// Reines Laden der Live-Streams (ohne Vermischung mit Feed-Bildern)
+window.loadLiveStreams = async function() {
+    const liveList = document.getElementById('live-streams-list');
+    if (!liveList) return;
+
+    liveList.innerHTML = '<p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;">Lade Live-Streams...</p>';
+
+    const { data: streams, error } = await _supabase
+        .from('live_events')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+    if (error || !streams || streams.length === 0) {
+        liveList.innerHTML = '<p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;">Aktuell sind keine Live-Streams aktiv.</p>';
+        return;
+    }
+
+    liveList.innerHTML = '';
+
+    streams.forEach(stream => {
+        const item = document.createElement('div');
+        item.className = 'live-card';
+        item.style.cssText = 'background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 14px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 8px;';
+
+        item.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="background: rgba(236,72,153,0.2); color: var(--accent); padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 800;">🔴 ${stream.category || 'Live'}</span>
+                <span style="font-size: 10px; color: var(--text-muted);">📍 ${stream.location || 'Campus'}</span>
+            </div>
+            <div style="font-size: 13px; font-weight: 700; color: #fff;">Stream-ID: ${stream.id.substring(0, 8)}</div>
+            <button class="btn" style="margin-top: 4px; padding: 6px; font-size: 11px;" onclick="alert('Dem Stream beitreten...')">Beitreten 🚀</button>
+        `;
+        
+        liveList.appendChild(item);
+    });
 };
 
 async function checkAuthSession() {
@@ -389,7 +429,6 @@ window.loadCampusFeed = async function(filter = 'foryou') {
     if (filter === 'following' && state.currentUserEmail) {
         query = query.eq('author_email', state.currentUserEmail);
     } else if (filter === 'discover') {
-        // Entdecken sortiert nach Zufall/neuesten
         query = query.order('created_at', { ascending: false }).limit(20);
     } else {
         query = query.order('created_at', { ascending: false });
