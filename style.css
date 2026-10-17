@@ -270,11 +270,11 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--p
 }
 .reel-pill.active { background: rgba(99, 102, 241, 0.15); color: #818cf8; }
 
-/* FEED CONTAINER MIT MITTIGER RASTUNG (10% VORSCHAU OBEN & UNTEN) */
+/* FEED CONTAINER MIT MITTIGER RASTUNG & 10% VORSCHAU OBEN/UNTEN */
 .reel-card-wrapper { 
   flex: 1 !important; 
-  height: calc(100dvh - 120px) !important;
-  max-height: calc(100dvh - 120px) !important;
+  height: calc(100dvh - 140px) !important;
+  max-height: calc(100dvh - 140px) !important;
   overflow-y: scroll !important; 
   scroll-snap-type: y mandatory !important; 
   -webkit-overflow-scrolling: touch !important; 
@@ -312,15 +312,15 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--p
 
 .match-wednesday .reel-item { border-color: rgba(255, 0, 127, 0.4) !important; }
 
-/* BILDER WERDEN NATIV OHNE ABSCHNEIDEN VORBEREITET */
+/* BILDER VOLLSTÄNDIG ANZEIGEN OHNE BESCHNITT */
 .reel-media { 
   position: absolute; 
   top: 0; 
   left: 0; 
-  width: 100%; 
-  height: 100%; 
+  width: 100% !important; 
+  height: 100% !important; 
   object-fit: contain !important; 
-  background: #090d16;
+  background: #000000;
   z-index: 1; 
 }
 
@@ -331,7 +331,7 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--p
   width: 100%; 
   height: 100%; 
   z-index: 2; 
-  background: linear-gradient(0deg, rgba(9,13,22,0.9) 0%, rgba(9,13,22,0.1) 60%, transparent 100%); 
+  background: linear-gradient(0deg, rgba(9,13,22,0.9) 0%, rgba(9,13,22,0.2) 60%, transparent 100%); 
   padding: 16px; 
   display: flex; 
   flex-direction: column; 
