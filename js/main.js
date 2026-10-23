@@ -1,4 +1,4 @@
-// js/main.js - Vollständige angepasste Datei mit Swipe-Live-Streams & Modals
+// js/main.js - Vollständige angepasste Datei mit reinem Live-Swipe-Layout
 import { _supabase } from './config.js';
 import { state } from './state.js';
 import { changeLanguage } from './i18n.js';
@@ -92,12 +92,12 @@ window.setReelFilter = function(filterType) {
     window.loadCampusFeed(filterType);
 };
 
-// Live-Streams im Swipe-Format (gleicher Aufbau wie Reels für den 10%-Ansichtseffekt)
+// Live-Streams im reinen Vollbild-Swipe-Format (Ohne Treffen, Nur echte Live-Streams mit Autoplay-Vorbereitung)
 window.loadLiveStreams = async function() {
     const liveList = document.getElementById('live-streams-list');
     if (!liveList) return;
 
-    liveList.innerHTML = '<p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;">Lade Live-Streams...</p>';
+    liveList.innerHTML = '<p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;">Lade aktive Live-Streams...</p>';
 
     const { data: streams, error } = await _supabase
         .from('live_events')
@@ -113,23 +113,33 @@ window.loadLiveStreams = async function() {
 
     streams.forEach(stream => {
         const item = document.createElement('div');
-        item.className = 'reel-item'; // Nutzt exakt dieselbe CSS-Klasse wie der Feed
+        item.className = 'reel-item'; // Nutzt exakt das TikTok/Reels-Swipe-Layout mit 10% Vorschau
 
         item.innerHTML = `
-            <div style="width: 100%; height: 100%; background: linear-gradient(135deg, #1e1b4b, #311026); display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; text-align: center;">
-                <span style="background: rgba(236,72,153,0.3); color: var(--accent); padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 800; margin-bottom: 10px;">🔴 ${stream.category || 'Live Stream'}</span>
-                <h3 style="font-size: 18px; font-weight: 900; color: #fff; margin-bottom: 6px;">Stream-ID: ${stream.id.substring(0, 8)}</h3>
-                <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">📍 Standort: ${stream.location || 'Campus Wien'}</p>
-                <button class="btn" style="width: auto; padding: 8px 20px; font-size: 12px; font-weight: 800; background: var(--gradient-main);" onclick="alert('Dem Stream beitreten...')">Live Beitreten 🚀</button>
+            <div style="width: 100%; height: 100%; background: linear-gradient(135deg, #111827, #1f2937); display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; text-align: center; position: relative; cursor: pointer;" onclick="openLiveFullscreen('${stream.id}')">
+                <div style="position: absolute; top: 16px; left: 16px; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.5); color: #ef4444; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 800; display: flex; align-items: center; gap: 4px;">
+                    <span style="width: 8px; height: 8px; background: #ef4444; border-radius: 50%; display: inline-block;"></span> LIVE
+                </div>
+                
+                <span style="background: rgba(99,102,241,0.2); color: #818cf8; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 800; margin-bottom: 10px;">${stream.category || '🔴 Live Stream'}</span>
+                <h3 style="font-size: 20px; font-weight: 900; color: #fff; margin-bottom: 6px;">Stream-ID: ${stream.id.substring(0, 8)}</h3>
+                <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">📍 Campus-Standort: ${stream.location || 'Wien'}</p>
+                
+                <button class="btn" style="width: auto; padding: 10px 24px; font-size: 13px; font-weight: 800; background: var(--gradient-main); box-shadow: 0 4px 15px rgba(99,102,241,0.4);" onclick="event.stopPropagation(); openLiveFullscreen('${stream.id}')">Vollbild beitreten 🚀</button>
             </div>
-            <div class="reel-overlay" style="justify-content: flex-end; align-items: flex-start; text-align: left; background: linear-gradient(0deg, rgba(9,13,22,0.9) 0%, transparent 50%);">
-                <div style="font-size: 12px; font-weight: 800; color: #818cf8; margin-bottom: 2px;">🔴 Live-Host / Creator</div>
-                <div style="font-size: 13px; color: #fff; font-weight: 600;">Schalte jetzt ein und chatte live mit!</div>
+            <div class="reel-overlay" style="justify-content: flex-end; align-items: flex-start; text-align: left; background: linear-gradient(0deg, rgba(9,13,22,0.95) 0%, transparent 60%); padding: 16px;">
+                <div style="font-size: 12px; font-weight: 800; color: #818cf8; margin-bottom: 2px;">🔴 Live Host</div>
+                <div style="font-size: 13px; color: #fff; font-weight: 600;">Tippe auf den Stream, um in den Vollbildmodus zu wechseln.</div>
             </div>
         `;
         
         liveList.appendChild(item);
     });
+};
+
+// Live Vollbildmodus öffnen
+window.openLiveFullscreen = function(streamId) {
+    alert(`Öffne Live-Stream ${streamId} im Vollbildmodus...`);
 };
 
 async function checkAuthSession() {
