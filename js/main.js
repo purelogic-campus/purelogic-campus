@@ -1,4 +1,4 @@
-// js/main.js - Vollständige angepasste Datei mit reinem Live-Swipe-Layout
+// js/main.js - Vollständige und fehlerfreie Version
 import { _supabase } from './config.js';
 import { state } from './state.js';
 import { changeLanguage } from './i18n.js';
@@ -25,7 +25,9 @@ window.switchTab = function(tabId) {
         }
     });
     const target = document.getElementById('tab-' + tabId);
-    if (target) target.classList.remove('hidden');
+    if (target) {
+        target.classList.remove('hidden');
+    }
 
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
     const activeBtn = document.getElementById('btn-tab-' + tabId);
@@ -92,7 +94,7 @@ window.setReelFilter = function(filterType) {
     window.loadCampusFeed(filterType);
 };
 
-// Live-Streams im reinen Vollbild-Swipe-Format (Ohne Treffen, Nur echte Live-Streams mit Autoplay-Vorbereitung)
+// Live-Streams im reinen Vollbild-Swipe-Format (Nur aktive Live-Streams)
 window.loadLiveStreams = async function() {
     const liveList = document.getElementById('live-streams-list');
     if (!liveList) return;
@@ -113,7 +115,7 @@ window.loadLiveStreams = async function() {
 
     streams.forEach(stream => {
         const item = document.createElement('div');
-        item.className = 'reel-item'; // Nutzt exakt das TikTok/Reels-Swipe-Layout mit 10% Vorschau
+        item.className = 'reel-item';
 
         item.innerHTML = `
             <div style="width: 100%; height: 100%; background: linear-gradient(135deg, #111827, #1f2937); display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; text-align: center; position: relative; cursor: pointer;" onclick="openLiveFullscreen('${stream.id}')">
@@ -137,7 +139,6 @@ window.loadLiveStreams = async function() {
     });
 };
 
-// Live Vollbildmodus öffnen
 window.openLiveFullscreen = function(streamId) {
     alert(`Öffne Live-Stream ${streamId} im Vollbildmodus...`);
 };
