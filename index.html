@@ -89,7 +89,7 @@
     </div>
   </div>
 
-  <div id="main-app" class="hidden" style="flex: 1; display: flex; flex-direction: column; overflow: hidden; min-height: 0;">
+  <div id="main-app" class="hidden" style="flex: 1; display: flex; flex-direction: column; overflow: hidden; height: 100%; min-height: 0;">
     
     <div id="campus-drop-banner" class="flash-banner-active" style="display:none; width: 100%; background: linear-gradient(135deg, #f59e0b, #ec4899); color: white; padding: 10px 14px; border-radius: 12px; margin-bottom: 6px; text-align: center; cursor: pointer; flex-shrink: 0; border: 2px solid rgba(255, 255, 255, 0.6);" onclick="claimActiveDrop()">
       <div style="font-weight: 900; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; text-shadow: 0 2px 4px rgba(0,0,0,0.2);" id="drop-title-text" data-i18n="flashDropTitle">⚡ FLASH DROP: 50 Extra-Punkte!</div>
@@ -102,9 +102,9 @@
       </button>
     </div>
 
-    <div class="tab-content-wrapper">
+    <div class="tab-content-wrapper" style="flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative;">
       
-      <div id="tab-lecture-mode" class="lecture-mode-view">
+      <div id="tab-lecture-mode" class="lecture-mode-view tab-content hidden">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
           <div>
             <h3 style="font-size: 15px; font-weight: 800; color: #94a3b8;" data-i18n="lectureModeHeader">🎓 Hörsaal-Fokusmodus</h3>
@@ -134,7 +134,8 @@
         </div>
       </div>
 
-      <div id="tab-live" class="tab-content hidden" style="display: flex; flex-direction: column; height: 100%; max-height: 100%; overflow: hidden;">
+      <!-- LIVE TAB: VOLLBILD SWIPE OHNE UNTEREN FEED -->
+      <div id="tab-live" class="tab-content hidden" style="display: flex; flex-direction: column; height: 100%; overflow: hidden; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg);">
         <div class="reels-subnav" style="flex-shrink: 0;">
           <div class="reel-pill" onclick="switchTab('reels')" data-i18n="subDiscover">🔥 Entdecken</div>
           <div class="reel-pill" onclick="switchTab('reels')" data-i18n="subForYou">✨ Für dich</div>
@@ -142,7 +143,7 @@
           <div class="reel-pill active" id="reel-filter-live" data-i18n="tabLive">🔴 Live</div>
         </div>
 
-        <div style="padding: 4px 12px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
+        <div style="padding: 4px 12px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; background: rgba(0,0,0,0.2);">
           <div class="category-group" id="live-filter-group" style="margin: 0; overflow-x: auto;">
             <div class="cat-pill active" onclick="setLiveFilter(this, 'Alle')" data-i18n="liveFilterAll">Alle</div>
             <div class="cat-pill" onclick="setLiveFilter(this, '🎮 Gaming')" data-i18n="liveFilterGaming">🎮 Gaming</div>
@@ -152,25 +153,26 @@
           <button class="btn" id="start-stream-btn" style="width: auto; margin: 0; padding: 4px 10px; font-size: 11px;" onclick="handlePreLiveCheck()" data-i18n="startStreamBtn">+ Start</button>
         </div>
 
-        <div class="reel-card-wrapper" id="live-streams-list">
+        <div class="reel-card-wrapper" id="live-streams-list" style="flex: 1; overflow-y: auto; scroll-snap-type: y mandatory; padding: 10px 0;">
           <p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;" data-i18n="loadingStreams">Lade Live-Streams...</p>
         </div>
       </div>
 
-      <div id="tab-reels" class="tab-content" style="display: flex; flex-direction: column; height: 100%; max-height: 100%; overflow: hidden;">
-        <div class="reels-subnav">
+      <!-- REELS / FEED TAB -->
+      <div id="tab-reels" class="tab-content" style="display: flex; flex-direction: column; height: 100%; overflow: hidden; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg);">
+        <div class="reels-subnav" style="flex-shrink: 0;">
           <div class="reel-pill" id="reel-filter-discover" onclick="setReelFilter('discover')" data-i18n="subDiscover">🔥 Entdecken</div>
           <div class="reel-pill active" id="reel-filter-foryou" onclick="setReelFilter('foryou')" data-i18n="subForYou">✨ Für dich</div>
           <div class="reel-pill" id="reel-filter-following" onclick="setReelFilter('following')" data-i18n="subFollowing">👥 Gefolgt</div>
           <div class="reel-pill" onclick="switchTab('live')" data-i18n="tabLive">🔴 Live</div>
         </div>
 
-        <div class="reel-card-wrapper" id="reels-list">
+        <div class="reel-card-wrapper" id="reels-list" style="flex: 1; overflow-y: auto; scroll-snap-type: y mandatory; padding: 10px 0;">
           <p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;" data-i18n="loadingFeeds">Lade Campus-Feeds...</p>
         </div>
       </div>
 
-      <div id="tab-feed" class="tab-content hidden">
+      <div id="tab-feed" class="tab-content hidden" style="height: 100%; overflow-y: auto;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px; flex-shrink:0;">
           <h3 style="font-size: 16px; font-weight: 800;" data-i18n="meetupsHeader">Spontane Treffen</h3>
           <button class="btn" style="width:auto; margin-top:0; padding: 6px 12px; font-size: 12px;" onclick="toggleModal(true)" data-i18n="createBtn">+ Erstellen</button>
@@ -189,7 +191,7 @@
         </div>
       </div>
 
-      <div id="tab-ranking" class="tab-content hidden">
+      <div id="tab-ranking" class="tab-content hidden" style="height: 100%; overflow-y: auto;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px; flex-shrink:0;">
           <h3 style="font-size: 16px; font-weight: 800;" data-i18n="rankingHeader">🏆 Uni-Duell & Top 100</h3>
           <span style="font-size: 10px; color: var(--text-muted);" data-i18n="rankingReset">Reset So. 23:59</span>
@@ -208,8 +210,8 @@
         </div>
       </div>
 
-      <div id="tab-global" class="tab-content hidden">
-        <div class="chat-container">
+      <div id="tab-global" class="tab-content hidden" style="height: 100%;">
+        <div class="chat-container" style="height: 100%;">
           <div class="messages-list" id="global-chat-list">
             <p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;" data-i18n="loadingChat">Lade Campus-Chat...</p>
           </div>
@@ -220,8 +222,8 @@
         </div>
       </div>
 
-      <div id="tab-inbox" class="tab-content hidden">
-        <div class="chat-container">
+      <div id="tab-inbox" class="tab-content hidden" style="height: 100%;">
+        <div class="chat-container" style="height: 100%;">
           <label style="font-size: 10px; font-weight: 600; color: var(--text-muted); flex-shrink:0;" data-i18n="recipientLabel">Empfänger (E-Mail):</label>
           <input type="email" id="dm-recipient" placeholder="kommilitone@uni.at" data-i18n="recipientPlaceholder" style="margin-bottom: 6px; flex-shrink:0; max-width: 400px;" onchange="loadDirectMessages()">
           
@@ -235,8 +237,8 @@
         </div>
       </div>
 
-      <div id="tab-profile" class="tab-content hidden">
-        <div style="overflow-y: auto; flex: 1; padding-right: 2px; min-height: 0;">
+      <div id="tab-profile" class="tab-content hidden" style="height: 100%;">
+        <div style="overflow-y: auto; flex: 1; padding-right: 2px; min-height: 0; height: 100%;">
           <div class="profile-header-card">
             <div style="display:flex; align-items:center; gap:12px;">
               <img id="my-profile-avatar-preview" class="profile-avatar-lg" src="" onclick="changeAvatarDirectly()" title="Klicken, um das Profilbild zu ändern" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'64\' height=\'64\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%2394a3b8\' stroke-width=\'2\'><path d=\'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2\'></path><circle cx=\'12\' cy=\'7\' r=\'4\'></circle></svg>'" alt="Avatar">
@@ -289,7 +291,7 @@
         </div>
       </div>
 
-      <div id="tab-admin" class="tab-content hidden">
+      <div id="tab-admin" class="tab-content hidden" style="height: 100%; overflow-y: auto;">
         <div style="max-width: 600px; padding-bottom: 20px;">
           <h3 style="font-size: 16px; font-weight: 800; margin-bottom: 4px; color: var(--admin);" data-i18n="adminHeader">⚡ Admin-Interface: Campus-Drops & Test-Tools</h3>
           <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;" data-i18n="adminSub">Verwalte hier Drops und teste dein Punktekonto im Admin-Modus.</p>
@@ -342,7 +344,7 @@
 
     </div>
 
-    <div class="nav-tabs" id="bottom-nav-bar">
+    <div class="nav-tabs" id="bottom-nav-bar" style="flex-shrink: 0;">
       <button class="tab-btn active" onclick="switchTab('reels')" id="btn-tab-reels">📱 Feed</button>
       <button class="tab-btn" onclick="switchTab('feed')" id="btn-tab-feed">💬 Treffen</button>
       
@@ -354,7 +356,7 @@
       <button class="tab-btn" onclick="switchTab('inbox')" id="btn-tab-inbox">📬 Postfach</button>
     </div>
 
-    <div class="footer-links">
+    <div class="footer-links" style="flex-shrink: 0;">
       <span onclick="openReportModal()">🚨 Inhalt melden</span>
       <span>•</span>
       <span onclick="openImpressumModal()">Impressum</span>
