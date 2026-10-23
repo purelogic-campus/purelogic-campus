@@ -134,24 +134,25 @@
         </div>
       </div>
 
-      <div id="tab-live" class="tab-content hidden">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 6px; flex-shrink:0; gap: 6px;">
-          <h3 style="font-size: 16px; font-weight: 800;" data-i18n="liveHeader">🔴 Campus Live & Mods</h3>
-          <div style="display:flex; gap:6px;">
-            <button class="btn btn-secondary" style="width:auto; margin-top:0; padding: 6px 10px; font-size: 11px;" onclick="openStreamHelpModal()" data-i18n="helpBtn">💡 Hilfe</button>
-            <button class="btn" id="start-stream-btn" style="width:auto; margin-top:0; padding: 6px 12px; font-size: 11px;" onclick="handlePreLiveCheck()" data-i18n="startStreamBtn">+ Stream starten</button>
+      <div id="tab-live" class="tab-content hidden" style="display: flex; flex-direction: column; height: 100%; max-height: 100%; overflow: hidden;">
+        <div class="reels-subnav" style="flex-shrink: 0;">
+          <div class="reel-pill" onclick="switchTab('reels')" data-i18n="subDiscover">🔥 Entdecken</div>
+          <div class="reel-pill" onclick="switchTab('reels')" data-i18n="subForYou">✨ Für dich</div>
+          <div class="reel-pill" onclick="switchTab('reels')" data-i18n="subFollowing">👥 Gefolgt</div>
+          <div class="reel-pill active" id="reel-filter-live" data-i18n="tabLive">🔴 Live</div>
+        </div>
+
+        <div style="padding: 4px 12px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
+          <div class="category-group" id="live-filter-group" style="margin: 0; overflow-x: auto;">
+            <div class="cat-pill active" onclick="setLiveFilter(this, 'Alle')" data-i18n="liveFilterAll">Alle</div>
+            <div class="cat-pill" onclick="setLiveFilter(this, '🎮 Gaming')" data-i18n="liveFilterGaming">🎮 Gaming</div>
+            <div class="cat-pill" onclick="setLiveFilter(this, '🎵 Musik')" data-i18n="liveFilterMusic">🎵 Musik</div>
+            <div class="cat-pill" onclick="setLiveFilter(this, '💬 Plaudern')" data-i18n="liveFilterChat">💬 Plaudern</div>
           </div>
+          <button class="btn" id="start-stream-btn" style="width: auto; margin: 0; padding: 4px 10px; font-size: 11px;" onclick="handlePreLiveCheck()" data-i18n="startStreamBtn">+ Start</button>
         </div>
 
-        <div class="category-group" id="live-filter-group">
-          <div class="cat-pill active" onclick="setLiveFilter(this, 'Alle')" data-i18n="liveFilterAll">Alle Live</div>
-          <div class="cat-pill" onclick="setLiveFilter(this, '🎮 Gaming')" data-i18n="liveFilterGaming">🎮 Gaming</div>
-          <div class="cat-pill" onclick="setLiveFilter(this, '🎵 Musik')" data-i18n="liveFilterMusic">🎵 Musik</div>
-          <div class="cat-pill" onclick="setLiveFilter(this, '💬 Plaudern')" data-i18n="liveFilterChat">💬 Plaudern</div>
-          <div class="cat-pill" onclick="setLiveFilter(this, '🔬 Lernen & Wissenschaft')" data-i18n="liveFilterScience">🔬 Lernen & Wissenschaft</div>
-        </div>
-
-        <div id="live-streams-list" style="overflow-y:auto; flex:1;">
+        <div class="reel-card-wrapper" id="live-streams-list">
           <p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;" data-i18n="loadingStreams">Lade Live-Streams...</p>
         </div>
       </div>
@@ -161,7 +162,7 @@
           <div class="reel-pill" id="reel-filter-discover" onclick="setReelFilter('discover')" data-i18n="subDiscover">🔥 Entdecken</div>
           <div class="reel-pill active" id="reel-filter-foryou" onclick="setReelFilter('foryou')" data-i18n="subForYou">✨ Für dich</div>
           <div class="reel-pill" id="reel-filter-following" onclick="setReelFilter('following')" data-i18n="subFollowing">👥 Gefolgt</div>
-          <div class="reel-pill" id="reel-filter-live" onclick="switchTab('live')" data-i18n="tabLive">🔴 Live</div>
+          <div class="reel-pill" onclick="switchTab('live')" data-i18n="tabLive">🔴 Live</div>
         </div>
 
         <div class="reel-card-wrapper" id="reels-list">

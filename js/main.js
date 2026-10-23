@@ -1,4 +1,4 @@
-// js/main.js - Vollständige angepasste Datei mit korrigiertem Live-Laden, Modals & Subnav-Filtern
+// js/main.js - Vollständige angepasste Datei mit Swipe-Live-Streams & Modals
 import { _supabase } from './config.js';
 import { state } from './state.js';
 import { changeLanguage } from './i18n.js';
@@ -61,7 +61,7 @@ window.closeMorePointsModal = () => document.getElementById('more-points-modal')
 window.openCrushModal = () => document.getElementById('crush-modal')?.classList.remove('hidden');
 window.closeCrushModal = () => document.getElementById('crush-modal')?.classList.add('hidden');
 
-// Rechtliche & Melde-Modals (Öffnen sich als eigene Seiten)
+// Rechtliche & Melde-Modals
 window.openReportModal = () => document.getElementById('report-modal')?.classList.remove('hidden');
 window.openImpressumModal = () => document.getElementById('impressum-modal')?.classList.remove('hidden');
 window.openAgbModal = () => document.getElementById('agb-modal')?.classList.remove('hidden');
@@ -92,7 +92,7 @@ window.setReelFilter = function(filterType) {
     window.loadCampusFeed(filterType);
 };
 
-// Reines Laden der Live-Streams (ohne Vermischung mit Feed-Bildern)
+// Live-Streams im Swipe-Format (gleicher Aufbau wie Reels für den 10%-Ansichtseffekt)
 window.loadLiveStreams = async function() {
     const liveList = document.getElementById('live-streams-list');
     if (!liveList) return;
@@ -113,16 +113,19 @@ window.loadLiveStreams = async function() {
 
     streams.forEach(stream => {
         const item = document.createElement('div');
-        item.className = 'live-card';
-        item.style.cssText = 'background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 14px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 8px;';
+        item.className = 'reel-item'; // Nutzt exakt dieselbe CSS-Klasse wie der Feed
 
         item.innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <span style="background: rgba(236,72,153,0.2); color: var(--accent); padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 800;">🔴 ${stream.category || 'Live'}</span>
-                <span style="font-size: 10px; color: var(--text-muted);">📍 ${stream.location || 'Campus'}</span>
+            <div style="width: 100%; height: 100%; background: linear-gradient(135deg, #1e1b4b, #311026); display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; text-align: center;">
+                <span style="background: rgba(236,72,153,0.3); color: var(--accent); padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 800; margin-bottom: 10px;">🔴 ${stream.category || 'Live Stream'}</span>
+                <h3 style="font-size: 18px; font-weight: 900; color: #fff; margin-bottom: 6px;">Stream-ID: ${stream.id.substring(0, 8)}</h3>
+                <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">📍 Standort: ${stream.location || 'Campus Wien'}</p>
+                <button class="btn" style="width: auto; padding: 8px 20px; font-size: 12px; font-weight: 800; background: var(--gradient-main);" onclick="alert('Dem Stream beitreten...')">Live Beitreten 🚀</button>
             </div>
-            <div style="font-size: 13px; font-weight: 700; color: #fff;">Stream-ID: ${stream.id.substring(0, 8)}</div>
-            <button class="btn" style="margin-top: 4px; padding: 6px; font-size: 11px;" onclick="alert('Dem Stream beitreten...')">Beitreten 🚀</button>
+            <div class="reel-overlay" style="justify-content: flex-end; align-items: flex-start; text-align: left; background: linear-gradient(0deg, rgba(9,13,22,0.9) 0%, transparent 50%);">
+                <div style="font-size: 12px; font-weight: 800; color: #818cf8; margin-bottom: 2px;">🔴 Live-Host / Creator</div>
+                <div style="font-size: 13px; color: #fff; font-weight: 600;">Schalte jetzt ein und chatte live mit!</div>
+            </div>
         `;
         
         liveList.appendChild(item);
@@ -454,13 +457,13 @@ window.loadCampusFeed = async function(filter = 'foryou') {
             mediaHtml = `<img src="${post.media_url}" class="reel-media" style="object-fit: contain; width: 100%; height: 100%;" alt="Post">`;
         }
 
-        const cleanCaption = (post.caption && !post.caption.includes('\${post.caption}')) ? post.caption : '';
+        const cleanCaption = (post.caption && !post.caption.includes('${post.caption}')) ? post.caption : '';
 
         item.innerHTML = `
             ${mediaHtml}
             <div class="reel-overlay" style="justify-content: flex-end; align-items: flex-start; text-align: left; background: linear-gradient(0deg, rgba(9,13,22,0.9) 0%, rgba(9,13,22,0.2) 60%, transparent 100%);">
                 <div style="font-size: 12px; font-weight: 800; color: #818cf8; margin-bottom: 2px;">👤 ${post.author_email || 'Anonyme Confession'}</div>
-                ${cleanCaption ? `<div style="font-size: 13px; color: #fff; font-weight: 600; background: rgba(0,0,0,0.5); padding: 4px 8px; border-radius: 6px;">💬 \${cleanCaption}</div>` : ''}
+                ${cleanCaption ? `<div style="font-size: 13px; color: #fff; font-weight: 600; background: rgba(0,0,0,0.5); padding: 4px 8px; border-radius: 6px;">💬 ${cleanCaption}</div>` : ''}
             </div>
         `;
         
@@ -496,7 +499,7 @@ window.loadMyProfilePosts = async function() {
             item.innerHTML = `<img src="${post.media_url}" style="width: 100%; height: 100px; object-fit: contain; background: #000;" alt="Post">`;
         }
         
-        const cleanCaption = (post.caption && !post.caption.includes('\${post.caption}')) ? post.caption : '';
+        const cleanCaption = (post.caption && !post.caption.includes('${post.caption}')) ? post.caption : '';
         if (cleanCaption) {
             item.innerHTML += `<div style="padding: 6px; font-size: 10px; color: var(--text);">${cleanCaption}</div>`;
         }
