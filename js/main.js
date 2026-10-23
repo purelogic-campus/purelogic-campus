@@ -1,4 +1,4 @@
-// js/main.js - Vollständige und fehlerfreie Version
+// js/main.js - Vollständige und optimierte Version
 import { _supabase } from './config.js';
 import { state } from './state.js';
 import { changeLanguage } from './i18n.js';
@@ -20,7 +20,7 @@ window.closeProfGuideModal = closeProfGuideModal;
 // UI Hilfsfunktionen & Tab-Steuerung
 window.switchTab = function(tabId) {
     document.querySelectorAll('.tab-content').forEach(el => {
-        if (!['more-points-modal', 'prof-guide-modal', 'quiz-modal', 'active-spots-modal', 'crush-modal', 'media-upload-modal', 'impressum-modal', 'agb-modal', 'report-modal'].includes(el.id)) {
+        if (!['more-points-modal', 'prof-guide-modal', 'quiz-modal', 'active-spots-modal', 'crush-modal', 'media-upload-modal', 'impressum-modal', 'agb-modal', 'report-modal', 'live-fullscreen-modal'].includes(el.id)) {
             el.classList.add('hidden');
         }
     });
@@ -94,7 +94,7 @@ window.setReelFilter = function(filterType) {
     window.loadCampusFeed(filterType);
 };
 
-// Live-Streams im reinen Vollbild-Swipe-Format (Nur aktive Live-Streams)
+// LIVE TAB: REINER SWIPE-FEED NUR FÜR AKTIVE LIVES (OHNE TREFFEN)
 window.loadLiveStreams = async function() {
     const liveList = document.getElementById('live-streams-list');
     if (!liveList) return;
@@ -115,23 +115,23 @@ window.loadLiveStreams = async function() {
 
     streams.forEach(stream => {
         const item = document.createElement('div');
-        item.className = 'reel-item';
+        item.className = 'reel-item'; // Nutzt exakt dieselbe Snap-Scroll-Logik wie der Hauptfeed
 
         item.innerHTML = `
-            <div style="width: 100%; height: 100%; background: linear-gradient(135deg, #111827, #1f2937); display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; text-align: center; position: relative; cursor: pointer;" onclick="openLiveFullscreen('${stream.id}')">
+            <div style="width: 100%; height: 100%; background: linear-gradient(135deg, #0f172a, #1e1b4b); display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; text-align: center; position: relative; cursor: pointer;" onclick="openLiveFullscreen('${stream.id}', '${stream.category || 'Live'}', '${stream.location || 'Wien'}')">
                 <div style="position: absolute; top: 16px; left: 16px; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.5); color: #ef4444; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 800; display: flex; align-items: center; gap: 4px;">
-                    <span style="width: 8px; height: 8px; background: #ef4444; border-radius: 50%; display: inline-block;"></span> LIVE
+                    <span style="width: 8px; height: 8px; background: #ef4444; border-radius: 50%; display: inline-block; animation: pulseGlow 1s infinite;"></span> LIVE
                 </div>
                 
                 <span style="background: rgba(99,102,241,0.2); color: #818cf8; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 800; margin-bottom: 10px;">${stream.category || '🔴 Live Stream'}</span>
-                <h3 style="font-size: 20px; font-weight: 900; color: #fff; margin-bottom: 6px;">Stream-ID: ${stream.id.substring(0, 8)}</h3>
-                <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">📍 Campus-Standort: ${stream.location || 'Wien'}</p>
+                <h3 style="font-size: 22px; font-weight: 900; color: #fff; margin-bottom: 6px;">Campus Live # ${stream.id.substring(0, 4)}</h3>
+                <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">📍 Standort: ${stream.location || 'Wien'}</p>
                 
-                <button class="btn" style="width: auto; padding: 10px 24px; font-size: 13px; font-weight: 800; background: var(--gradient-main); box-shadow: 0 4px 15px rgba(99,102,241,0.4);" onclick="event.stopPropagation(); openLiveFullscreen('${stream.id}')">Vollbild beitreten 🚀</button>
+                <button class="btn" style="width: auto; padding: 10px 24px; font-size: 13px; font-weight: 800; background: var(--gradient-main); box-shadow: 0 4px 15px rgba(99,102,241,0.4);" onclick="event.stopPropagation(); openLiveFullscreen('${stream.id}', '${stream.category || 'Live'}', '${stream.location || 'Wien'}')">Vollbild beitreten & Chatten 🚀</button>
             </div>
             <div class="reel-overlay" style="justify-content: flex-end; align-items: flex-start; text-align: left; background: linear-gradient(0deg, rgba(9,13,22,0.95) 0%, transparent 60%); padding: 16px;">
-                <div style="font-size: 12px; font-weight: 800; color: #818cf8; margin-bottom: 2px;">🔴 Live Host</div>
-                <div style="font-size: 13px; color: #fff; font-weight: 600;">Tippe auf den Stream, um in den Vollbildmodus zu wechseln.</div>
+                <div style="font-size: 12px; font-weight: 800; color: #818cf8; margin-bottom: 2px;">🔴 Live Broadcast</div>
+                <div style="font-size: 13px; color: #fff; font-weight: 600;">Wische für den nächsten Stream oder tippe zum Beitreten.</div>
             </div>
         `;
         
@@ -139,8 +139,40 @@ window.loadLiveStreams = async function() {
     });
 };
 
-window.openLiveFullscreen = function(streamId) {
-    alert(`Öffne Live-Stream ${streamId} im Vollbildmodus...`);
+// VOLLBILD LIVE MIT INTERAKTIVEM CHAT
+window.openLiveFullscreen = function(streamId, category, location) {
+    const modal = document.getElementById('live-fullscreen-modal');
+    if (modal) modal.classList.remove('hidden');
+
+    const titleDisplay = document.getElementById('active-live-title-display');
+    const hostDisplay = document.getElementById('active-live-host-display');
+    if (titleDisplay) titleDisplay.textContent = `🔴 ${category}`;
+    if (hostDisplay) hostDisplay.textContent = `Standort: ${location} | Stream-ID: ${streamId.substring(0, 8)}`;
+
+    const chatList = document.getElementById('live-chat-messages');
+    if (chatList) {
+        chatList.innerHTML = `<div style="color: var(--text-muted); text-align: center;">Verbunden mit Live-Stream ${streamId.substring(0, 6)}... Schreib eine Nachricht!</div>`;
+    }
+};
+
+window.closeLiveFullscreen = function() {
+    const modal = document.getElementById('live-fullscreen-modal');
+    if (modal) modal.classList.add('hidden');
+};
+
+window.sendLiveChatMessage = function() {
+    const input = document.getElementById('live-chat-input');
+    const chatList = document.getElementById('live-chat-messages');
+    if (!input || !input.value.trim() || !chatList) return;
+
+    const msgText = input.value.trim();
+    const msgDiv = document.createElement('div');
+    msgDiv.style.cssText = 'background: rgba(255,255,255,0.08); padding: 6px 10px; border-radius: 8px; font-size: 11px;';
+    msgDiv.innerHTML = `<strong style="color: #818cf8;">Du:</strong> ${msgText}`;
+    
+    chatList.appendChild(msgDiv);
+    chatList.scrollTop = chatList.scrollHeight;
+    input.value = '';
 };
 
 async function checkAuthSession() {

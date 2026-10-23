@@ -134,7 +134,7 @@
         </div>
       </div>
 
-      <!-- LIVE TAB: VOLLBILD SWIPE OHNE UNTEREN FEED -->
+      <!-- LIVE TAB: VOLLBILD SWIPE OHNE UNTEREN FEED & OHNE TREFFEN -->
       <div id="tab-live" class="tab-content hidden" style="display: flex; flex-direction: column; height: 100%; overflow: hidden; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg);">
         <div class="reels-subnav" style="flex-shrink: 0;">
           <div class="reel-pill" onclick="switchTab('reels')" data-i18n="subDiscover">🔥 Entdecken</div>
@@ -154,7 +154,7 @@
         </div>
 
         <div class="reel-card-wrapper" id="live-streams-list" style="flex: 1; overflow-y: auto; scroll-snap-type: y mandatory; padding: 10px 0;">
-          <p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;" data-i18n="loadingStreams">Lade Live-Streams...</p>
+          <p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;" data-i18n="loadingStreams">Lade aktive Live-Streams...</p>
         </div>
       </div>
 
@@ -364,6 +364,31 @@
       <span onclick="openAgbModal()">AGB</span>
     </div>
 
+  </div>
+
+  <!-- LIVE VOLLBILD MODAL MIT CHAT OVERLAY -->
+  <div id="live-fullscreen-modal" class="hidden tab-content" style="position: absolute; top:0; left:0; width:100%; height:100%; background: #000; z-index: 200; display: flex; flex-direction: column;">
+    <div style="position: absolute; top: 12px; right: 12px; z-index: 210;">
+      <button class="btn btn-secondary" onclick="closeLiveFullscreen()" style="padding: 6px 12px; font-size: 11px; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.2);">✕ Schließen</button>
+    </div>
+    
+    <div style="flex: 1; position: relative; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #090d16, #1e1b4b);">
+      <div id="live-stream-player-container" style="width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 20px;">
+        <span style="background: rgba(239,68,68,0.2); border: 1px solid rgba(239,68,68,0.5); color: #ef4444; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 800; margin-bottom: 12px;">🔴 LIVE BROADCAST</span>
+        <h3 id="active-live-title-display" style="font-size: 22px; font-weight: 900; color: #fff; margin-bottom: 6px;">🔴 Live Stream</h3>
+        <p id="active-live-host-display" style="font-size: 12px; color: var(--text-muted);">Host: lade...</p>
+      </div>
+
+      <div style="position: absolute; bottom: 0; left: 0; width: 100%; height: 50%; background: linear-gradient(0deg, rgba(9,13,22,0.98) 0%, rgba(9,13,22,0.7) 70%, transparent 100%); display: flex; flex-direction: column; padding: 12px; box-sizing: border-box;">
+        <div id="live-chat-messages" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; font-size: 12px; padding-right: 4px;">
+          <div style="color: var(--text-muted); text-align: center;">Willkommen im Live-Chat! 💬</div>
+        </div>
+        <div style="display: flex; gap: 6px;">
+          <input type="text" id="live-chat-input" placeholder="Nachricht an Creator..." style="margin: 0; font-size: 11px; padding: 8px 10px;" onkeydown="if(event.key==='Enter') sendLiveChatMessage()">
+          <button class="btn" style="width: auto; margin: 0; padding: 0 14px; font-size: 11px; font-weight: 800;" onclick="sendLiveChatMessage()">Senden</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- MODALS / SEITEN-OVERLAYS -->
