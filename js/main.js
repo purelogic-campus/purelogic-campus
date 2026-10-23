@@ -1,4 +1,4 @@
-// js/main.js - Vollständige und optimierte Version
+// js/main.js - Vollständige und fehlerfreie Version
 import { _supabase } from './config.js';
 import { state } from './state.js';
 import { changeLanguage } from './i18n.js';
@@ -17,7 +17,7 @@ window.toggleLectureMode = toggleLectureMode;
 window.openProfGuideModal = openProfGuideModal;
 window.closeProfGuideModal = closeProfGuideModal;
 
-// UI Hilfsfunktionen & Tab-Steuerung
+// UI Hilfsfunktionen & Tab-Steuerung (Korrigiert für Live-Tab)
 window.switchTab = function(tabId) {
     document.querySelectorAll('.tab-content').forEach(el => {
         if (!['more-points-modal', 'prof-guide-modal', 'quiz-modal', 'active-spots-modal', 'crush-modal', 'media-upload-modal', 'impressum-modal', 'agb-modal', 'report-modal', 'live-fullscreen-modal'].includes(el.id)) {
@@ -27,6 +27,10 @@ window.switchTab = function(tabId) {
     const target = document.getElementById('tab-' + tabId);
     if (target) {
         target.classList.remove('hidden');
+        // Falls es sich um den Live-Tab handelt, direkt die Streams laden
+        if (tabId === 'live' && typeof window.loadLiveStreams === 'function') {
+            window.loadLiveStreams();
+        }
     }
 
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
@@ -38,9 +42,6 @@ window.switchTab = function(tabId) {
     }
     if (tabId === 'reels' && typeof window.loadCampusFeed === 'function') {
         window.loadCampusFeed(state.currentReelFilter || 'foryou');
-    }
-    if (tabId === 'live' && typeof window.loadLiveStreams === 'function') {
-        window.loadLiveStreams();
     }
 };
 
@@ -115,7 +116,7 @@ window.loadLiveStreams = async function() {
 
     streams.forEach(stream => {
         const item = document.createElement('div');
-        item.className = 'reel-item'; // Nutzt exakt dieselbe Snap-Scroll-Logik wie der Hauptfeed
+        item.className = 'reel-item';
 
         item.innerHTML = `
             <div style="width: 100%; height: 100%; background: linear-gradient(135deg, #0f172a, #1e1b4b); display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; text-align: center; position: relative; cursor: pointer;" onclick="openLiveFullscreen('${stream.id}', '${stream.category || 'Live'}', '${stream.location || 'Wien'}')">
