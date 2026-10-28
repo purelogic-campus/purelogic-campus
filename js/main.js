@@ -27,7 +27,7 @@ window.switchTab = function(tabId) {
     const target = document.getElementById('tab-' + tabId);
     if (target) {
         target.classList.remove('hidden');
-        // Falls es sich um den Live-Tab handelt, direkt die Streams laden
+        // Falls es sich um den Live-Tab handelt, direkt die echten Live-Streams laden
         if (tabId === 'live' && typeof window.loadLiveStreams === 'function') {
             window.loadLiveStreams();
         }
@@ -95,7 +95,7 @@ window.setReelFilter = function(filterType) {
     window.loadCampusFeed(filterType);
 };
 
-// LIVE TAB: REINER SWIPE-FEED NUR FÜR AKTIVE LIVES (OHNE TREFFEN)
+// LIVE TAB: REINER SWIPE-FEED NUR FÜR AKTIVE LIVES (Aus der Tabelle live_events)
 window.loadLiveStreams = async function() {
     const liveList = document.getElementById('live-streams-list');
     if (!liveList) return;

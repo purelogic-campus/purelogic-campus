@@ -134,7 +134,7 @@
         </div>
       </div>
 
-      <!-- LIVE TAB: VOLLBILD REINER LIVE FEED -->
+      <!-- LIVE TAB (Exklusiv für live_events) -->
       <div id="tab-live" class="tab-content hidden" style="display: flex; flex-direction: column; height: 100%; overflow: hidden; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg); z-index: 10;">
         <div class="reels-subnav" style="flex-shrink: 0;">
           <div class="reel-pill" onclick="switchTab('reels')">🔥 Entdecken</div>
@@ -344,9 +344,9 @@
 
     </div>
 
+    <!-- KORRIGIERTE UNTERE LEISTE (OHNE LIVE-BUTTON) -->
     <div class="nav-tabs" id="bottom-nav-bar" style="flex-shrink: 0;">
       <button class="tab-btn active" onclick="switchTab('reels')" id="btn-tab-reels">📱 Feed</button>
-      <button class="tab-btn" onclick="switchTab('live')" id="btn-tab-live">🔴 Live</button>
       <button class="tab-btn" onclick="switchTab('feed')" id="btn-tab-feed">💬 Treffen</button>
       
       <div class="tab-btn-action-container">
@@ -367,7 +367,7 @@
 
   </div>
 
-  <!-- LIVE VOLLBILD MODAL MIT CHAT OVERLAY -->
+  <!-- LIVE VOLLBILD MODAL -->
   <div id="live-fullscreen-modal" class="hidden tab-content" style="position: absolute; top:0; left:0; width:100%; height:100%; background: #000; z-index: 200; display: flex; flex-direction: column;">
     <div style="position: absolute; top: 12px; right: 12px; z-index: 210;">
       <button class="btn btn-secondary" onclick="closeLiveFullscreen()" style="padding: 6px 12px; font-size: 11px; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.2);">✕ Schließen</button>
@@ -392,7 +392,7 @@
     </div>
   </div>
 
-  <!-- MODALS / SEITEN-OVERLAYS -->
+  <!-- MODALS -->
   <div id="more-points-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.92); z-index: 100;">
     <div style="width: 100%; max-width: 400px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 18px; margin: 10px;">
       <h3 style="margin-bottom: 4px; font-weight: 900; color: var(--primary);">🎁 Mehr Punkte sammeln</h3>
@@ -495,7 +495,7 @@
       <h3 style="margin-bottom: 4px; font-weight: 900; color: var(--accent);">💖 Anonymes Crush Radar</h3>
       <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px; line-height: 1.4;">Trage deinen Campus-Crush ein. Bei gegenseitigem Match gibt es ein Blind-Date!</p>
       <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Crush (E-Mail oder @handle):</label>
-      <input type="text" id="crush-target-input" placeholder="crush@uni.at oder @username">
+      <input type="text" id="crush-target-input" placeholder="crush@uni.at ou @username">
       <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Geheimer Hinweis (optional):</label>
       <input type="text" id="crush-hint-input" placeholder="z.b. Bib Reihe 4...">
       <button class="btn" onclick="submitCrush()">Abschicken & Hoffen 💘</button>
