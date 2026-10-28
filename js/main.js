@@ -17,7 +17,7 @@ window.toggleLectureMode = toggleLectureMode;
 window.openProfGuideModal = openProfGuideModal;
 window.closeProfGuideModal = closeProfGuideModal;
 
-// UI Hilfsfunktionen & Tab-Steuerung (Korrigiert für Live-Tab)
+// UI Hilfsfunktionen & Tab-Steuerung
 window.switchTab = function(tabId) {
     document.querySelectorAll('.tab-content').forEach(el => {
         if (!['more-points-modal', 'prof-guide-modal', 'quiz-modal', 'active-spots-modal', 'crush-modal', 'media-upload-modal', 'impressum-modal', 'agb-modal', 'report-modal', 'live-fullscreen-modal'].includes(el.id)) {
@@ -95,15 +95,16 @@ window.setReelFilter = function(filterType) {
     window.loadCampusFeed(filterType);
 };
 
-// LIVE TAB: REINER SWIPE-FEED NUR FÜR AKTIVE LIVES (Aus der Tabelle live_events)
+// LIVE TAB: LÄDT EXKLUSIV NUR AUS DER TABELLE 'live_streams'
 window.loadLiveStreams = async function() {
     const liveList = document.getElementById('live-streams-list');
     if (!liveList) return;
 
     liveList.innerHTML = '<p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;">Lade aktive Live-Streams...</p>';
 
+    // Abfrage geht strikt an die Live-Streams-Tabelle
     const { data: streams, error } = await _supabase
-        .from('live_events')
+        .from('live_streams')
         .select('*')
         .order('created_at', { ascending: false });
 
@@ -118,23 +119,20 @@ window.loadLiveStreams = async function() {
         const item = document.createElement('div');
         item.className = 'reel-item';
 
-        // Bereinigung, falls location fälschlicherweise der Kategoriename ist
-        let displayLocation = stream.location || 'Wien';
-        if (displayLocation === stream.category) {
-            displayLocation = 'Campus Hauptuni / Wien';
-        }
+        const category = stream.category || stream.title || 'Live Stream';
+        const location = stream.location || 'Wien / Campus';
 
         item.innerHTML = `
-            <div style="width: 100%; height: 100%; background: linear-gradient(135deg, #0f172a, #1e1b4b); display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; text-align: center; position: relative; cursor: pointer;" onclick="openLiveFullscreen('${stream.id}', '${stream.category || 'Live'}', '${displayLocation}')">
+            <div style="width: 100%; height: 100%; background: linear-gradient(135deg, #0f172a, #1e1b4b); display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; text-align: center; position: relative; cursor: pointer;" onclick="openLiveFullscreen('${stream.id}', '${category}', '${location}')">
                 <div style="position: absolute; top: 16px; left: 16px; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.5); color: #ef4444; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 800; display: flex; align-items: center; gap: 4px;">
                     <span style="width: 8px; height: 8px; background: #ef4444; border-radius: 50%; display: inline-block; animation: pulseGlow 1s infinite;"></span> LIVE
                 </div>
                 
-                <span style="background: rgba(99,102,241,0.2); color: #818cf8; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 800; margin-bottom: 10px;">${stream.category || '🔴 Live Stream'}</span>
+                <span style="background: rgba(99,102,241,0.2); color: #818cf8; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 800; margin-bottom: 10px;">${category}</span>
                 <h3 style="font-size: 22px; font-weight: 900; color: #fff; margin-bottom: 6px;">Campus Stream # ${stream.id.substring(0, 4)}</h3>
-                <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">📍 ${displayLocation}</p>
+                <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">📍 ${location}</p>
                 
-                <button class="btn" style="width: auto; padding: 10px 24px; font-size: 13px; font-weight: 800; background: var(--gradient-main); box-shadow: 0 4px 15px rgba(99,102,241,0.4);" onclick="event.stopPropagation(); openLiveFullscreen('${stream.id}', '${stream.category || 'Live'}', '${displayLocation}')">Vollbild beitreten & Chatten 🚀</button>
+                <button class="btn" style="width: auto; padding: 10px 24px; font-size: 13px; font-weight: 800; background: var(--gradient-main); box-shadow: 0 4px 15px rgba(99,102,241,0.4);" onclick="event.stopPropagation(); openLiveFullscreen('${stream.id}', '${category}', '${location}')">Vollbild beitreten & Chatten 🚀</button>
             </div>
             <div class="reel-overlay" style="justify-content: flex-end; align-items: flex-start; text-align: left; background: linear-gradient(0deg, rgba(9,13,22,0.95) 0%, transparent 60%); padding: 16px;">
                 <div style="font-size: 12px; font-weight: 800; color: #818cf8; margin-bottom: 2px;">🔴 Live Broadcast</div>
@@ -546,7 +544,7 @@ window.loadMyProfilePosts = async function() {
         if (post.media_type === 'video') {
             item.innerHTML = `<video src="${post.media_url}" controls style="width: 100%; height: 100px; object-fit: contain; background: #000;"></video>`;
         } else {
-            item.innerHTML = `<img src="${post.media_url}" style="width: 100% ; height: 100px; object-fit: contain; background: #000;" alt="Post">`;
+            item.innerHTML = `<img src="${post.media_url}" style="width: 100%; height: 100px; object-fit: contain; background: #000;" alt="Post">`;
         }
         
         const cleanCaption = (post.caption && !post.caption.includes('${post.caption}')) ? post.caption : '';
