@@ -512,17 +512,49 @@ input:focus, select:focus, textarea:focus {
 }
 
 /* ==========================================================================
-   GROSSER, RUNDER PLUS-BUTTON & GROSSE LINKE SIDEBAR (ab 768px)
+   DER IKONISCHE, GROSSE PLUS-BUTTON (ZENTRIERT & ÜBERLAPPEND IN DEN FEED)
    ========================================================================== */
+.tab-btn-action-container {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 60;
+  pointer-events: auto;
+}
+
+.tab-btn-action {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  background: var(--gradient-main);
+  color: #fff;
+  border: 4px solid var(--card);
+  font-size: 36px;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 8px 30px rgba(99, 102, 241, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.tab-btn-action:hover {
+  transform: scale(1.12);
+  box-shadow: 0 10px 35px rgba(236, 72, 153, 0.95);
+}
+
 @media (min-width: 768px) {
   #main-app:not(.hidden) {
     display: grid !important;
     grid-template-columns: 260px 1fr;
     grid-template-rows: 1fr auto;
     height: 100%;
+    position: relative;
   }
 
-  /* Linke Sidebar: Große, gut lesbare Schrift & Symbole, die den Container ausfüllen */
+  /* Linke Sidebar: Große, gut lesbare Schrift & Symbole */
   #main-app:not(.hidden) .nav-tabs {
     grid-column: 1;
     grid-row: 1 / span 2;
@@ -560,36 +592,13 @@ input:focus, select:focus, textarea:focus {
     color: var(--primary);
   }
 
-  /* Der große, kreisrunde Plus-Button in der Mitte / am Ende der Sidebar */
+  /* Der Plus-Button sitzt jetzt absolut zentriert am unteren Rand des Feed-Fensters und überlappt in den Feed wie am Smartphone */
   #main-app:not(.hidden) .tab-btn-action-container {
-    margin-top: auto;
-    margin-bottom: 16px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 100%;
-  }
-
-  #main-app:not(.hidden) .tab-btn-action {
-    width: 64px;
-    height: 64px;
-    border-radius: 50%;
-    background: var(--gradient-main);
-    color: #fff;
-    border: none;
-    font-size: 32px;
-    font-weight: 900;
-    cursor: pointer;
-    box-shadow: 0 6px 25px rgba(99, 102, 241, 0.7);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: transform 0.2s, box-shadow 0.2s;
-  }
-
-  #main-app:not(.hidden) .tab-btn-action:hover {
-    transform: scale(1.1);
-    box-shadow: 0 8px 30px rgba(236, 72, 153, 0.9);
+    position: absolute;
+    bottom: 50px;
+    left: calc(260px + (100% - 260px) / 2);
+    transform: translateX(-50%);
+    margin: 0;
   }
 
   /* Mittlerer Feed-Bereich */
@@ -598,6 +607,7 @@ input:focus, select:focus, textarea:focus {
     grid-row: 1;
     border-right: none;
     height: 100%;
+    position: relative;
   }
 
   /* Footer unten rechts */
