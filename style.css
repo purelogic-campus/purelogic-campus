@@ -69,7 +69,6 @@ body {
   letter-spacing: -0.5px;
 }
 
-/* Obere Leiste: Icons links vom Text, Buttons passen sich an Textlänge an */
 .header-right {
   display: flex;
   align-items: center;
@@ -209,7 +208,7 @@ body {
   letter-spacing: 0.3px;
 }
 
-/* PERFEKT ZENTRIERTES & VERGRÖSSERTES LOGIN-FENSTER */
+/* AUTH GATE */
 .auth-gate-container {
   display: flex;
   justify-content: center;
@@ -512,7 +511,7 @@ input:focus, select:focus, textarea:focus {
 }
 
 /* ==========================================================================
-   DER IKONISCHE, GROSSE PLUS-BUTTON (ZENTRIERT & ÜBERLAPPEND IN DEN FEED)
+   PERFEKT ZENTRIERTER, 15% GRÖSSERER PLUS-BUTTON (EXAKT MITTIG)
    ========================================================================== */
 .tab-btn-action-container {
   position: absolute;
@@ -524,24 +523,27 @@ input:focus, select:focus, textarea:focus {
 }
 
 .tab-btn-action {
-  width: 68px;
-  height: 68px;
+  width: 80px;
+  height: 80px;
   border-radius: 50%;
   background: var(--gradient-main);
   color: #fff;
   border: 4px solid var(--card);
-  font-size: 36px;
+  font-size: 42px;
+  line-height: 1;
   font-weight: 900;
   cursor: pointer;
   box-shadow: 0 8px 30px rgba(99, 102, 241, 0.8);
   display: flex;
   align-items: center;
   justify-content: center;
+  text-align: center;
+  padding-bottom: 4px; /* Optischer Ausgleich fürs Plus-Zeichen */
   transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .tab-btn-action:hover {
-  transform: scale(1.12);
+  transform: scale(1.1);
   box-shadow: 0 10px 35px rgba(236, 72, 153, 0.95);
 }
 
@@ -592,7 +594,7 @@ input:focus, select:focus, textarea:focus {
     color: var(--primary);
   }
 
-  /* Der Plus-Button sitzt jetzt absolut zentriert am unteren Rand des Feed-Fensters und überlappt in den Feed wie am Smartphone */
+  /* Plus-Button exakt im Zentrum der unteren Feed-Kante */
   #main-app:not(.hidden) .tab-btn-action-container {
     position: absolute;
     bottom: 50px;
