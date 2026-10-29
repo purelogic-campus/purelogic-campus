@@ -96,12 +96,6 @@ body {
   background: var(--card-hover);
 }
 
-.uni-duell-header-btn {
-  background: var(--gradient-main) !important;
-  color: #fff !important;
-  border: none !important;
-}
-
 .points-badge {
   background: rgba(99, 102, 241, 0.2);
   border: 1px solid rgba(99, 102, 241, 0.4);
@@ -195,7 +189,20 @@ body {
   outline: none;
 }
 
-/* Banner */
+/* Uni-Duell Banner & Match Banner (exakt selbe Größe und Länge) */
+.uni-duell-banner {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  text-align: center;
+  padding: 6px 10px;
+  cursor: pointer;
+  flex-shrink: 0;
+  letter-spacing: 0.3px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
 .match-banner {
   background: linear-gradient(135deg, #ec4899, #8b5cf6);
   color: #fff;
@@ -511,7 +518,7 @@ input:focus, select:focus, textarea:focus {
 }
 
 /* ==========================================================================
-   PERFEKT ZENTRIERTER, 15% GRÖSSERER PLUS-BUTTON (EXAKT MITTIG)
+   PERFEKT ZENTRIERTER, GROSSER PLUS-BUTTON (EXAKT MITTIG)
    ========================================================================== */
 .tab-btn-action-container {
   position: absolute;
@@ -538,7 +545,7 @@ input:focus, select:focus, textarea:focus {
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding-bottom: 4px; /* Optischer Ausgleich fürs Plus-Zeichen */
+  padding-bottom: 4px;
   transition: transform 0.2s, box-shadow 0.2s;
 }
 
@@ -556,7 +563,7 @@ input:focus, select:focus, textarea:focus {
     position: relative;
   }
 
-  /* Linke Sidebar: Große, gut lesbare Schrift & Symbole */
+  /* Linke Sidebar */
   #main-app:not(.hidden) .nav-tabs {
     grid-column: 1;
     grid-row: 1 / span 2;
@@ -594,7 +601,7 @@ input:focus, select:focus, textarea:focus {
     color: var(--primary);
   }
 
-  /* Plus-Button exakt im Zentrum der unteren Feed-Kante */
+  /* Plus-Button exakt zentriert am unteren Rand des Feed-Fensters */
   #main-app:not(.hidden) .tab-btn-action-container {
     position: absolute;
     bottom: 50px;
