@@ -199,8 +199,36 @@ body {
   letter-spacing: 0.3px;
 }
 
-/* Auth Gate & Formulare */
-.auth-gate-container, .tab-content {
+/* ==========================================================================
+   PERFEKT ZENTRIERTES & VERGRÖSSERTES LOGIN-FENSTER (AUTH GATE)
+   ========================================================================== */
+.auth-gate-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  background: var(--bg);
+  z-index: 100;
+  padding: 20px;
+}
+
+/* Die Login-Box ist hier exakt zentriert und um ca. 10% größer (420px max-width) */
+.auth-gate-container > div {
+  width: 100%;
+  max-width: 420px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 28px;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.7);
+  box-sizing: border-box;
+}
+
+.tab-content {
   display: flex;
   flex-direction: column;
   width: 100%;
@@ -213,8 +241,8 @@ body {
 .msg-box {
   padding: 10px;
   border-radius: 8px;
-  font-size: 11px;
-  margin-bottom: 10px;
+  font-size: 12px;
+  margin-bottom: 12px;
 }
 
 .password-container {
@@ -225,19 +253,19 @@ body {
 
 .password-toggle {
   position: absolute;
-  right: 10px;
+  right: 12px;
   background: transparent;
   border: none;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 16px;
 }
 
 .forgot-password {
   display: block;
-  font-size: 11px;
+  font-size: 12px;
   color: #818cf8;
   text-align: right;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
   cursor: pointer;
 }
 
@@ -245,7 +273,7 @@ body {
   text-decoration: underline;
 }
 
-/* Inputs & Buttons */
+/* Inputs & Buttons (etwas angenehmer dimensioniert für das größere Login-Fenster) */
 input[type="text"],
 input[type="email"],
 input[type="password"],
@@ -254,14 +282,14 @@ input[type="datetime-local"],
 select,
 textarea {
   width: 100%;
-  background: var(--card);
+  background: rgba(255, 255, 255, 0.03);
   border: 1px solid var(--border);
   color: var(--text);
-  padding: 10px 14px;
+  padding: 12px 16px;
   border-radius: 12px;
-  font-size: 12px;
+  font-size: 13px;
   outline: none;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
   transition: border 0.2s;
 }
 
@@ -274,12 +302,12 @@ input:focus, select:focus, textarea:focus {
   background: var(--gradient-main);
   color: #fff;
   border: none;
-  padding: 12px;
+  padding: 14px;
   border-radius: 12px;
   font-weight: 800;
-  font-size: 13px;
+  font-size: 14px;
   cursor: pointer;
-  margin-top: 6px;
+  margin-top: 8px;
   transition: opacity 0.2s, transform 0.1s;
 }
 
