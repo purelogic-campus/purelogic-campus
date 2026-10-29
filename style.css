@@ -199,9 +199,7 @@ body {
   letter-spacing: 0.3px;
 }
 
-/* ==========================================================================
-   PERFEKT ZENTRIERTES & VERGRÖSSERTES LOGIN-FENSTER (AUTH GATE)
-   ========================================================================== */
+/* PERFEKT ZENTRIERTES & VERGRÖSSERTES LOGIN-FENSTER */
 .auth-gate-container {
   display: flex;
   justify-content: center;
@@ -216,7 +214,6 @@ body {
   padding: 20px;
 }
 
-/* Die Login-Box ist hier exakt zentriert und um ca. 10% größer (420px max-width) */
 .auth-gate-container > div {
   width: 100%;
   max-width: 420px;
@@ -273,7 +270,7 @@ body {
   text-decoration: underline;
 }
 
-/* Inputs & Buttons (etwas angenehmer dimensioniert für das größere Login-Fenster) */
+/* Inputs & Buttons */
 input[type="text"],
 input[type="email"],
 input[type="password"],
@@ -505,8 +502,37 @@ input:focus, select:focus, textarea:focus {
 }
 
 /* ==========================================================================
-   TIKTOK-STYLE DESKTOP GRID LAYOUT (ab 768px Bildschirme)
+   IKONISCHER, SKALIERENDER PLUS-BUTTON & DESKTOP GRID LAYOUT (ab 768px)
    ========================================================================== */
+.tab-btn-action-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 10px 0;
+}
+
+.tab-btn-action {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--gradient-main);
+  color: #fff;
+  border: none;
+  font-size: 26px;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.tab-btn-action:hover {
+  transform: scale(1.08);
+  box-shadow: 0 6px 25px rgba(236, 72, 153, 0.8);
+}
+
 @media (min-width: 768px) {
   #main-app:not(.hidden) {
     display: grid !important;
@@ -515,13 +541,13 @@ input:focus, select:focus, textarea:focus {
     height: 100%;
   }
 
-  /* Linke Sidebar: Entdecken, Für dich, Gefolgt, Live, Treffen */
+  /* Linke Sidebar */
   #main-app:not(.hidden) .nav-tabs {
     grid-column: 1;
     grid-row: 1 / span 2;
     flex-direction: column;
     justify-content: flex-start;
-    align-items: flex-start;
+    align-items: stretch;
     gap: 10px;
     padding: 24px 16px;
     border-top: none;
@@ -551,22 +577,20 @@ input:focus, select:focus, textarea:focus {
     color: var(--primary);
   }
 
+  /* Der ikonische Plus-Button skaliert in der Sidebar als zentrales Erkennungsmerkmal */
   #main-app:not(.hidden) .tab-btn-action-container {
-    position: static;
-    width: 100%;
     margin-top: auto;
+    margin-bottom: 10px;
+    width: 100%;
   }
 
   #main-app:not(.hidden) .tab-btn-action {
     width: 100%;
-    border-radius: 12px;
-    font-size: 14px;
-    height: 44px;
-    background: var(--gradient-main);
-    color: #fff;
-    border: none;
-    font-weight: 900;
-    cursor: pointer;
+    max-width: 120px;
+    height: 52px;
+    border-radius: 26px; /* Wird auf Desktop zu einem ansprechenden breiteren Pill-Button oder bleibt rund, je nach Geschmack */
+    margin: 0 auto;
+    font-size: 24px;
   }
 
   /* Mittlerer Feed-Bereich */
