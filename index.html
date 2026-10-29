@@ -8,15 +8,18 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>PURE LOGIC • GenZ Campus</title>
   
+  <!-- PWA Manifest & Icons -->
   <link rel="manifest" href="manifest.json">
   <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/icon-512.png">
 
+  <!-- Supabase & Leaflet & jsPDF -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
+  <!-- Eigenes Stylesheet -->
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -62,7 +65,7 @@
     </div>
   </div>
 
-  <!-- UNI-DUELL BALKEN (Direkt über dem Match-Mittwoch) -->
+  <!-- OPTISCH GETRENNTE OBERE BALKEN -->
   <div class="uni-duell-banner" onclick="switchTab('ranking')">
     🏆 Zum Wiener Uni-Duell & Rangliste [Klick fürs Duell 🚀]
   </div>
@@ -71,9 +74,9 @@
     💖 MATCH-MITTWOCH • FIND YOUR CRUSH! [Klick fürs Radar 💘]
   </div>
 
-  <!-- AUTH GATE -->
-  <div id="auth-gate" class="tab-content" style="justify-content: center; align-items: center;">
-    <div style="width: 100%; max-width: 420px;">
+  <!-- AUTHENTIFIZIERUNGS-GATE -->
+  <div id="auth-gate" class="tab-content auth-gate-container">
+    <div>
       <h2 style="margin-bottom: 4px; font-size: 22px; font-weight: 800;">Hey there 👋</h2>
       <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 14px;">Logge dich ein oder starte direkt durch:</p>
       
@@ -105,20 +108,7 @@
       <div style="font-size: 10px; opacity: 0.95; margin-top: 2px; font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,0.2);">Nur für kurze Zeit verfügbar! [Jetzt tippen 🎁]</div>
     </div>
 
-    <!-- LINKER SIDEBAR-BEREICH -->
-    <nav class="nav-tabs" id="bottom-nav-bar" style="flex-shrink: 0;">
-      <button class="tab-btn active" onclick="setReelFilter('foryou'); switchTab('reels');" id="btn-tab-foryou">✨ Für dich</button>
-      <button class="tab-btn" onclick="setReelFilter('discover'); switchTab('reels');" id="btn-tab-discover">🔥 Entdecken</button>
-      <button class="tab-btn" onclick="setReelFilter('following'); switchTab('reels');" id="btn-tab-following">👥 Gefolgt</button>
-      <button class="tab-btn" onclick="switchTab('live')" id="btn-tab-live">🔴 Live</button>
-      <button class="tab-btn" onclick="switchTab('feed')" id="btn-tab-feed">💬 Treffen</button>
-      
-      <div class="tab-btn-action-container">
-        <button class="tab-btn-action" onclick="openUploadModal()" title="Beitrag erstellen">+</button>
-      </div>
-    </nav>
-
-    <!-- MITTLERER CONTENT-BEREICH -->
+    <!-- MAIN CONTENT WRAPPER -->
     <div class="tab-content-wrapper" style="flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative;">
       
       <!-- LECTURE MODE VIEW -->
@@ -354,7 +344,21 @@
 
     </div>
 
-    <!-- RECHTE SIDEBAR / UNTEN: Impressum, AGB, Melden -->
+    <!-- MOBILE BOTTOM NAVIGATION (URSPRÜNGLICHE SMARTPHONE-BAR) -->
+    <nav class="nav-tabs" id="bottom-nav-bar" style="flex-shrink: 0;">
+      <button class="tab-btn active" onclick="setReelFilter('foryou'); switchTab('reels');" id="btn-tab-foryou">✨ Für dich</button>
+      <button class="tab-btn" onclick="setReelFilter('discover'); switchTab('reels');" id="btn-tab-discover">🔥 Entdecken</button>
+
+      <div class="tab-btn-action-container">
+        <button class="tab-btn-action" onclick="openUploadModal()" title="Beitrag erstellen">+</button>
+      </div>
+
+      <button class="tab-btn" onclick="setReelFilter('following'); switchTab('reels');" id="btn-tab-following">👥 Gefolgt</button>
+      <button class="tab-btn" onclick="switchTab('live')" id="btn-tab-live">🔴 Live</button>
+      <button class="tab-btn" onclick="switchTab('feed')" id="btn-tab-feed">💬 Treffen</button>
+    </nav>
+
+    <!-- FOOTER LINKS -->
     <div class="footer-links" style="flex-shrink: 0;">
       <span onclick="openReportModal()">🚨 Inhalt melden</span>
       <span>•</span>
@@ -365,7 +369,7 @@
 
   </div>
 
-  <!-- LIVE VOLLBILD MODAL -->
+  <!-- MODALS -->
   <div id="live-fullscreen-modal" class="hidden tab-content" style="position: absolute; top:0; left:0; width:100%; height:100%; background: #000; z-index: 200; display: flex; flex-direction: column;">
     <div style="position: absolute; top: 12px; right: 12px; z-index: 210;">
       <button class="btn btn-secondary" onclick="closeLiveFullscreen()" style="padding: 6px 12px; font-size: 11px; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.2);">✕ Schließen</button>
@@ -390,7 +394,6 @@
     </div>
   </div>
 
-  <!-- MODALS -->
   <div id="more-points-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.92); z-index: 100;">
     <div style="width: 100%; max-width: 400px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 18px; margin: 10px;">
       <h3 style="margin-bottom: 4px; font-weight: 900; color: var(--primary);">🎁 Mehr Punkte sammeln</h3>
