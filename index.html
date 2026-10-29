@@ -134,7 +134,7 @@
         </div>
       </div>
 
-      <!-- LIVE TAB (Exklusiv für live_events) -->
+      <!-- LIVE TAB (Exklusiv für live_streams) -->
       <div id="tab-live" class="tab-content hidden" style="display: flex; flex-direction: column; height: 100%; overflow: hidden; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg); z-index: 10;">
         <div class="reels-subnav" style="flex-shrink: 0;">
           <div class="reel-pill" onclick="switchTab('reels')">🔥 Entdecken</div>
@@ -175,7 +175,7 @@
       <div id="tab-feed" class="tab-content hidden" style="height: 100%; overflow-y: auto;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px; flex-shrink:0;">
           <h3 style="font-size: 16px; font-weight: 800;">Spontane Treffen</h3>
-          <button class="btn" style="width:auto; margin-top:0; padding: 6px 12px; font-size: 12px;" onclick="toggleModal(true)">+ Erstellen</button>
+          <button class="btn" style="width:auto; margin-top:0; padding: 6px 12px; font-size: 12px;" onclick="openUploadModal()">+ Erstellen</button>
         </div>
 
         <div class="category-group" id="filter-group">
@@ -344,7 +344,7 @@
 
     </div>
 
-    <!-- KORRIGIERTE UNTERE LEISTE (OHNE LIVE-BUTTON) -->
+    <!-- UNTERE LEISTE -->
     <div class="nav-tabs" id="bottom-nav-bar" style="flex-shrink: 0;">
       <button class="tab-btn active" onclick="switchTab('reels')" id="btn-tab-reels">📱 Feed</button>
       <button class="tab-btn" onclick="switchTab('feed')" id="btn-tab-feed">💬 Treffen</button>
@@ -568,6 +568,16 @@
 
 </div>
 
+<!-- ES6 JavaScript-Module in korrekter Ladereihenfolge -->
+<script type="module" src="js/config.js"></script>
+<script type="module" src="js/state.js"></script>
+<script type="module" src="js/i18n.js"></script>
+<script type="module" src="js/auth.js"></script>
+<script type="module" src="js/features/lecture.js"></script>
+<script type="module" src="js/features/quiz.js"></script>
+<script type="module" src="js/features/profguide.js"></script>
+<script type="module" src="js/features/live.js"></script>
+<script type="module" src="js/features/feed.js"></script>
 <script type="module" src="js/main.js"></script>
 </body>
 </html>
