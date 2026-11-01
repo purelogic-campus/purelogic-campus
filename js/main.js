@@ -4,7 +4,7 @@ import { state } from './state.js';
 import { changeLanguage } from './i18n.js';
 import { handleLogin, handleSignup, resetUser, handleForgotPassword, togglePasswordVisibility } from './auth.js';
 import { toggleLectureMode } from './features/lecture.js';
-import { initQuiz } from './features/quiz.js';
+import { initQuiz, openCampusQuizModal, closeCampusQuizModal } from './features/quiz.js';
 import { openProfGuideModal, closeProfGuideModal } from './features/profguide.js';
 import { loadLiveStreams } from './features/live.js';
 import { loadCampusFeed, loadMyProfilePosts } from './features/feed.js';
@@ -18,6 +18,8 @@ window.togglePasswordVisibility = togglePasswordVisibility;
 window.toggleLectureMode = toggleLectureMode;
 window.openProfGuideModal = openProfGuideModal;
 window.closeProfGuideModal = closeProfGuideModal;
+window.openCampusQuizModal = openCampusQuizModal;
+window.closeCampusQuizModal = closeCampusQuizModal;
 
 // UI Hilfsfunktionen & Tab-Steuerung
 window.switchTab = function(tabId) {
@@ -29,7 +31,6 @@ window.switchTab = function(tabId) {
     const target = document.getElementById('tab-' + tabId);
     if (target) {
         target.classList.remove('hidden');
-        // Lädt beim Wechsel in den Live-Tab exklusiv die echten Streams
         if (tabId === 'live') {
             loadLiveStreams();
         }
@@ -83,8 +84,34 @@ window.submitReportWithEvidence = async () => {
     if(fileInput) fileInput.value = '';
 };
 
-window.openCampusQuizModal = () => document.getElementById('quiz-modal')?.classList.remove('hidden');
-window.closeCampusQuizModal = () => document.getElementById('quiz-modal')?.classList.add('hidden');
+// Admin Test Punkte Funktion
+window.adminSetTestPoints = async function() {
+    const input = document.getElementById('admin-test-points-input');
+    const points = parseInt(input?.value);
+    if (isNaN(points)) {
+        alert('Bitte eine gültige Zahl eingeben.');
+        return;
+    }
+
+    if (!state.currentUserEmail) return;
+
+    try {
+        await _supabase
+            .from('users')
+            .update({ logic_score: points })
+            .eq('email', state.currentUserEmail);
+
+        const badge = document.getElementById('score');
+        if (badge) {
+            badge.textContent = `${points} P`;
+        }
+        alert(`Punktestand erfolgreich auf ${points} P gesetzt! 🚀`);
+        if (input) input.value = '';
+    } catch (err) {
+        console.error('Fehler beim Setzen der Admin-Punkte:', err);
+        alert('Fehler beim Aktualisieren der Punkte.');
+    }
+};
 
 // Auth-Prüfung
 async function checkAuthSession() {
@@ -113,7 +140,10 @@ async function checkAuthSession() {
                 if (badge) {
                     badge.classList.add('admin-badge');
                     badge.textContent = '👑 Admin';
-                    badge.onclick = () => window.switchTab('admin');
+                    badge.onclick = (e) => {
+                        e.stopPropagation();
+                        window.switchTab('admin');
+                    };
                 }
             }
         } else {
