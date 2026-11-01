@@ -596,7 +596,7 @@ input:focus, select:focus, textarea:focus {
 }
 
 /* ==========================================================================
-   DESKTOP-ANSICHT (AB 768PX: PERFEKT ZENTRIERTER PLUS-BUTTON)
+   DESKTOP-ANSICHT (AB 768PX: PLUS-BUTTON UNTEN IN DER LINKEN SIDEBAR)
    ========================================================================== */
 @media (min-width: 768px) {
   #main-app:not(.hidden) {
@@ -615,11 +615,12 @@ input:focus, select:focus, textarea:focus {
     justify-content: flex-start;
     align-items: stretch;
     gap: 12px;
-    padding: 24px 16px;
+    padding: 24px 16px 20px 16px;
     border-top: none;
     border-right: 1px solid var(--border);
     background: var(--card);
     height: 100%;
+    position: relative;
   }
 
   #main-app:not(.hidden) .tab-btn {
@@ -647,12 +648,13 @@ input:focus, select:focus, textarea:focus {
     color: var(--primary);
   }
 
-  /* Exakt mittige Positionierung des Plus-Buttons im Feed-Fenster */
+  /* Plus-Button am PC: Unten bündig in der linken Sidebar integriert */
   #main-app:not(.hidden) .tab-btn-action-container {
     position: absolute;
-    bottom: 24px;
-    left: calc(260px + (100% - 260px) / 2);
-    transform: translateX(-50%);
+    bottom: 20px;
+    left: 0;
+    width: 100%;
+    transform: none;
     margin: 0;
     display: flex;
     justify-content: center;
@@ -671,6 +673,10 @@ input:focus, select:focus, textarea:focus {
     align-items: center;
     justify-content: center;
     padding-bottom: 2px;
+  }
+
+  #main-app:not(.hidden) .tab-btn-action:hover {
+    transform: scale(1.08);
   }
 
   /* Mittlerer Feed-Bereich */
