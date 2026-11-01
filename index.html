@@ -30,9 +30,6 @@
     <div class="logo" onclick="switchTab('reels')" title="Zur Startseite">PURE LOGIC</div>
     
     <div class="header-right" id="header-right-container">
-      <button class="header-top-link-btn" onclick="switchTab('global')">⚡ Chat</button>
-      <button class="header-top-link-btn" onclick="switchTab('inbox')">📬 Postfach</button>
-
       <div style="position: relative;">
         <div class="points-badge" id="score" onclick="togglePointsDropdown(event)">0 P</div>
         <div id="points-dropdown-menu" class="points-dropdown hidden">
@@ -344,18 +341,17 @@
 
     </div>
 
-    <!-- MOBILE BOTTOM NAVIGATION (URSPRÜNGLICHE SMARTPHONE-BAR) -->
+    <!-- EXAKTE MOBILE BAR UNTEN: Feed - Treffen - Plus - Chat - Postfach -->
     <nav class="nav-tabs" id="bottom-nav-bar" style="flex-shrink: 0;">
-      <button class="tab-btn active" onclick="setReelFilter('foryou'); switchTab('reels');" id="btn-tab-foryou">✨ Für dich</button>
-      <button class="tab-btn" onclick="setReelFilter('discover'); switchTab('reels');" id="btn-tab-discover">🔥 Entdecken</button>
+      <button class="tab-btn active" onclick="setReelFilter('foryou'); switchTab('reels');" id="btn-tab-foryou">✨ Feed</button>
+      <button class="tab-btn" onclick="switchTab('feed')" id="btn-tab-feed">💬 Treffen</button>
 
       <div class="tab-btn-action-container">
         <button class="tab-btn-action" onclick="openUploadModal()" title="Beitrag erstellen">+</button>
       </div>
 
-      <button class="tab-btn" onclick="setReelFilter('following'); switchTab('reels');" id="btn-tab-following">👥 Gefolgt</button>
-      <button class="tab-btn" onclick="switchTab('live')" id="btn-tab-live">🔴 Live</button>
-      <button class="tab-btn" onclick="switchTab('feed')" id="btn-tab-feed">💬 Treffen</button>
+      <button class="tab-btn" onclick="switchTab('global')" id="btn-tab-global">⚡ Chat</button>
+      <button class="tab-btn" onclick="switchTab('inbox')" id="btn-tab-inbox">📬 Postfach</button>
     </nav>
 
     <!-- FOOTER LINKS -->

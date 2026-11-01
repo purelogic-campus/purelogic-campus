@@ -190,7 +190,7 @@ body {
 }
 
 /* ==========================================================================
-   OPTISCH CLEAR GETRENNTE OBERE BALKEN (KARTEN-LOOK)
+   OPTISCH SAUBER GETRENNTE OBERE BALKEN (KARTEN-LOOK)
    ========================================================================== */
 .uni-duell-banner {
   background: linear-gradient(135deg, #6366f1, #8b5cf6);
@@ -596,7 +596,7 @@ input:focus, select:focus, textarea:focus {
 }
 
 /* ==========================================================================
-   DESKTOP-ANSICHT (AB 768PX: TIKTOK-DESKTOP-LAYOUT)
+   DESKTOP-ANSICHT (AB 768PX: PERFEKT ZENTRIERTER PLUS-BUTTON)
    ========================================================================== */
 @media (min-width: 768px) {
   #main-app:not(.hidden) {
@@ -647,15 +647,16 @@ input:focus, select:focus, textarea:focus {
     color: var(--primary);
   }
 
-  /* Der Plus-Button am PC: Tief unten im Feed-Fenster zentriert */
+  /* Exakt mittige Positionierung des Plus-Buttons im Feed-Fenster */
   #main-app:not(.hidden) .tab-btn-action-container {
     position: absolute;
-    bottom: 20px;
+    bottom: 24px;
     left: calc(260px + (100% - 260px) / 2);
     transform: translateX(-50%);
     margin: 0;
     display: flex;
     justify-content: center;
+    align-items: center;
     z-index: 70;
   }
 
@@ -666,6 +667,10 @@ input:focus, select:focus, textarea:focus {
     font-size: 40px;
     border: 4px solid var(--card);
     box-shadow: 0 8px 30px rgba(99, 102, 241, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-bottom: 2px;
   }
 
   /* Mittlerer Feed-Bereich */
