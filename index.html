@@ -159,13 +159,13 @@
 
       <!-- REELS / FEED TAB -->
       <div id="tab-reels" class="tab-content">
-        <div class="container-box" style="display: flex; justify-content: center; gap: 16px; padding: 10px; margin-bottom: 8px; flex-shrink: 0;">
+        <div class="feed-filter-bar">
           <span style="font-size: 12px; font-weight: 800; cursor: pointer; color: var(--primary);" id="subtab-foryou" onclick="setReelFilter('foryou')">✨ Für dich</span>
           <span style="font-size: 12px; font-weight: 800; cursor: pointer; color: var(--text-muted);" id="subtab-discover" onclick="setReelFilter('discover')">🔥 Entdecken</span>
           <span style="font-size: 12px; font-weight: 800; cursor: pointer; color: var(--text-muted);" id="subtab-following" onclick="setReelFilter('following')">👥 Gefolgt</span>
         </div>
 
-        <div class="reel-card-wrapper" id="reels-list" style="flex: 1; overflow-y: auto; scroll-snap-type: y mandatory; padding: 10px 0;">
+        <div class="reel-card-wrapper" id="reels-list" style="flex: 1; overflow-y: auto; scroll-snap-type: y mandatory; padding: 0 12px 10px 12px;">
           <p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;">Lade Campus-Feeds...</p>
         </div>
       </div>
@@ -350,7 +350,7 @@
 
     </div>
 
-    <!-- NATIVE BOTTOM NAVIGATION -->
+    <!-- NATIVE BOTTOM NAVIGATION & FOOTER -->
     <div class="bottom-controls-wrapper">
       <nav class="nav-tabs" id="bottom-nav-bar">
         <button class="tab-btn active" onclick="switchTab('reels')" id="btn-tab-reels">✨ Feed</button>
@@ -364,7 +364,6 @@
         <button class="tab-btn" onclick="switchTab('inbox')" id="btn-tab-inbox">📬 Postfach</button>
       </nav>
 
-      <!-- FOOTER LINKS (FEHLERFREI UND IMMER UNTEN ANGESCHLOSSEN) -->
       <div class="footer-links">
         <span onclick="openReportModal()">🚨 Inhalt melden</span>
         <span>•</span>
