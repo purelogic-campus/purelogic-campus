@@ -54,6 +54,7 @@ window.togglePointsDropdown = function(event) {
     if (dropdown) dropdown.classList.toggle('hidden');
 };
 
+// Globaler Klick schließt das Dropdown
 document.addEventListener('click', () => {
     const dropdown = document.getElementById('points-dropdown-menu');
     if (dropdown) dropdown.classList.add('hidden');
@@ -140,11 +141,10 @@ async function checkAuthSession() {
                 if (badge) {
                     badge.classList.add('admin-badge');
                     badge.textContent = '👑 Admin';
-                    badge.onclick = (e) => {
-                        e.stopPropagation();
-                        window.switchTab('admin');
-                    };
+                    // Admin-Badge zeigt jetzt den Admin-Tab, blockiert aber nicht das Dropdown daneben
                 }
+                
+                // Extra Admin-Tab-Button im Header einblenden, falls gewünscht oder über Sidebar steuerbar
             }
         } else {
             state.currentUserEmail = null;
