@@ -84,6 +84,27 @@ body {
   gap: 10px;
 }
 
+.header-top-link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 6px 12px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  width: auto;
+  white-space: nowrap;
+  transition: background 0.2s;
+}
+
+.header-top-link-btn:hover {
+  background: var(--card-hover);
+}
+
 .points-badge {
   background: rgba(99, 102, 241, 0.2);
   border: 1px solid rgba(99, 102, 241, 0.4);
@@ -200,6 +221,11 @@ body {
   letter-spacing: 0.3px;
   border: 1px solid rgba(255, 255, 255, 0.2);
   box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+  transition: transform 0.2s;
+}
+
+.uni-duell-banner:hover, .match-banner:hover {
+  transform: translateY(-1px);
 }
 
 .match-banner {
@@ -214,6 +240,7 @@ body {
   letter-spacing: 0.3px;
   border: 1px solid rgba(255, 255, 255, 0.2);
   box-shadow: 0 4px 12px rgba(236, 72, 153, 0.3);
+  transition: transform 0.2s;
 }
 
 /* AUTH GATE & CONTAINER */
@@ -339,6 +366,19 @@ input:focus, select:focus, textarea:focus {
   background: var(--card-hover);
 }
 
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 11px;
+  width: auto;
+  margin-top: 0;
+}
+
+.danger {
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  color: var(--danger);
+}
+
 /* Kategorien / Pills */
 .category-group {
   display: flex;
@@ -359,12 +399,17 @@ input:focus, select:focus, textarea:focus {
   border: 1px solid var(--border);
   cursor: pointer;
   white-space: nowrap;
+  transition: background 0.2s, color 0.2s;
 }
 
 .cat-pill.active {
   background: var(--primary);
   color: #fff;
   border-color: var(--primary);
+}
+
+.cat-pill:hover {
+  background: var(--card-hover);
 }
 
 /* Reels & Feed Items */
@@ -378,6 +423,9 @@ input:focus, select:focus, textarea:focus {
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 12px;
 }
 
 .reel-media {
@@ -395,6 +443,7 @@ input:focus, select:focus, textarea:focus {
   display: flex;
   flex-direction: column;
   pointer-events: none;
+  background: linear-gradient(0deg, rgba(0,0,0,0.8) 0%, transparent 100%);
 }
 
 .reel-overlay * {
@@ -407,6 +456,8 @@ input:focus, select:focus, textarea:focus {
   flex-direction: column;
   height: 100%;
   background: var(--bg);
+  border-radius: 16px;
+  overflow: hidden;
 }
 
 .messages-list {
@@ -433,6 +484,15 @@ input:focus, select:focus, textarea:focus {
 }
 
 /* Profile */
+.profile-header-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 12px;
+  max-width: 600px;
+}
+
 .profile-avatar-lg {
   width: 64px;
   height: 64px;
@@ -440,6 +500,11 @@ input:focus, select:focus, textarea:focus {
   object-fit: cover;
   border: 2px solid var(--primary);
   cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.profile-avatar-lg:hover {
+  transform: scale(1.05);
 }
 
 .profile-grid {
@@ -493,18 +558,26 @@ input:focus, select:focus, textarea:focus {
   min-height: 0;
 }
 
+.bottom-controls-wrapper {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  flex-shrink: 0;
+  background: var(--card);
+  border-top: 1px solid var(--border);
+  z-index: 60;
+}
+
 .nav-tabs {
   display: flex;
   justify-content: space-around;
   align-items: center;
   background: rgba(19, 27, 46, 0.98);
   backdrop-filter: blur(10px);
-  border-top: 1px solid var(--border);
-  padding: 4px 6px;
-  z-index: 50;
-  flex-shrink: 0;
+  padding: 6px 4px;
   height: 56px;
   position: relative;
+  width: 100%;
 }
 
 .tab-btn {
@@ -521,7 +594,7 @@ input:focus, select:focus, textarea:focus {
   cursor: pointer;
   flex: 1;
   height: 100%;
-  line-height: 1.1;
+  transition: color 0.2s;
 }
 
 .tab-btn.active {
@@ -540,14 +613,14 @@ input:focus, select:focus, textarea:focus {
 
 .tab-btn-action {
   position: absolute;
-  bottom: 4px;
-  width: 52px;
-  height: 52px;
+  top: -18px;
+  width: 54px;
+  height: 54px;
   border-radius: 50%;
   background: var(--gradient-main);
   color: #fff;
   border: 3px solid var(--card);
-  font-size: 30px;
+  font-size: 32px;
   line-height: 1;
   font-weight: 900;
   cursor: pointer;
@@ -555,7 +628,6 @@ input:focus, select:focus, textarea:focus {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding-bottom: 2px;
   transition: transform 0.2s;
 }
 
@@ -566,20 +638,20 @@ input:focus, select:focus, textarea:focus {
 /* Footer Links (Garantiert sichtbar) */
 .footer-links {
   text-align: center;
-  padding: 8px;
+  padding: 6px 10px 10px 10px;
   font-size: 10px;
   color: var(--text-muted);
   background: var(--card);
-  border-top: 1px solid var(--border);
-  flex-shrink: 0;
   display: flex;
   justify-content: center;
-  gap: 6px;
-  z-index: 40;
+  gap: 8px;
+  width: 100%;
+  border-top: 1px solid rgba(255,255,255,0.03);
 }
 
 .footer-links span {
   cursor: pointer;
+  transition: color 0.2s;
 }
 
 .footer-links span:hover {
@@ -592,111 +664,118 @@ input:focus, select:focus, textarea:focus {
 }
 
 /* ==========================================================================
-   DESKTOP-ANSICHT (AB 768PX)
+   DESKTOP-ANSICHT (AB 768PX: LINKE SIDEBAR + ZENTRIERTER FEED)
    ========================================================================== */
 @media (min-width: 768px) {
   .main-app-layout:not(.hidden) {
     display: grid !important;
     grid-template-columns: 260px 1fr;
-    grid-template-rows: 1fr auto;
+    grid-template-rows: 1fr;
     height: 100%;
     position: relative;
   }
 
   /* Linke Sidebar am PC */
-  .main-app-layout:not(.hidden) .nav-tabs {
+  .bottom-controls-wrapper {
     grid-column: 1;
-    grid-row: 1 / span 2;
-    flex-direction: column;
-    justify-content: flex-start;
-    align-items: stretch;
-    gap: 12px;
-    padding: 24px 16px 20px 16px;
+    grid-row: 1;
     border-top: none;
     border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 24px 16px;
     background: var(--card);
     height: 100%;
     position: relative;
   }
 
-  .main-app-layout:not(.hidden) .tab-btn {
-    display: flex;
+  .nav-tabs {
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: stretch;
+    gap: 10px;
+    height: auto;
+    background: transparent;
+  }
+
+  .tab-btn {
     flex-direction: row;
     align-items: center;
     gap: 14px;
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 800;
-    padding: 16px 20px;
+    padding: 14px 18px;
     width: 100%;
     height: auto;
-    border-radius: 14px;
+    border-radius: 12px;
     background: transparent;
     border: none;
     color: var(--text-muted);
     cursor: pointer;
     text-align: left;
     transition: all 0.2s;
-    flex: unset;
   }
 
-  .main-app-layout:not(.hidden) .tab-btn:hover,
-  .main-app-layout:not(.hidden) .tab-btn.active {
+  .tab-btn:hover,
+  .tab-btn.active {
     background: var(--card-hover);
     color: var(--primary);
   }
 
-  /* Plus-Button unten in der linken Sidebar bündig integriert */
-  .main-app-layout:not(.hidden) .tab-btn-action-container {
-    position: absolute;
-    bottom: 20px;
-    left: 0;
-    width: 100%;
-    transform: none;
-    margin: 0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 70;
-    height: auto;
-  }
-
-  .main-app-layout:not(.hidden) .tab-btn-action {
+  /* Plus-Button unten bündig in der linken Sidebar integriert */
+  .tab-btn-action-container {
     position: static;
-    width: 76px;
-    height: 76px;
-    font-size: 40px;
-    border: 4px solid var(--card);
-    box-shadow: 0 8px 30px rgba(99, 102, 241, 0.9);
+    margin-top: auto;
+    padding-bottom: 10px;
+    width: 100%;
+    height: auto;
+    display: flex;
+    justify-content: center;
+  }
+
+  .tab-btn-action {
+    position: static;
+    width: 100%;
+    height: 52px;
+    border-radius: 12px;
+    font-size: 18px;
+    font-weight: 800;
+    border: 2px solid rgba(255,255,255,0.2);
+    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.6);
     display: flex;
     align-items: center;
     justify-content: center;
-    padding-bottom: 2px;
+    gap: 8px;
   }
 
-  .main-app-layout:not(.hidden) .tab-btn-action:hover {
-    transform: scale(1.08);
+  .tab-btn-action::after {
+    content: " Neuer Beitrag +";
+    font-size: 14px;
+  }
+
+  .tab-btn-action:hover {
+    transform: scale(1.02);
+  }
+
+  /* Footer Links in der linken Sidebar unten */
+  .footer-links {
+    flex-direction: column;
+    gap: 4px;
+    background: transparent;
+    border-top: 1px solid var(--border);
+    padding-top: 12px;
+    font-size: 11px;
+    text-align: center;
   }
 
   /* Mittlerer Feed-Bereich */
-  .main-app-layout:not(.hidden) .tab-content-wrapper {
+  .tab-content-wrapper {
     grid-column: 2;
     grid-row: 1;
     border-right: none;
     height: 100%;
     position: relative;
-  }
-
-  /* Footer unten rechts */
-  .main-app-layout:not(.hidden) .footer-links {
-    grid-column: 2;
-    grid-row: 2;
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    gap: 10px;
-    border-top: 1px solid var(--border);
-    background: var(--card);
-    text-align: right;
-    padding: 12px 24px;
+    background: var(--bg);
   }
 }

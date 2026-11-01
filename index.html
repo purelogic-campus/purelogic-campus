@@ -62,7 +62,7 @@
     </div>
   </div>
 
-  <!-- OBERE BALKEN ALS CONTAINER -->
+  <!-- BANNER CONTAINER -->
   <div class="banner-container">
     <div class="uni-duell-banner" onclick="switchTab('ranking')">
       🏆 Zum Wiener Uni-Duell & Rangliste [Klick fürs Duell 🚀]
@@ -74,7 +74,7 @@
 
   <!-- AUTHENTIFIZIERUNGS-GATE -->
   <div id="auth-gate" class="tab-content auth-gate-container">
-    <div>
+    <div class="container-box" style="max-width: 420px; width: 100%;">
       <h2 style="margin-bottom: 4px; font-size: 22px; font-weight: 800;">Hey there 👋</h2>
       <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 14px;">Logge dich ein oder starte direkt durch:</p>
       
@@ -121,7 +121,7 @@
 
         <textarea id="lecture-notes-input" class="lecture-notepad" placeholder="Schreibe hier deine Vorlesungsnotizen mit..."></textarea>
 
-        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; padding: 10px; margin-top: 4px; flex-shrink: 0;">
+        <div class="container-box" style="margin-top: 8px; padding: 10px; flex-shrink: 0;">
           <div style="font-size: 11px; font-weight: 700; color: #cbd5e1; margin-bottom: 6px;">💾 Notiz auf Gerät speichern:</div>
           <div style="display: flex; gap: 6px; margin-bottom: 6px;">
             <input type="text" id="lecture-file-name" placeholder="Dateiname (z.B. Vorlesung_Mathe)" style="margin: 0; flex: 2; font-size: 11px; padding: 8px 10px;">
@@ -141,7 +141,7 @@
       </div>
 
       <!-- LIVE TAB -->
-      <div id="tab-live" class="tab-content hidden" style="display: flex; flex-direction: column; height: 100%; overflow: hidden; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg); z-index: 10;">
+      <div id="tab-live" class="tab-content hidden">
         <div style="padding: 10px 16px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; background: rgba(0,0,0,0.2);">
           <div class="category-group" id="live-filter-group" style="margin: 0; overflow-x: auto;">
             <div class="cat-pill active" onclick="setLiveFilter(this, 'Alle')">Alle</div>
@@ -158,8 +158,8 @@
       </div>
 
       <!-- REELS / FEED TAB -->
-      <div id="tab-reels" class="tab-content" style="display: flex; flex-direction: column; height: 100%; overflow: hidden; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg);">
-        <div style="display: flex; justify-content: center; gap: 16px; padding: 10px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; margin: 6px 12px; flex-shrink: 0; z-index: 5;">
+      <div id="tab-reels" class="tab-content">
+        <div class="container-box" style="display: flex; justify-content: center; gap: 16px; padding: 10px; margin-bottom: 8px; flex-shrink: 0;">
           <span style="font-size: 12px; font-weight: 800; cursor: pointer; color: var(--primary);" id="subtab-foryou" onclick="setReelFilter('foryou')">✨ Für dich</span>
           <span style="font-size: 12px; font-weight: 800; cursor: pointer; color: var(--text-muted);" id="subtab-discover" onclick="setReelFilter('discover')">🔥 Entdecken</span>
           <span style="font-size: 12px; font-weight: 800; cursor: pointer; color: var(--text-muted);" id="subtab-following" onclick="setReelFilter('following')">👥 Gefolgt</span>
@@ -171,7 +171,7 @@
       </div>
 
       <!-- TREFFEN TAB -->
-      <div id="tab-feed" class="tab-content hidden" style="height: 100%; overflow-y: auto; padding: 16px;">
+      <div id="tab-feed" class="tab-content hidden">
         <div class="container-box" style="margin-bottom: 12px;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
             <h3 style="font-size: 16px; font-weight: 800;">Spontane Treffen</h3>
@@ -193,7 +193,7 @@
       </div>
 
       <!-- RANKING TAB -->
-      <div id="tab-ranking" class="tab-content hidden" style="height: 100%; overflow-y: auto; padding: 16px;">
+      <div id="tab-ranking" class="tab-content hidden">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px; flex-shrink:0;">
           <h3 style="font-size: 16px; font-weight: 800;">🏆 Uni-Duell & Top 100</h3>
           <span style="font-size: 10px; color: var(--text-muted);">Reset So. 23:59</span>
@@ -213,7 +213,7 @@
       </div>
 
       <!-- GLOBAL CHAT TAB -->
-      <div id="tab-global" class="tab-content hidden" style="height: 100%;">
+      <div id="tab-global" class="tab-content hidden">
         <div class="chat-container container-box" style="height: 100%; padding: 0; overflow: hidden;">
           <div class="messages-list" id="global-chat-list">
             <p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;">Lade Campus-Chat...</p>
@@ -226,7 +226,7 @@
       </div>
 
       <!-- POSTFACH / DM TAB -->
-      <div id="tab-inbox" class="tab-content hidden" style="height: 100%; padding: 16px;">
+      <div id="tab-inbox" class="tab-content hidden">
         <div class="chat-container container-box" style="height: 100%; padding: 12px; overflow: hidden;">
           <label style="font-size: 10px; font-weight: 600; color: var(--text-muted); flex-shrink:0;">Empfänger (E-Mail):</label>
           <input type="email" id="dm-recipient" placeholder="kommilitone@uni.at" style="margin-bottom: 6px; flex-shrink:0; max-width: 400px;" onchange="loadDirectMessages()">
@@ -242,9 +242,9 @@
       </div>
 
       <!-- PROFIL TAB -->
-      <div id="tab-profile" class="tab-content hidden" style="height: 100%;">
-        <div style="overflow-y: auto; flex: 1; padding: 16px; min-height: 0; height: 100%;">
-          <div class="profile-header-card container-box">
+      <div id="tab-profile" class="tab-content hidden">
+        <div style="overflow-y: auto; flex: 1; padding: 4px; min-height: 0; height: 100%;">
+          <div class="profile-header-card container-box" style="margin-bottom: 12px;">
             <div style="display:flex; align-items:center; gap:12px;">
               <img id="my-profile-avatar-preview" class="profile-avatar-lg" src="" onclick="changeAvatarDirectly()" title="Klicken, um das Profilbild zu ändern" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'64\' height=\'64\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%2394a3b8\' stroke-width=\'2\'><path d=\'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2\'></path><circle cx=\'12\' cy=\'7\' r=\'4\'></circle></svg>'" alt="Avatar">
               <div>
@@ -297,7 +297,7 @@
       </div>
 
       <!-- ADMIN TAB -->
-      <div id="tab-admin" class="tab-content hidden" style="height: 100%; overflow-y: auto; padding: 16px;">
+      <div id="tab-admin" class="tab-content hidden">
         <div class="container-box" style="max-width: 600px; padding-bottom: 20px;">
           <h3 style="font-size: 16px; font-weight: 800; margin-bottom: 4px; color: var(--admin);">⚡ Admin-Interface: Campus-Drops & Test-Tools</h3>
           <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;">Verwalte hier Drops und teste dein Punktekonto im Admin-Modus.</p>
@@ -350,26 +350,28 @@
 
     </div>
 
-    <!-- NAVIGATION UNTEN (VOLLSTÄNDIG SICHTBAR OHNE ABSCHNITT) -->
-    <nav class="nav-tabs" id="bottom-nav-bar">
-      <button class="tab-btn active" onclick="switchTab('reels')" id="btn-tab-reels">✨ Feed</button>
-      <button class="tab-btn" onclick="switchTab('feed')" id="btn-tab-feed">💬 Treffen</button>
+    <!-- NATIVE BOTTOM NAVIGATION -->
+    <div class="bottom-controls-wrapper">
+      <nav class="nav-tabs" id="bottom-nav-bar">
+        <button class="tab-btn active" onclick="switchTab('reels')" id="btn-tab-reels">✨ Feed</button>
+        <button class="tab-btn" onclick="switchTab('feed')" id="btn-tab-feed">💬 Treffen</button>
 
-      <div class="tab-btn-action-container">
-        <button class="tab-btn-action" onclick="openUploadModal()" title="Beitrag erstellen">+</button>
+        <div class="tab-btn-action-container">
+          <button class="tab-btn-action" onclick="openUploadModal()" title="Beitrag erstellen">+</button>
+        </div>
+
+        <button class="tab-btn" onclick="switchTab('global')" id="btn-tab-global">⚡ Chat</button>
+        <button class="tab-btn" onclick="switchTab('inbox')" id="btn-tab-inbox">📬 Postfach</button>
+      </nav>
+
+      <!-- FOOTER LINKS (FEHLERFREI UND IMMER UNTEN ANGESCHLOSSEN) -->
+      <div class="footer-links">
+        <span onclick="openReportModal()">🚨 Inhalt melden</span>
+        <span>•</span>
+        <span onclick="openImpressumModal()">Impressum</span>
+        <span>•</span>
+        <span onclick="openAgbModal()">AGB</span>
       </div>
-
-      <button class="tab-btn" onclick="switchTab('global')" id="btn-tab-global">⚡ Chat</button>
-      <button class="tab-btn" onclick="switchTab('inbox')" id="btn-tab-inbox">📬 Postfach</button>
-    </nav>
-
-    <!-- FOOTER LINKS (JETZT IMMER SICHTBAR & INKL. MELDEN) -->
-    <div class="footer-links">
-      <span onclick="openReportModal()">🚨 Inhalt melden</span>
-      <span>•</span>
-      <span onclick="openImpressumModal()">Impressum</span>
-      <span>•</span>
-      <span onclick="openAgbModal()">AGB</span>
     </div>
 
   </div>
