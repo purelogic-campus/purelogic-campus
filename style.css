@@ -503,7 +503,7 @@ input:focus, select:focus, textarea:focus {
 }
 
 /* ==========================================================================
-   URSPRÜNGLICHE SMARTPHONE-ANSICHT (KLASSISCHE BOTTOM-NAV-BAR UNTEN)
+   SMARTPHONE-ANSICHT (UNTERE LEISTE)
    ========================================================================== */
 .nav-tabs {
   display: flex;
