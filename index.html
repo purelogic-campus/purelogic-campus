@@ -62,13 +62,14 @@
     </div>
   </div>
 
-  <!-- OPTISCH SAUBER GETRENNTE OBERE BALKEN -->
-  <div class="uni-duell-banner" onclick="switchTab('ranking')">
-    🏆 Zum Wiener Uni-Duell & Rangliste [Klick fürs Duell 🚀]
-  </div>
-
-  <div class="match-banner" id="match-banner" onclick="openCrushModal()">
-    💖 MATCH-MITTWOCH • FIND YOUR CRUSH! [Klick fürs Radar 💘]
+  <!-- OBERE BALKEN ALS CONTAINER -->
+  <div class="banner-container">
+    <div class="uni-duell-banner" onclick="switchTab('ranking')">
+      🏆 Zum Wiener Uni-Duell & Rangliste [Klick fürs Duell 🚀]
+    </div>
+    <div class="match-banner" id="match-banner" onclick="openCrushModal()">
+      💖 MATCH-MITTWOCH • FIND YOUR CRUSH! [Klick fürs Radar 💘]
+    </div>
   </div>
 
   <!-- AUTHENTIFIZIERUNGS-GATE -->
@@ -98,7 +99,7 @@
   </div>
 
   <!-- HAUPT-APP -->
-  <div id="main-app" class="hidden" style="flex: 1; display: flex; flex-direction: column; overflow: hidden; height: 100%; min-height: 0;">
+  <div id="main-app" class="hidden main-app-layout">
     
     <div id="campus-drop-banner" class="flash-banner-active" style="display:none; width: 100%; background: linear-gradient(135deg, #f59e0b, #ec4899); color: white; padding: 10px 14px; border-radius: 12px; margin-bottom: 6px; text-align: center; cursor: pointer; flex-shrink: 0; border: 2px solid rgba(255, 255, 255, 0.6);" onclick="claimActiveDrop()">
       <div style="font-weight: 900; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">⚡ FLASH DROP: 50 Extra-Punkte!</div>
@@ -106,7 +107,7 @@
     </div>
 
     <!-- MAIN CONTENT WRAPPER -->
-    <div class="tab-content-wrapper" style="flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative;">
+    <div class="tab-content-wrapper">
       
       <!-- LECTURE MODE VIEW -->
       <div id="tab-lecture-mode" class="lecture-mode-view tab-content hidden">
@@ -156,9 +157,9 @@
         </div>
       </div>
 
-      <!-- REELS / FEED TAB (Mit integrierten "Für dich", "Entdecken", "Gefolgt"-Reitern oben im Feed) -->
+      <!-- REELS / FEED TAB -->
       <div id="tab-reels" class="tab-content" style="display: flex; flex-direction: column; height: 100%; overflow: hidden; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg);">
-        <div style="display: flex; justify-content: center; gap: 16px; padding: 10px; background: rgba(19, 27, 46, 0.8); border-bottom: 1px solid var(--border); flex-shrink: 0; z-index: 5;">
+        <div style="display: flex; justify-content: center; gap: 16px; padding: 10px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; margin: 6px 12px; flex-shrink: 0; z-index: 5;">
           <span style="font-size: 12px; font-weight: 800; cursor: pointer; color: var(--primary);" id="subtab-foryou" onclick="setReelFilter('foryou')">✨ Für dich</span>
           <span style="font-size: 12px; font-weight: 800; cursor: pointer; color: var(--text-muted);" id="subtab-discover" onclick="setReelFilter('discover')">🔥 Entdecken</span>
           <span style="font-size: 12px; font-weight: 800; cursor: pointer; color: var(--text-muted);" id="subtab-following" onclick="setReelFilter('following')">👥 Gefolgt</span>
@@ -171,17 +172,19 @@
 
       <!-- TREFFEN TAB -->
       <div id="tab-feed" class="tab-content hidden" style="height: 100%; overflow-y: auto; padding: 16px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px; flex-shrink:0;">
-          <h3 style="font-size: 16px; font-weight: 800;">Spontane Treffen</h3>
-          <button class="btn" style="width:auto; margin-top:0; padding: 6px 12px; font-size: 12px;" onclick="openUploadModal()">+ Erstellen</button>
-        </div>
+        <div class="container-box" style="margin-bottom: 12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+            <h3 style="font-size: 16px; font-weight: 800;">Spontane Treffen</h3>
+            <button class="btn" style="width:auto; margin-top:0; padding: 6px 12px; font-size: 12px;" onclick="openUploadModal()">+ Erstellen</button>
+          </div>
 
-        <div class="category-group" id="filter-group">
-          <div class="cat-pill active" onclick="setFilter(this, 'Alle')">Alle</div>
-          <div class="cat-pill" onclick="setFilter(this, '☕ Kaffee')">☕ Kaffee</div>
-          <div class="cat-pill" onclick="setFilter(this, '📖 Lernen')">📖 Lernen</div>
-          <div class="cat-pill" onclick="setFilter(this, '🍺 Bier')">🍺 Bier</div>
-          <div class="cat-pill" onclick="setFilter(this, '🏀 Sport')">🏀 Sport</div>
+          <div class="category-group" id="filter-group">
+            <div class="cat-pill active" onclick="setFilter(this, 'Alle')">Alle</div>
+            <div class="cat-pill" onclick="setFilter(this, '☕ Kaffee')">☕ Kaffee</div>
+            <div class="cat-pill" onclick="setFilter(this, '📖 Lernen')">📖 Lernen</div>
+            <div class="cat-pill" onclick="setFilter(this, '🍺 Bier')">🍺 Bier</div>
+            <div class="cat-pill" onclick="setFilter(this, '🏀 Sport')">🏀 Sport</div>
+          </div>
         </div>
 
         <div id="feed-list" style="overflow-y:auto; flex:1;">
@@ -196,7 +199,7 @@
           <span style="font-size: 10px; color: var(--text-muted);">Reset So. 23:59</span>
         </div>
 
-        <div style="background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 12px; margin-bottom: 12px;">
+        <div class="container-box" style="margin-bottom: 12px;">
           <h4 style="font-size: 13px; font-weight: 800; margin-bottom: 6px; color: #818cf8;">🎓 Wiener Uni-Duell (Pro-Kopf)</h4>
           <div id="uni-duell-list" style="display: flex; flex-direction: column; gap: 6px;">
             <p style="color: var(--text-muted); font-size: 12px;">Berechne Uni-Wertung...</p>
@@ -204,14 +207,14 @@
         </div>
 
         <h4 style="font-size: 13px; font-weight: 800; margin-bottom: 6px;">⭐ Wall of Fame (Top Creator)</h4>
-        <div id="top-creators-list" style="display: flex; flex-direction: column; gap: 6px; padding-bottom: 20px;">
+        <div id="top-creators-list" class="container-box" style="display: flex; flex-direction: column; gap: 6px; padding-bottom: 20px;">
           <p style="color: var(--text-muted); font-size: 12px;">Lade Top Creator...</p>
         </div>
       </div>
 
       <!-- GLOBAL CHAT TAB -->
       <div id="tab-global" class="tab-content hidden" style="height: 100%;">
-        <div class="chat-container" style="height: 100%;">
+        <div class="chat-container container-box" style="height: 100%; padding: 0; overflow: hidden;">
           <div class="messages-list" id="global-chat-list">
             <p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;">Lade Campus-Chat...</p>
           </div>
@@ -224,7 +227,7 @@
 
       <!-- POSTFACH / DM TAB -->
       <div id="tab-inbox" class="tab-content hidden" style="height: 100%; padding: 16px;">
-        <div class="chat-container" style="height: 100%;">
+        <div class="chat-container container-box" style="height: 100%; padding: 12px; overflow: hidden;">
           <label style="font-size: 10px; font-weight: 600; color: var(--text-muted); flex-shrink:0;">Empfänger (E-Mail):</label>
           <input type="email" id="dm-recipient" placeholder="kommilitone@uni.at" style="margin-bottom: 6px; flex-shrink:0; max-width: 400px;" onchange="loadDirectMessages()">
           
@@ -241,7 +244,7 @@
       <!-- PROFIL TAB -->
       <div id="tab-profile" class="tab-content hidden" style="height: 100%;">
         <div style="overflow-y: auto; flex: 1; padding: 16px; min-height: 0; height: 100%;">
-          <div class="profile-header-card">
+          <div class="profile-header-card container-box">
             <div style="display:flex; align-items:center; gap:12px;">
               <img id="my-profile-avatar-preview" class="profile-avatar-lg" src="" onclick="changeAvatarDirectly()" title="Klicken, um das Profilbild zu ändern" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'64\' height=\'64\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%2394a3b8\' stroke-width=\'2\'><path d=\'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2\'></path><circle cx=\'12\' cy=\'7\' r=\'4\'></circle></svg>'" alt="Avatar">
               <div>
@@ -253,13 +256,13 @@
             </div>
           </div>
 
-          <div style="background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(236,72,153,0.15)); border: 1px solid var(--border); border-radius: 16px; padding: 14px; margin-bottom: 12px; max-width: 600px; text-align: center;">
+          <div class="container-box" style="background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(236,72,153,0.15)); margin-bottom: 12px; max-width: 600px; text-align: center;">
             <h4 style="font-size: 13px; font-weight: 800; margin-bottom: 4px; color: var(--text);">🚀 Zeig dein Campus-Level!</h4>
             <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 10px;">Teile deinen Status in deiner WhatsApp-Status oder Insta-Story und hol dir Extrapunkte!</p>
             <button class="btn" onclick="shareProfileCard()" style="margin-top: 0; background: var(--gradient-main); font-size: 12px; padding: 8px 14px;">📲 Profil in WhatsApp / Insta teilen</button>
           </div>
 
-          <div style="max-width: 600px;">
+          <div class="container-box" style="max-width: 600px; margin-bottom: 20px;">
             <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Benutzername (Handle):</label>
             <input type="text" id="profile-username" placeholder="z. B. johndoe">
 
@@ -295,7 +298,7 @@
 
       <!-- ADMIN TAB -->
       <div id="tab-admin" class="tab-content hidden" style="height: 100%; overflow-y: auto; padding: 16px;">
-        <div style="max-width: 600px; padding-bottom: 20px;">
+        <div class="container-box" style="max-width: 600px; padding-bottom: 20px;">
           <h3 style="font-size: 16px; font-weight: 800; margin-bottom: 4px; color: var(--admin);">⚡ Admin-Interface: Campus-Drops & Test-Tools</h3>
           <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;">Verwalte hier Drops und teste dein Punktekonto im Admin-Modus.</p>
 
@@ -347,8 +350,8 @@
 
     </div>
 
-    <!-- NAVIGATION: Mobil unten (Feed - Treffen - Plus - Chat - Postfach), Desktop als linke Sidebar -->
-    <nav class="nav-tabs" id="bottom-nav-bar" style="flex-shrink: 0;">
+    <!-- NAVIGATION UNTEN (VOLLSTÄNDIG SICHTBAR OHNE ABSCHNITT) -->
+    <nav class="nav-tabs" id="bottom-nav-bar">
       <button class="tab-btn active" onclick="switchTab('reels')" id="btn-tab-reels">✨ Feed</button>
       <button class="tab-btn" onclick="switchTab('feed')" id="btn-tab-feed">💬 Treffen</button>
 
@@ -360,8 +363,8 @@
       <button class="tab-btn" onclick="switchTab('inbox')" id="btn-tab-inbox">📬 Postfach</button>
     </nav>
 
-    <!-- FOOTER LINKS -->
-    <div class="footer-links" style="flex-shrink: 0;">
+    <!-- FOOTER LINKS (JETZT IMMER SICHTBAR & INKL. MELDEN) -->
+    <div class="footer-links">
       <span onclick="openReportModal()">🚨 Inhalt melden</span>
       <span>•</span>
       <span onclick="openImpressumModal()">Impressum</span>
@@ -397,7 +400,7 @@
   </div>
 
   <div id="more-points-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.92); z-index: 100;">
-    <div style="width: 100%; max-width: 400px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 18px; margin: 10px;">
+    <div class="container-box" style="width: 100%; max-width: 400px; margin: 10px;">
       <h3 style="margin-bottom: 4px; font-weight: 900; color: var(--primary);">🎁 Mehr Punkte sammeln</h3>
       <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 14px; line-height: 1.4;">Wähle eine Methode, um deinen Punktestand und dein Uni-Ranking zu pushen:</p>
       
@@ -422,7 +425,7 @@
   </div>
 
   <div id="prof-guide-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.95); z-index: 120;">
-    <div style="width: 100%; max-width: 480px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 18px; margin: 10px; max-height: 85vh; display: flex; flex-direction: column;">
+    <div class="container-box" style="width: 100%; max-width: 480px; margin: 10px; max-height: 85vh; display: flex; flex-direction: column;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
         <h3 style="font-weight: 900; color: #818cf8; font-size: 16px;">📚 Prof-Rating & Survival Guide</h3>
         <button class="btn btn-secondary" style="width: auto; padding: 4px 10px; font-size: 11px; margin-top: 0;" onclick="toggleProfForm()">+ Review schreiben</button>
@@ -472,7 +475,7 @@
   </div>
 
   <div id="quiz-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.95); z-index: 110;">
-    <div style="width: 100%; max-width: 400px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 18px; margin: 10px;">
+    <div class="container-box" style="width: 100%; max-width: 400px; margin: 10px;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
         <h3 style="font-weight: 900; color: #818cf8; font-size: 15px;" id="quiz-title">🧠 Campus & Allgemein Quiz</h3>
         <span id="quiz-timer-badge" style="background: rgba(236,72,153,0.2); color: var(--accent); border: 1px solid rgba(236,72,153,0.4); padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 800;">⏱️ 15s</span>
@@ -485,7 +488,7 @@
   </div>
 
   <div id="active-spots-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.92); z-index: 100;">
-    <div style="width: 100%; max-width: 400px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 18px; margin: 10px; max-height: 80vh; display: flex; flex-direction: column;">
+    <div class="container-box" style="width: 100%; max-width: 400px; margin: 10px; max-height: 80vh; display: flex; flex-direction: column;">
       <h3 style="margin-bottom: 4px; font-weight: 900; color: var(--admin);">📍 Aktuelle Campus- & Partner-Spots</h3>
       <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px; line-height: 1.4;">Gehe zum Spot vor Ort, um Punkte einzusammeln!</p>
       <div id="modal-active-spots-list" style="overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;"></div>
@@ -494,7 +497,7 @@
   </div>
 
   <div id="crush-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.92); z-index: 100;">
-    <div style="width: 100%; max-width: 400px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 18px; margin: 10px;">
+    <div class="container-box" style="width: 100%; max-width: 400px; margin: 10px;">
       <h3 style="margin-bottom: 4px; font-weight: 900; color: var(--accent);">💖 Anonymes Crush Radar</h3>
       <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px; line-height: 1.4;">Trage deinen Campus-Crush ein. Bei gegenseitigem Match gibt es ein Blind-Date!</p>
       <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Crush (E-Mail oder @handle):</label>
@@ -508,7 +511,7 @@
   </div>
 
   <div id="media-upload-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.95); z-index: 150;">
-    <div style="width: 100%; max-width: 440px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 18px; margin: 10px;">
+    <div class="container-box" style="width: 100%; max-width: 440px; margin: 10px;">
       <h3 style="margin-bottom: 4px; font-weight: 900; color: var(--primary);">🎬 Direktes Video & Medien hochladen</h3>
       <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;">Wähle ein Video oder Foto aus. Videos werden automatisch auf max. 30 Sekunden überprüft.</p>
       
@@ -531,7 +534,7 @@
 
   <!-- RECHTLICHE MODALS -->
   <div id="impressum-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: #090d16; z-index: 250; padding: 20px;">
-    <div style="width: 100%; max-width: 500px; background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.8);">
+    <div class="container-box" style="width: 100%; max-width: 500px; padding: 24px;">
       <h2 style="font-size: 20px; font-weight: 900; color: var(--primary); margin-bottom: 12px;">Impressum</h2>
       <div style="font-size: 13px; color: var(--text); line-height: 1.6; margin-bottom: 18px;">
         <p><strong>Angaben gemäß § 5 ECG / Offenlegung gem. § 25 Mediengesetz:</strong></p><br>
@@ -543,7 +546,7 @@
   </div>
 
   <div id="agb-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: #090d16; z-index: 250; padding: 20px;">
-    <div style="width: 100%; max-width: 500px; background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.8);">
+    <div class="container-box" style="width: 100%; max-width: 500px; padding: 24px;">
       <h2 style="font-size: 20px; font-weight: 900; color: var(--primary); margin-bottom: 12px;">AGB & Nutzungsbedingungen</h2>
       <div style="font-size: 12px; color: var(--text-muted); line-height: 1.6; margin-bottom: 18px; max-height: 300px; overflow-y: auto;">
         <p><strong>1. Geltungsbereich:</strong> Diese Bedingungen gelten für alle Nutzer der Plattform.</p><br>
@@ -554,7 +557,7 @@
   </div>
 
   <div id="report-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: #090d16; z-index: 250; padding: 20px;">
-    <div style="width: 100%; max-width: 450px; background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.8);">
+    <div class="container-box" style="width: 100%; max-width: 450px; padding: 20px;">
       <h3 style="font-size: 18px; font-weight: 900; color: var(--accent); margin-bottom: 6px;">🚨 Inhalt melden</h3>
       <select id="report-reason" style="margin-bottom: 10px;">
         <option value="hate">Hassrede / Diskriminierung</option>
