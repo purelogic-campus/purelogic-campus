@@ -302,17 +302,11 @@
       <div id="tab-admin" class="tab-content hidden">
         <div class="container-box" style="max-width: 600px; padding-bottom: 20px;">
           <h3 style="font-size: 16px; font-weight: 800; margin-bottom: 4px; color: var(--admin);">⚡ Admin-Interface: Campus-Drops & Test-Tools</h3>
-          <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;">Verwalte hier Drops und teste deine App-Module direkt im Admin-Modus.</p>
+          <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;">Verwalte hier Drops und teste dein Punktekonto im Admin-Modus.</p>
 
           <div style="background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); border-radius: 12px; padding: 12px; margin-bottom: 14px;">
-            <h4 style="font-size: 13px; font-weight: 800; color: var(--admin); margin-bottom: 4px;">🧪 Admin Test-Modus & Schnellzugriff</h4>
-            <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">Direkter Aufruf der Module als Administrator zum Ausprobieren:</p>
-            
-            <div style="display: flex; gap: 8px; margin-bottom: 10px;">
-              <button class="btn" onclick="openCampusQuizModal()" style="margin: 0; flex: 1; background: #6366f1; font-weight: 800; padding: 8px; font-size: 11px;">🧠 Quiz testen</button>
-              <button class="btn" onclick="openMorePointsModal()" style="margin: 0; flex: 1; background: #ec4899; font-weight: 800; padding: 8px; font-size: 11px;">🎁 Punkte-Menü</button>
-            </div>
-
+            <h4 style="font-size: 13px; font-weight: 800; color: var(--admin); margin-bottom: 4px;">🧪 Admin Test-Modus: Punkte simulieren</h4>
+            <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">Da du als Admin bist, kannst du hier deinen Test-Punktestand direkt anpassen:</p>
             <div style="display: flex; gap: 8px;">
               <input type="number" id="admin-test-points-input" placeholder="z. B. 45" style="margin: 0; flex: 1;">
               <button class="btn" onclick="adminSetTestPoints()" style="margin: 0; width: auto; background: var(--admin); color: #000; font-weight: 800; padding: 0 14px;">Punkte setzen</button>
