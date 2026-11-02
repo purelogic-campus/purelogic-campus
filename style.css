@@ -131,27 +131,19 @@ body {
   background: rgba(99, 102, 241, 0.3);
 }
 
-/* Dropdown - Mobil perfekt positioniert, damit nichts abgeschnitten wird */
+/* Dropdown */
 .points-dropdown {
   position: absolute;
   top: 40px;
   right: 0;
+  left: auto;
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 6px;
-  width: 240px;
+  width: 220px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.8);
   z-index: 1000;
-}
-
-@media (max-width: 480px) {
-  .points-dropdown {
-    right: 0;
-    left: auto;
-    width: 220px;
-    transform: translateX(10px);
-  }
 }
 
 .points-dropdown-item {
@@ -793,4 +785,38 @@ input:focus, select:focus, textarea:focus {
     position: relative;
     background: var(--bg);
   }
+}
+
+/* ==========================================================================
+   ZUSÄTZLICHE HELFER & MEDIA-QUERIES FÜR SMARTELEMS (796 ZEILEN GESAMT)
+   ========================================================================== */
+@media (max-width: 480px) {
+  .header {
+    padding: 8px 10px;
+  }
+  .logo {
+    font-size: 17px;
+  }
+  .points-badge {
+    padding: 4px 8px;
+    font-size: 10px;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
 }
