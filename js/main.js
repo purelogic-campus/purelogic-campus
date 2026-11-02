@@ -8,6 +8,7 @@ import { initQuiz, openCampusQuizModal, closeCampusQuizModal } from './features/
 import { openProfGuideModal, closeProfGuideModal } from './features/profguide.js';
 import { loadLiveStreams } from './features/live.js';
 import { loadCampusFeed, loadMyProfilePosts } from './features/feed.js';
+import { openCrushModal, closeCrushModal, submitCrush, loadCrushMatches } from './features/crush.js';
 
 // Global verfügbar machen für HTML onclick-Attribute
 window.handleLogin = handleLogin;
@@ -20,6 +21,10 @@ window.openProfGuideModal = openProfGuideModal;
 window.closeProfGuideModal = closeProfGuideModal;
 window.openCampusQuizModal = openCampusQuizModal;
 window.closeCampusQuizModal = closeCampusQuizModal;
+window.openCrushModal = openCrushModal;
+window.closeCrushModal = closeCrushModal;
+window.submitCrush = submitCrush;
+window.loadCrushMatches = loadCrushMatches;
 
 // UI Hilfsfunktionen & Tab-Steuerung
 window.switchTab = function(tabId) {
@@ -65,8 +70,6 @@ window.openActiveSpotsModal = () => document.getElementById('active-spots-modal'
 window.closeActiveSpotsModal = () => document.getElementById('active-spots-modal')?.classList.add('hidden');
 window.openMorePointsModal = () => document.getElementById('more-points-modal')?.classList.remove('hidden');
 window.closeMorePointsModal = () => document.getElementById('more-points-modal')?.classList.add('hidden');
-window.openCrushModal = () => document.getElementById('crush-modal')?.classList.remove('hidden');
-window.closeCrushModal = () => document.getElementById('crush-modal')?.classList.add('hidden');
 
 // Rechtliche & Melde-Modals
 window.openReportModal = () => document.getElementById('report-modal')?.classList.remove('hidden');
@@ -141,10 +144,7 @@ async function checkAuthSession() {
                 if (badge) {
                     badge.classList.add('admin-badge');
                     badge.textContent = '👑 Admin';
-                    // Admin-Badge zeigt jetzt den Admin-Tab, blockiert aber nicht das Dropdown daneben
                 }
-                
-                // Extra Admin-Tab-Button im Header einblenden, falls gewünscht oder über Sidebar steuerbar
             }
         } else {
             state.currentUserEmail = null;
