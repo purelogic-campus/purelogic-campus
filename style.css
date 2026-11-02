@@ -131,7 +131,7 @@ body {
   background: rgba(99, 102, 241, 0.3);
 }
 
-/* Dropdown - Mobil & Desktop optimiert gegen Abschneiden */
+/* Dropdown - Mobil perfekt positioniert, damit nichts abgeschnitten wird */
 .points-dropdown {
   position: absolute;
   top: 40px;
@@ -147,8 +147,10 @@ body {
 
 @media (max-width: 480px) {
   .points-dropdown {
-    right: -10px;
+    right: 0;
+    left: auto;
     width: 220px;
+    transform: translateX(10px);
   }
 }
 
