@@ -85,6 +85,7 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
+  position: relative;
 }
 
 .header-top-link-btn {
@@ -131,19 +132,26 @@ body {
   background: rgba(99, 102, 241, 0.3);
 }
 
-/* Dropdown */
+/* Dropdown - Perfekt eingepasst für Smartphones und Desktop */
 .points-dropdown {
   position: absolute;
-  top: 40px;
+  top: 45px;
   right: 0;
   left: auto;
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 6px;
-  width: 220px;
+  width: 230px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.8);
   z-index: 1000;
+}
+
+@media (max-width: 480px) {
+  .points-dropdown {
+    right: -20px;
+    width: 210px;
+  }
 }
 
 .points-dropdown-item {
@@ -788,7 +796,7 @@ input:focus, select:focus, textarea:focus {
 }
 
 /* ==========================================================================
-   ZUSÄTZLICHE HELFER & MEDIA-QUERIES FÜR SMARTELEMS (796 ZEILEN GESAMT)
+   ZUSÄTZLICHE HELFER & MEDIA-QUERIES FÜR SMARTELEMS (802 ZEILEN GESAMT)
    ========================================================================== */
 @media (max-width: 480px) {
   .header {
