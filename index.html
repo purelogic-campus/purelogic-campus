@@ -165,6 +165,7 @@
           <span style="font-size: 12px; font-weight: 800; cursor: pointer; color: var(--primary);" id="subtab-foryou" onclick="setReelFilter('foryou')">✨ Für dich</span>
           <span style="font-size: 12px; font-weight: 800; cursor: pointer; color: var(--text-muted);" id="subtab-discover" onclick="setReelFilter('discover')">🔥 Entdecken</span>
           <span style="font-size: 12px; font-weight: 800; cursor: pointer; color: var(--text-muted);" id="subtab-following" onclick="setReelFilter('following')">👥 Gefolgt</span>
+          <span style="font-size: 12px; font-weight: 800; cursor: pointer; color: var(--danger);" id="subtab-live" onclick="switchTab('live')">🔴 LIVE</span>
         </div>
 
         <div class="reel-card-wrapper" id="reels-list" style="flex: 1; overflow-y: auto; scroll-snap-type: y mandatory; padding: 0 12px 10px 12px;">
@@ -504,9 +505,9 @@
       <h3 style="margin-bottom: 4px; font-weight: 900; color: var(--accent);">💖 Anonymes Crush Radar</h3>
       <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px; line-height: 1.4;">Trage deinen Campus-Crush ein. Bei gegenseitigem Match gibt es ein Blind-Date!</p>
       <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Crush (E-Mail oder @handle):</label>
-      <input type="text" id="crush-target-input" placeholder="crush@uni.at ou @username">
+      <input type="text" id="crush-target-input" placeholder="crush@uni.at oder @username">
       <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Geheimer Hinweis (optional):</label>
-      <input type="text" id="crush-hint-input" placeholder="z.b. Bib Reihe 4...">
+      <input type="text" id="crush-hint-input" placeholder="z.B. Bib Reihe 4...">
       <button class="btn" onclick="submitCrush()">Abschicken & Hoffen 💘</button>
       <div id="crush-matches-box" style="margin-top: 12px; font-size: 11px;"></div>
       <button class="btn btn-secondary" onclick="closeCrushModal()">Schließen</button>
@@ -586,6 +587,7 @@
 <script type="module" src="js/features/quiz.js"></script>
 <script type="module" src="js/features/profguide.js"></script>
 <script type="module" src="js/features/live.js"></script>
+<script type="module" src="js/features/crush.js"></script>
 <script type="module" src="js/features/feed.js"></script>
 <script type="module" src="js/main.js"></script>
 </body>
