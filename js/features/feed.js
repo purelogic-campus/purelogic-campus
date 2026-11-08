@@ -1,8 +1,9 @@
-// js/features/feed.js - Vollständiges Campus-Feed & Medien Modul
+// js/features/feed.js - Vollständiges Campus-Feed & Medien Modul mit Video-Autoplay
 import { _supabase } from '../config.js';
 import { state } from '../state.js';
 
 let selectedMediaFile = null;
+let observer = null;
 
 /**
  * Bild-Skalierung und Komprimierung über Canvas (Standardisierung auf max 1080px)
@@ -183,6 +184,39 @@ export async function uploadTrimmedMedia() {
 }
 
 /**
+ * Initialisiert den IntersectionObserver für automatisches Video-Autoplay im Sichtfeld
+ */
+function initVideoAutoplayObserver() {
+    if (observer) observer.disconnect();
+
+    const options = {
+        root: document.getElementById('reels-list'),
+        rootMargin: '0px',
+        threshold: 0.6 // Das Video muss zu mindestens 60% im Viewport sein, um zu starten
+    };
+
+    observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            const video = entry.target.querySelector('video');
+            if (!video) return;
+
+            if (entry.isIntersecting) {
+                video.play().catch(err => {
+                    console.warn('Autoplay wurde vom Browser blockiert oder unterbunden:', err);
+                });
+            } else {
+                video.pause();
+            }
+        });
+    }, options);
+
+    // Alle aktuellen Reel-Items beobachten
+    document.querySelectorAll('.reel-item').forEach(item => {
+        observer.observe(item);
+    });
+}
+
+/**
  * Lädt die Beiträge für den Campus-Feed basierend auf dem Filter
  */
 export async function loadCampusFeed(filter = 'foryou') {
@@ -216,7 +250,8 @@ export async function loadCampusFeed(filter = 'foryou') {
         
         let mediaHtml = '';
         if (post.media_type === 'video') {
-            mediaHtml = `<video src="${post.media_url}" controls class="reel-media" style="object-fit: contain; width: 100%; height: 100%;"></video>`;
+            // muted & playsinline ist essenziell, damit mobile Browser Autoplay erlauben
+            mediaHtml = `<video src="${post.media_url}" muted playsinline loop class="reel-media" style="object-fit: contain; width: 100%; height: 100%;"></video>`;
         } else if (post.media_url) {
             mediaHtml = `<img src="${post.media_url}" class="reel-media" style="object-fit: contain; width: 100%; height: 100%;" alt="Post">`;
         }
@@ -233,6 +268,9 @@ export async function loadCampusFeed(filter = 'foryou') {
         
         feedList.appendChild(item);
     });
+
+    // Nach dem Rendern der Posts den Observer starten
+    setTimeout(initVideoAutoplayObserver, 100);
 }
 
 /**
@@ -261,7 +299,7 @@ export async function loadMyProfilePosts() {
         item.style.cssText = 'background: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; display: flex; flex-direction: column;';
         
         if (post.media_type === 'video') {
-            item.innerHTML = `<video src="${post.media_url}" controls style="width: 100%; height: 100px; object-fit: contain; background: #000;"></video>`;
+            item.innerHTML = `<video src="${post.media_url}" muted playsinline style="width: 100%; height: 100px; object-fit: contain; background: #000;"></video>`;
         } else {
             item.innerHTML = `<img src="${post.media_url}" style="width: 100%; height: 100px; object-fit: contain; background: #000;" alt="Post">`;
         }
