@@ -65,10 +65,6 @@ async function initMainAppSession() {
     if (logoutBtn) logoutBtn.classList.remove('hidden');
     if (profileBtn) profileBtn.classList.remove('hidden');
 
-    if (userData && userData.is_admin) {
-        if (adminBtn) adminBtn.classList.remove('hidden');
-    }
-
     try {
         const { data: userData } = await _supabase
             .from('users')
@@ -80,6 +76,11 @@ async function initMainAppSession() {
             const scoreBadge = document.getElementById('score');
             if (scoreBadge) scoreBadge.textContent = `${userData.logic_score || 0} P`;
             state.isVerifiedStudent = userData.is_verified_student || false;
+
+            // Admin-Prüfung basierend auf Datenbank-Flag oder Admin-E-Mail
+            if (userData.is_admin || state.currentUserEmail === 'office@pure-logic.at' || state.currentUserEmail?.includes('admin')) {
+                if (adminBtn) adminBtn.classList.remove('hidden');
+            }
 
             // Profilfelder im Profil-Tab vorbefüllen
             const userHandleInput = document.getElementById('profile-username');
