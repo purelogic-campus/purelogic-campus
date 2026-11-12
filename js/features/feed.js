@@ -358,6 +358,15 @@ export function setReelFilter(filterType) {
     loadCampusFeed(filterType);
 }
 
+/**
+ * Filter-Funktion für Treffen
+ */
+export function setFilter(element, category) {
+    document.querySelectorAll('#filter-group .cat-pill').forEach(p => p.classList.remove('active'));
+    element.classList.add('active');
+    // Optional: Logik zum Filtern der Treffen-Liste hier einfügen
+}
+
 // Global für HTML-Events bereitstellen
 window.openUploadModal = openUploadModal;
 window.closeMediaUploadModal = closeMediaUploadModal;
@@ -366,4 +375,5 @@ window.uploadTrimmedMedia = uploadTrimmedMedia;
 window.loadCampusFeed = loadCampusFeed;
 window.loadMyProfilePosts = loadMyProfilePosts;
 window.setReelFilter = setReelFilter;
+window.setFilter = setFilter;
 window.claimActiveDrop = claimActiveDrop;
