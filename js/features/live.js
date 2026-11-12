@@ -1,9 +1,54 @@
 // js/features/live.js - Vollständiges Live-Stream Modul
 import { _supabase } from '../config.js';
+import { state } from '../state.js';
+
+/**
+ * Vorab-Prüfung vor dem Start eines Live-Streams
+ */
+export function handlePreLiveCheck() {
+    if (!state.currentUserEmail) {
+        alert('Bitte logge dich zuerst ein, um einen Live-Stream zu starten!');
+        return;
+    }
+    
+    const category = prompt('Wähle eine Kategorie für deinen Stream (z.B. 🎮 Gaming, 🎵 Musik, 💬 Plaudern):', '💬 Plaudern');
+    if (!category) return;
+    
+    const location = prompt('Dein Standort / Hörsaal (z.B. HS 32, Uni Wien):', 'Uni Wien Hauptgebäude');
+    if (!location) return;
+
+    startLiveStreamBroadcast(category, location);
+}
+
+/**
+ * Startet einen neuen Live-Stream in der Datenbank
+ */
+async function startLiveStreamBroadcast(category, location) {
+    try {
+        const { error } = await _supabase
+            .from('live_streams')
+            .insert([
+                {
+                    id: crypto.randomUUID(),
+                    host_email: state.currentUserEmail,
+                    category: category,
+                    location: location,
+                    created_at: new Date().toISOString()
+                }
+            ]);
+
+        if (error) throw error;
+
+        alert('Dein Live-Stream wurde erfolgreich gestartet! 🔴');
+        loadLiveStreams();
+    } catch (err) {
+        console.error('Fehler beim Starten des Streams:', err);
+        alert('Fehler beim Starten des Streams: ' + err.message);
+    }
+}
 
 /**
  * Lädt exklusiv aktive Live-Streams aus der Tabelle 'live_streams'.
- * Verhindert das Verfälschen der Ansicht durch spontane Treffen.
  */
 export async function loadLiveStreams() {
     const liveList = document.getElementById('live-streams-list');
@@ -32,18 +77,18 @@ export async function loadLiveStreams() {
         const item = document.createElement('div');
         item.className = 'reel-item';
 
-        const category = stream.category || stream.title || 'Live Stream';
+        const category = stream.category || 'Live Stream';
         const location = stream.location || 'Wien / Campus';
         const streamId = stream.id ? String(stream.id) : '0000';
 
         item.innerHTML = `
             <div style="width: 100%; height: 100%; background: linear-gradient(135deg, #0f172a, #1e1b4b); display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; text-align: center; position: relative; cursor: pointer;" onclick="openLiveFullscreen('${streamId}', '${category}', '${location}')">
                 <div style="position: absolute; top: 16px; left: 16px; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.5); color: #ef4444; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 800; display: flex; align-items: center; gap: 4px;">
-                    <span style="width: 8px; height: 8px; background: #ef4444; border-radius: 50%; display: inline-block; animation: pulseGlow 1s infinite;"></span> LIVE
+                    <span style="width: 8px; height: 8px; background: #ef4444; border-radius: 50%; display: inline-block;"></span> LIVE
                 </div>
                 
                 <span style="background: rgba(99,102,241,0.2); color: #818cf8; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 800; margin-bottom: 10px;">${category}</span>
-                <h3 style="font-size: 22px; font-weight: 900; color: #fff; margin-bottom: 6px;">Campus Stream # ${streamId.substring(0, 4)}</h3>
+                <h3 style="font-size: 22px; font-weight: 900; color: #fff; margin-bottom: 6px;">Campus Stream</h3>
                 <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">📍 ${location}</p>
                 
                 <button class="btn" style="width: auto; padding: 10px 24px; font-size: 13px; font-weight: 800; background: var(--gradient-main); box-shadow: 0 4px 15px rgba(99,102,241,0.4);" onclick="event.stopPropagation(); openLiveFullscreen('${streamId}', '${category}', '${location}')">Vollbild beitreten & Chatten 🚀</button>
@@ -56,6 +101,15 @@ export async function loadLiveStreams() {
         
         liveList.appendChild(item);
     });
+}
+
+/**
+ * Filtert die Live-Streams nach Kategorie
+ */
+export function setLiveFilter(element, category) {
+    document.querySelectorAll('#live-filter-group .cat-pill').forEach(p => p.classList.remove('active'));
+    element.classList.add('active');
+    loadLiveStreams();
 }
 
 /**
@@ -72,7 +126,7 @@ export function openLiveFullscreen(streamId, category, location) {
 
     const chatList = document.getElementById('live-chat-messages');
     if (chatList) {
-        chatList.innerHTML = `<div style="color: var(--text-muted); text-align: center;">Verbunden mit Live-Stream ${streamId.substring(0, 6)}... Schreib eine Nachricht!</div>`;
+        chatList.innerHTML = `<div style="color: var(--text-muted); text-align: center;">Verbunden mit Live-Stream... Schreib eine Nachricht!</div>`;
     }
 }
 
@@ -104,6 +158,8 @@ export function sendLiveChatMessage() {
 
 // Global für onclick-Handler im HTML verfügbar machen
 window.loadLiveStreams = loadLiveStreams;
+window.handlePreLiveCheck = handlePreLiveCheck;
+window.setLiveFilter = setLiveFilter;
 window.openLiveFullscreen = openLiveFullscreen;
 window.closeLiveFullscreen = closeLiveFullscreen;
 window.sendLiveChatMessage = sendLiveChatMessage;
