@@ -558,7 +558,7 @@ input:focus, select:focus, textarea:focus {
 }
 
 /* ==========================================================================
-   SMARTPHONE-ANSICHT (UNTERE LEISTE, FOOTER & HERVORSTEHENDER PLUS-BUTTON)
+   SMARTPHONE-ANSICHT (STANDARD: EINSPALTIGES MOBILE-APP-LAYOUT)
    ========================================================================== */
 .main-app-layout {
   flex: 1;
@@ -567,6 +567,7 @@ input:focus, select:focus, textarea:focus {
   overflow: hidden;
   height: 100%;
   min-height: 0;
+  width: 100%;
 }
 
 .tab-content-wrapper {
@@ -576,6 +577,7 @@ input:focus, select:focus, textarea:focus {
   overflow: hidden;
   position: relative;
   min-height: 0;
+  width: 100%;
 }
 
 .bottom-controls-wrapper {
@@ -654,7 +656,7 @@ input:focus, select:focus, textarea:focus {
   transform: scale(0.95);
 }
 
-/* Footer Links */
+/* Footer Links (Mobil) */
 .footer-links {
   text-align: center;
   padding: 6px 8px 8px 8px;
@@ -683,7 +685,7 @@ input:focus, select:focus, textarea:focus {
 }
 
 /* ==========================================================================
-   DESKTOP-ANSICHT (AB 768PX: LINKE SIDEBAR + ZENTRIERTER FEED)
+   PC-DESKTOP-ANSICHT (AB 768PX: LINKE SIDEBAR + ZENTRIERTER HAUPTBEREICH)
    ========================================================================== */
 @media (min-width: 768px) {
   .main-app-layout:not(.hidden) {
@@ -692,6 +694,8 @@ input:focus, select:focus, textarea:focus {
     grid-template-rows: 1fr;
     height: 100%;
     position: relative;
+    width: 100%;
+    overflow: hidden;
   }
 
   .bottom-controls-wrapper {
@@ -706,6 +710,7 @@ input:focus, select:focus, textarea:focus {
     background: var(--card);
     height: 100%;
     position: relative;
+    box-sizing: border-box;
   }
 
   .nav-tabs {
@@ -715,6 +720,7 @@ input:focus, select:focus, textarea:focus {
     gap: 10px;
     height: auto;
     background: transparent;
+    padding: 0;
   }
 
   .tab-btn {
@@ -792,11 +798,12 @@ input:focus, select:focus, textarea:focus {
     height: 100%;
     position: relative;
     background: var(--bg);
+    overflow-y: auto;
   }
 }
 
 /* ==========================================================================
-   ZUSÄTZLICHE HELFER & MEDIA-QUERIES FÜR SMARTELEMS (802 ZEILEN GESAMT)
+   ZUSÄTZLICHE HELFER & MEDIA-QUERIES FÜR SMARTELEMS
    ========================================================================== */
 @media (max-width: 480px) {
   .header {
