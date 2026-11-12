@@ -77,9 +77,10 @@ async function initMainAppSession() {
             if (scoreBadge) scoreBadge.textContent = `${userData.logic_score || 0} P`;
             state.isVerifiedStudent = userData.is_verified_student || false;
 
-            // Admin-Prüfung basierend auf Datenbank-Flag oder Admin-E-Mail
+            // Admin-Prüfung: Greift über das Datenbank-Flag ODER fix über die Master-Admin E-Mail
             if (userData.is_admin || state.currentUserEmail === 'office@pure-logic.at' || state.currentUserEmail?.includes('admin')) {
                 if (adminBtn) adminBtn.classList.remove('hidden');
+                if (scoreBadge) scoreBadge.classList.add('admin-badge');
             }
 
             // Profilfelder im Profil-Tab vorbefüllen
