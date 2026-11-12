@@ -1,6 +1,7 @@
-// js/features/feed.js - Vollständiges Campus-Feed & Medien Modul mit Video-Autoplay
+// js/features/feed.js - Vollständiges Campus-Feed & Medien Modul mit Video-Autoplay & Moderation
 import { _supabase } from '../config.js';
 import { state } from '../state.js';
+import { validateInputOrAlert } from './moderation.js';
 
 let selectedMediaFile = null;
 let observer = null;
@@ -147,11 +148,18 @@ export function handleMediaSelection(event) {
 }
 
 /**
- * Lädt die gewählte Datei hoch und speichert den Beitrag in Supabase
+ * Lädt die gewählte Datei hoch und speichert den Beitrag in Supabase (mit Moderations-Check)
  */
 export async function uploadTrimmedMedia() {
     if (!selectedMediaFile) {
         alert('Bitte wähle zuerst eine Mediendatei aus.');
+        return;
+    }
+    
+    const caption = document.getElementById('media-caption-input')?.value || '';
+
+    // Moderations-Check für den Untertitel
+    if (!validateInputOrAlert(caption)) {
         return;
     }
     
@@ -165,7 +173,6 @@ export async function uploadTrimmedMedia() {
         }
     }
 
-    const caption = document.getElementById('media-caption-input')?.value || '';
     const fileExt = fileToUpload.name.split('.').pop();
     const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
     const filePath = `campus-uploads/${fileName}`;
@@ -364,7 +371,6 @@ export function setReelFilter(filterType) {
 export function setFilter(element, category) {
     document.querySelectorAll('#filter-group .cat-pill').forEach(p => p.classList.remove('active'));
     element.classList.add('active');
-    // Optional: Logik zum Filtern der Treffen-Liste hier einfügen
 }
 
 // Global für HTML-Events bereitstellen

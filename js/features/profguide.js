@@ -1,6 +1,7 @@
-// js/features/profguide.js - Vollständiges Prof-Rating & Survival Guide Modul
+// js/features/profguide.js - Vollständiges Prof-Rating & Survival Guide Modul mit Moderation
 import { _supabase } from '../config.js';
 import { state } from '../state.js';
+import { validateInputOrAlert } from './moderation.js';
 
 export function openProfGuideModal() {
     const modal = document.getElementById('prof-guide-modal');
@@ -68,7 +69,7 @@ export async function loadProfReviews() {
 }
 
 /**
- * Sendet eine neue Prof-Bewertung an Supabase und belohnt mit 15 Punkten
+ * Sendet eine neue Prof-Bewertung an Supabase (mit Moderations-Check)
  */
 export async function submitProfReview() {
     const profName = document.getElementById('prof-name-input')?.value.trim();
@@ -79,6 +80,11 @@ export async function submitProfReview() {
 
     if (!profName || !subject || !comment) {
         alert('Bitte fülle alle Pflichtfelder (Professor, Modul und Kommentar) aus.');
+        return;
+    }
+
+    // Moderations-Check für Professor-Name, Fach und Kommentar
+    if (!validateInputOrAlert(profName) || !validateInputOrAlert(subject) || !validateInputOrAlert(comment)) {
         return;
     }
 
