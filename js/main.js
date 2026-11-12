@@ -65,7 +65,7 @@ async function initMainAppSession() {
     if (logoutBtn) logoutBtn.classList.remove('hidden');
     if (profileBtn) profileBtn.classList.remove('hidden');
 
-    if (state.currentUserEmail === 'admin@pure-logic.at' || state.currentUserEmail?.includes('admin')) {
+    if (userData && userData.is_admin) {
         if (adminBtn) adminBtn.classList.remove('hidden');
     }
 
