@@ -10,9 +10,13 @@ import { toggleLectureMode, saveLectureNotesToFile } from './features/lecture.js
 import { openCampusQuizModal, closeCampusQuizModal } from './features/quiz.js';
 import { openProfGuideModal, closeProfGuideModal, toggleProfForm, submitProfReview, filterProfReviews } from './features/profguide.js';
 import { openCrushModal, closeCrushModal, submitCrush } from './features/crush.js';
+import { changeLanguage } from './i18n.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('PURE LOGIC • App initialisiert & Module geladen 🚀');
+
+    // Globale Fallbacks und Event-Listener initialisieren
+    setupGlobalWindowHandlers();
 
     // 1. Globale Logout- & Reset-Funktion mit sofortiger Neuladung
     window.resetUser = async function() {
@@ -117,28 +121,134 @@ async function initMainAppSession() {
     loadMyProfilePosts();
 }
 
-// Tab-Switching Logik
-window.switchTab = function(tabName) {
-    document.querySelectorAll('.tab-content').forEach(el => {
-        if (!el.id.includes('modal') && el.id !== 'auth-gate' && el.id !== 'main-app') {
-            el.classList.add('hidden');
+// Tab-Switching und globale Handler
+function setupGlobalWindowHandlers() {
+    window.switchTab = function(tabName) {
+        document.querySelectorAll('.tab-content').forEach(el => {
+            if (!el.id.includes('modal') && el.id !== 'auth-gate' && el.id !== 'main-app') {
+                el.classList.add('hidden');
+            }
+        });
+
+        const targetTab = document.getElementById('tab-' + tabName);
+        if (targetTab) {
+            targetTab.classList.remove('hidden');
         }
-    });
+    };
 
-    const targetTab = document.getElementById('tab-' + tabName);
-    if (targetTab) {
-        targetTab.classList.remove('hidden');
-    }
-};
+    // Dropdown-Menü für Punkte & Extras
+    window.togglePointsDropdown = function(event) {
+        event.stopPropagation();
+        const menu = document.getElementById('points-dropdown-menu');
+        if (menu) {
+            menu.classList.toggle('hidden');
+        }
+    };
 
-// Dropdown-Menü für Punkte & Extras
-window.togglePointsDropdown = function(event) {
-    event.stopPropagation();
-    const menu = document.getElementById('points-dropdown-menu');
-    if (menu) {
-        menu.classList.toggle('hidden');
-    }
-};
+    // Hilfsfunktion für Fehlermeldungen im Auth-Bereich
+    window.showAuthMsg = function(text, type) {
+        const msgBox = document.getElementById('auth-msg');
+        if (!msgBox) return;
+        msgBox.textContent = text;
+        msgBox.classList.remove('hidden', 'msg-error', 'msg-success');
+        msgBox.classList.add(type === 'error' ? 'msg-error' : 'msg-success');
+    };
+
+    // Modals öffnen & schließen
+    window.openMorePointsModal = function() {
+        document.getElementById('more-points-modal')?.classList.remove('hidden');
+    };
+    window.closeMorePointsModal = function() {
+        document.getElementById('more-points-modal')?.classList.add('hidden');
+    };
+
+    window.openActiveSpotsModal = function() {
+        document.getElementById('active-spots-modal')?.classList.remove('hidden');
+    };
+    window.closeActiveSpotsModal = function() {
+        document.getElementById('active-spots-modal')?.classList.add('hidden');
+    };
+
+    window.openImpressumModal = function() {
+        document.getElementById('impressum-modal')?.classList.remove('hidden');
+    };
+    window.openAgbModal = function() {
+        document.getElementById('agb-modal')?.classList.remove('hidden');
+    };
+
+    window.openUploadModal = function() {
+        document.getElementById('media-upload-modal')?.classList.remove('hidden');
+    };
+    window.closeMediaUploadModal = function() {
+        document.getElementById('media-upload-modal')?.classList.add('hidden');
+    };
+
+    window.changeAvatarDirectly = function() {
+        const newUrl = prompt('Bitte gib die Bild-URL für dein neues Profilbild ein:');
+        if (newUrl) {
+            document.getElementById('profile-avatar').value = newUrl;
+            document.getElementById('my-profile-avatar-preview').src = newUrl;
+            document.getElementById('header-avatar-preview').src = newUrl;
+        }
+    };
+
+    window.saveMyProfile = async function() {
+        const username = document.getElementById('profile-username')?.value.trim();
+        const fullName = document.getElementById('profile-fullname')?.value.trim();
+        const bio = document.getElementById('profile-bio')?.value.trim();
+        const avatarUrl = document.getElementById('profile-avatar')?.value.trim();
+        const university = document.getElementById('profile-university')?.value;
+
+        if (!state.currentUserEmail) return;
+
+        try {
+            const { error } = await _supabase
+                .from('users')
+                .update({
+                    username: username,
+                    full_name: fullName,
+                    bio: bio,
+                    avatar_url: avatarUrl,
+                    university: university
+                })
+                .eq('email', state.currentUserEmail);
+
+            if (error) throw error;
+            alert('Profil erfolgreich gespeichert! (+10 P)');
+
+            // Punkte gutschreiben (+10)
+            const { data: userData } = await _supabase
+                .from('users')
+                .select('logic_score')
+                .eq('email', state.currentUserEmail)
+                .single();
+
+            if (userData) {
+                const newScore = (userData.logic_score || 0) + 10;
+                await _supabase.from('users').update({ logic_score: newScore }).eq('email', state.currentUserEmail);
+                const scoreBadge = document.getElementById('score');
+                if (scoreBadge) scoreBadge.textContent = `${newScore} P`;
+            }
+        } catch (err) {
+            alert('Fehler beim Speichern des Profils: ' + err.message);
+        }
+    };
+
+    window.shareProfileCard = function() {
+        if (navigator.share) {
+            navigator.share({
+                title: 'PURE LOGIC • Campus Profil',
+                text: `Check mal mein Profil und Uni-Level auf PURE LOGIC ab! 🚀`,
+                url: window.location.href
+            }).catch(() => {});
+        } else {
+            navigator.clipboard.writeText(window.location.href);
+            alert('Profil-Link in die Zwischenablage kopiert! 📋');
+        }
+    };
+
+    window.changeLanguage = changeLanguage;
+}
 
 // Globales Schließen des Dropdowns bei Klick außerhalb
 document.addEventListener('click', () => {
@@ -147,105 +257,3 @@ document.addEventListener('click', () => {
         menu.classList.add('hidden');
     }
 });
-
-// Hilfsfunktion für Fehlermeldungen im Auth-Bereich
-window.showAuthMsg = function(text, type) {
-    const msgBox = document.getElementById('auth-msg');
-    if (!msgBox) return;
-    msgBox.textContent = text;
-    msgBox.classList.remove('hidden', 'msg-error', 'msg-success');
-    msgBox.classList.add(type === 'error' ? 'msg-error' : 'msg-success');
-};
-
-// Modals öffnen & schließen
-window.openMorePointsModal = function() {
-    document.getElementById('more-points-modal')?.classList.remove('hidden');
-};
-window.closeMorePointsModal = function() {
-    document.getElementById('more-points-modal')?.classList.add('hidden');
-};
-
-window.openActiveSpotsModal = function() {
-    document.getElementById('active-spots-modal')?.classList.remove('hidden');
-};
-window.closeActiveSpotsModal = function() {
-    document.getElementById('active-spots-modal')?.classList.add('hidden');
-};
-
-window.openImpressumModal = function() {
-    document.getElementById('impressum-modal')?.classList.remove('hidden');
-};
-window.openAgbModal = function() {
-    document.getElementById('agb-modal')?.classList.remove('hidden');
-};
-
-window.openUploadModal = function() {
-    document.getElementById('media-upload-modal')?.classList.remove('hidden');
-};
-window.closeMediaUploadModal = function() {
-    document.getElementById('media-upload-modal')?.classList.add('hidden');
-};
-
-window.changeAvatarDirectly = function() {
-    const newUrl = prompt('Bitte gib die Bild-URL für dein neues Profilbild ein:');
-    if (newUrl) {
-        document.getElementById('profile-avatar').value = newUrl;
-        document.getElementById('my-profile-avatar-preview').src = newUrl;
-        document.getElementById('header-avatar-preview').src = newUrl;
-    }
-};
-
-window.saveMyProfile = async function() {
-    const username = document.getElementById('profile-username')?.value.trim();
-    const fullName = document.getElementById('profile-fullname')?.value.trim();
-    const bio = document.getElementById('profile-bio')?.value.trim();
-    const avatarUrl = document.getElementById('profile-avatar')?.value.trim();
-    const university = document.getElementById('profile-university')?.value;
-
-    if (!state.currentUserEmail) return;
-
-    try {
-        const { error } = await _supabase
-            .from('users')
-            .update({
-                username: username,
-                full_name: fullName,
-                bio: bio,
-                avatar_url: avatarUrl,
-                university: university
-            })
-            .eq('email', state.currentUserEmail);
-
-        if (error) throw error;
-        alert('Profil erfolgreich gespeichert! (+10 P)');
-
-        // Punkte gutschreiben (+10)
-        const { data: userData } = await _supabase
-            .from('users')
-            .select('logic_score')
-            .eq('email', state.currentUserEmail)
-            .single();
-
-        if (userData) {
-            const newScore = (userData.logic_score || 0) + 10;
-            await _supabase.from('users').update({ logic_score: newScore }).eq('email', state.currentUserEmail);
-            const scoreBadge = document.getElementById('score');
-            if (scoreBadge) scoreBadge.textContent = `${newScore} P`;
-        }
-    } catch (err) {
-        alert('Fehler beim Speichern des Profils: ' + err.message);
-    }
-};
-
-window.shareProfileCard = function() {
-    if (navigator.share) {
-        navigator.share({
-            title: 'PURE LOGIC • Campus Profil',
-            text: `Check mal mein Profil und Uni-Level auf PURE LOGIC ab! 🚀`,
-            url: window.location.href
-        }).catch(() => {});
-    } else {
-        navigator.clipboard.writeText(window.location.href);
-        alert('Profil-Link in die Zwischenablage kopiert! 📋');
-    }
-};
