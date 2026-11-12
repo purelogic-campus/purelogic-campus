@@ -1,4 +1,4 @@
-// js/features/feed.js - Vollständiges Campus-Feed & Medien Modul mit Video-Autoplay & Moderation
+// js/features/feed.js - Vollständiges Campus-Feed & Medien Modul mit Video-Autoplay, Moderation & Öffentlichem Profil
 import { _supabase } from '../config.js';
 import { state } from '../state.js';
 import { validateInputOrAlert } from './moderation.js';
@@ -297,11 +297,12 @@ export async function loadCampusFeed(filter = 'foryou') {
         }
 
         const cleanCaption = (post.caption && !post.caption.includes('${post.caption}')) ? post.caption : '';
+        const authorEmail = post.author_email || 'Anonyme Confession';
 
         item.innerHTML = `
             ${mediaHtml}
             <div class="reel-overlay" style="justify-content: flex-end; align-items: flex-start; text-align: left; background: linear-gradient(0deg, rgba(9,13,22,0.9) 0%, rgba(9,13,22,0.2) 60%, transparent 100%);">
-                <div style="font-size: 12px; font-weight: 800; color: #818cf8; margin-bottom: 2px;">👤 ${post.author_email || 'Anonyme Confession'}</div>
+                <button onclick="window.openPublicProfile('${authorEmail}')" style="background: rgba(129, 140, 248, 0.2); border: 1px solid rgba(129, 140, 248, 0.4); color: #818cf8; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 800; cursor: pointer; margin-bottom: 4px;">👤 ${authorEmail}</button>
                 ${cleanCaption ? `<div style="font-size: 13px; color: #fff; font-weight: 600; background: rgba(0,0,0,0.5); padding: 4px 8px; border-radius: 6px;">💬 ${cleanCaption}</div>` : ''}
             </div>
         `;
@@ -351,6 +352,88 @@ export async function loadMyProfilePosts() {
         grid.appendChild(item);
     });
 }
+
+/**
+ * Öffnet das öffentliche Profil eines beliebigen Nutzers per E-Mail (Punkt 12)
+ */
+window.openPublicProfile = async function(email) {
+    if (!email) return;
+    
+    const modal = document.getElementById('public-profile-modal');
+    if (modal) modal.classList.remove('hidden');
+
+    const avatar = document.getElementById('pub-profile-avatar');
+    const fullname = document.getElementById('pub-profile-fullname');
+    const handle = document.getElementById('pub-profile-handle');
+    const uni = document.getElementById('pub-profile-uni');
+    const score = document.getElementById('pub-profile-score');
+    const bio = document.getElementById('pub-profile-bio');
+    const badgeContainer = document.getElementById('pub-profile-badge-container');
+    const postsGrid = document.getElementById('pub-profile-posts-grid');
+
+    if (fullname) fullname.textContent = 'Lädt...';
+    if (postsGrid) postsGrid.innerHTML = '<p style="font-size: 11px; color: var(--text-muted);">Lade Beiträge...</p>';
+
+    try {
+        const { data: userData } = await _supabase
+            .from('users')
+            .select('*')
+            .eq('email', email)
+            .single();
+
+        if (userData) {
+            if (avatar) avatar.src = userData.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150';
+            if (fullname) fullname.textContent = userData.full_name || email.split('@')[0];
+            if (handle) handle.textContent = '@' + (userData.username || email.split('@')[0]);
+            if (uni) uni.textContent = userData.university || 'Universität Wien';
+            if (score) score.textContent = `${userData.logic_score || 0} P`;
+            if (bio) bio.textContent = userData.bio || 'Keine Bio hinterlegt.';
+
+            if (badgeContainer) {
+                if (userData.is_verified_student) {
+                    badgeContainer.innerHTML = `<span style="display: inline-block; background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.4); padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 800; margin-top: 2px;">🎓 Verified Student (.ac.at)</span>`;
+                } else {
+                    badgeContainer.innerHTML = '';
+                }
+            }
+        } else {
+            if (fullname) fullname.textContent = email.split('@')[0];
+            if (handle) handle.textContent = '@' + email.split('@')[0];
+            if (bio) bio.textContent = 'Kein Profil in der Datenbank gefunden.';
+        }
+
+        const { data: userPosts } = await _supabase
+            .from('media_posts')
+            .select('*')
+            .eq('author_email', email)
+            .order('created_at', { ascending: false });
+
+        if (postsGrid) {
+            if (!userPosts || userPosts.length === 0) {
+                postsGrid.innerHTML = '<p style="font-size: 11px; color: var(--text-muted); grid-column: span 3;">Keine Beiträge vorhanden.</p>';
+            } else {
+                postsGrid.innerHTML = '';
+                userPosts.forEach(post => {
+                    const postItem = document.createElement('div');
+                    postItem.style.cssText = 'background: #000; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; height: 90px;';
+                    if (post.media_type === 'video') {
+                        postItem.innerHTML = `<video src="${post.media_url}" muted style="width: 100%; height: 100%; object-fit: cover;"></video>`;
+                    } else {
+                        postItem.innerHTML = `<img src="${post.media_url}" style="width: 100%; height: 100%; object-fit: cover;" alt="Post">`;
+                    }
+                    postsGrid.appendChild(postItem);
+                });
+            }
+        }
+
+    } catch (err) {
+        console.error('Fehler beim Laden des öffentlichen Profils:', err);
+    }
+};
+
+window.closePublicProfileModal = function() {
+    document.getElementById('public-profile-modal')?.classList.add('hidden');
+};
 
 /**
  * Setzt den aktiven Reel-Filter ("Entdecken", "Für dich", "Gefolgt")
