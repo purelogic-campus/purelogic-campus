@@ -1,6 +1,7 @@
-// js/features/live.js - Vollständiges Live-Stream Modul
+// js/features/live.js - Vollständiges Live-Stream Modul mit Moderation
 import { _supabase } from '../config.js';
 import { state } from '../state.js';
+import { validateInputOrAlert } from './moderation.js';
 
 /**
  * Vorab-Prüfung vor dem Start eines Live-Streams
@@ -14,8 +15,13 @@ export function handlePreLiveCheck() {
     const category = prompt('Wähle eine Kategorie für deinen Stream (z.B. 🎮 Gaming, 🎵 Musik, 💬 Plaudern):', '💬 Plaudern');
     if (!category) return;
     
+    // Moderations-Check für Kategorie und Standort
+    if (!validateInputOrAlert(category)) return;
+    
     const location = prompt('Dein Standort / Hörsaal (z.B. HS 32, Uni Wien):', 'Uni Wien Hauptgebäude');
     if (!location) return;
+
+    if (!validateInputOrAlert(location)) return;
 
     startLiveStreamBroadcast(category, location);
 }
@@ -139,7 +145,7 @@ export function closeLiveFullscreen() {
 }
 
 /**
- * Sendet eine Chatnachricht im aktiven Stream.
+ * Sendet eine Chatnachricht im aktiven Stream (inkl. Moderations-Check).
  */
 export function sendLiveChatMessage() {
     const input = document.getElementById('live-chat-input');
@@ -147,6 +153,12 @@ export function sendLiveChatMessage() {
     if (!input || !input.value.trim() || !chatList) return;
 
     const msgText = input.value.trim();
+
+    // Moderations-Check ausführen
+    if (!validateInputOrAlert(msgText)) {
+        return;
+    }
+
     const msgDiv = document.createElement('div');
     msgDiv.style.cssText = 'background: rgba(255,255,255,0.08); padding: 6px 10px; border-radius: 8px; font-size: 11px; margin-bottom: 4px;';
     msgDiv.innerHTML = `<strong style="color: #818cf8;">Du:</strong> ${msgText}`;
