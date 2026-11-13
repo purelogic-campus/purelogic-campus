@@ -1,4 +1,4 @@
-// js/features/feed.js - Vollständiges Campus-Feed & Medien Modul mit Follow-System
+// js/features/feed.js - Vollständiges Campus-Feed & Medien Modul mit Autoren-Profilbildern & Follow-System
 import { _supabase } from '../config.js';
 import { state } from '../state.js';
 import { validateInputOrAlert } from './moderation.js';
@@ -257,7 +257,7 @@ function initVideoAutoplayObserver() {
 }
 
 /**
- * Lädt die Beiträge für den Campus-Feed basierend auf dem Filter
+ * Lädt die Beiträge für den Campus-Feed basierend auf dem Filter (inkl. Autoren-Profilbildern)
  */
 export async function loadCampusFeed(filter = 'foryou') {
     const feedList = document.getElementById('reels-list');
@@ -268,14 +268,13 @@ export async function loadCampusFeed(filter = 'foryou') {
     let query = _supabase.from('media_posts').select('*');
 
     if (filter === 'following' && state.currentUserEmail) {
-        // Lade Posts von Nutzern, denen der aktuelle User folgt
         const { data: follows } = await _supabase
             .from('follows')
             .select('following_email')
             .eq('follower_email', state.currentUserEmail);
             
         const followingEmails = follows ? follows.map(f => f.following_email) : [];
-        followingEmails.push(state.currentUserEmail); // Eigene Posts auch anzeigen
+        followingEmails.push(state.currentUserEmail);
         
         query = query.in('author_email', followingEmails);
     } else if (filter === 'discover') {
@@ -293,7 +292,7 @@ export async function loadCampusFeed(filter = 'foryou') {
 
     feedList.innerHTML = '';
 
-    posts.forEach(post => {
+    for (const post of posts) {
         const item = document.createElement('div');
         item.className = 'reel-item';
         
@@ -305,18 +304,41 @@ export async function loadCampusFeed(filter = 'foryou') {
         }
 
         const cleanCaption = (post.caption && !post.caption.includes('${post.caption}')) ? post.caption : '';
-        const authorEmail = post.author_email || 'Anonyme Confession';
+        const authorEmail = post.author_email || 'student@uni.at';
+
+        // Autorendaten (Profilbild & Name) aus der 'users'-Tabelle abrufen
+        let authorName = authorEmail.split('@')[0];
+        let authorAvatar = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150';
+
+        try {
+            const { data: authorData } = await _supabase
+                .from('users')
+                .select('full_name, username, avatar_url')
+                .eq('email', authorEmail)
+                .maybeSingle();
+
+            if (authorData) {
+                authorName = authorData.full_name || authorData.username || authorName;
+                if (authorData.avatar_url) authorAvatar = authorData.avatar_url;
+            }
+        } catch (e) {
+            console.warn('Konnte Autor-Profil nicht laden:', e);
+        }
 
         item.innerHTML = `
             ${mediaHtml}
             <div class="reel-overlay" style="justify-content: flex-end; align-items: flex-start; text-align: left; background: linear-gradient(0deg, rgba(9,13,22,0.9) 0%, rgba(9,13,22,0.2) 60%, transparent 100%);">
-                <button onclick="window.openPublicProfile('${authorEmail}')" style="background: rgba(129, 140, 248, 0.2); border: 1px solid rgba(129, 140, 248, 0.4); color: #818cf8; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 800; cursor: pointer; margin-bottom: 4px;">👤 ${authorEmail}</button>
+                <!-- Klickbare Autoreninfo mit Profilbild & Name oben links -->
+                <div onclick="window.openPublicProfile('${authorEmail}')" style="display: flex; align-items: center; gap: 8px; background: rgba(19, 27, 46, 0.85); border: 1px solid rgba(129, 140, 248, 0.4); padding: 5px 12px; border-radius: 30px; cursor: pointer; margin-bottom: 6px; backdrop-filter: blur(5px);">
+                    <img src="${authorAvatar}" style="width: 26px; height: 26px; border-radius: 50%; object-fit: cover; border: 1px solid var(--primary);" onerror="this.src='https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'">
+                    <span style="font-size: 12px; font-weight: 800; color: #fff;">${authorName}</span>
+                </div>
                 ${cleanCaption ? `<div style="font-size: 13px; color: #fff; font-weight: 600; background: rgba(0,0,0,0.5); padding: 4px 8px; border-radius: 6px;">💬 ${cleanCaption}</div>` : ''}
             </div>
         `;
         
         feedList.appendChild(item);
-    });
+    }
 
     setTimeout(initVideoAutoplayObserver, 100);
 }
@@ -382,7 +404,6 @@ window.openPublicProfile = async function(email) {
     if (fullname) fullname.textContent = 'Lädt...';
     if (postsGrid) postsGrid.innerHTML = '<p style="font-size: 11px; color: var(--text-muted);">Lade Beiträge...</p>';
 
-    // Follow-Button Container im Modal vorbereiten oder einfügen
     let followBtnContainer = document.getElementById('pub-profile-follow-container');
     if (!followBtnContainer && fullname && fullname.parentNode) {
         followBtnContainer = document.createElement('div');
@@ -392,7 +413,6 @@ window.openPublicProfile = async function(email) {
     }
 
     if (followBtnContainer && state.currentUserEmail && state.currentUserEmail !== email) {
-        // Prüfen, ob bereits gefolgt wird
         const { data: existingFollow } = await _supabase
             .from('follows')
             .select('*')
@@ -477,7 +497,6 @@ window.toggleFollowUser = async function(targetEmail) {
     }
 
     try {
-        // Prüfen, ob bereits gefolgt wird
         const { data: existing } = await _supabase
             .from('follows')
             .select('*')
@@ -486,7 +505,6 @@ window.toggleFollowUser = async function(targetEmail) {
             .maybeSingle();
 
         if (existing) {
-            // Entfolgen
             await _supabase
                 .from('follows')
                 .delete()
@@ -495,7 +513,6 @@ window.toggleFollowUser = async function(targetEmail) {
             
             alert(`Du folgst ${targetEmail} nicht mehr.`);
         } else {
-            // Folgen
             await _supabase
                 .from('follows')
                 .insert([
@@ -510,7 +527,6 @@ window.toggleFollowUser = async function(targetEmail) {
             alert(`Du folgst jetzt ${targetEmail} 🚀`);
         }
 
-        // Profil-Modal aktualisieren, um den Button-Zustand zu wechseln
         window.openPublicProfile(targetEmail);
 
     } catch (err) {
@@ -530,7 +546,6 @@ export function setReelFilter(filterType) {
     state.currentReelFilter = filterType;
     document.querySelectorAll('.feed-filter-bar span').forEach(s => s.style.color = 'var(--text-muted)');
     
-    // Aktiven Filter hervorheben
     if (filterType === 'foryou') {
         const el = document.getElementById('subtab-foryou');
         if (el) el.style.color = 'var(--primary)';
