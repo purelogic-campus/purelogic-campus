@@ -27,6 +27,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         state.currentUserEmail = null;
         localStorage.clear();
+        sessionStorage.clear();
         window.location.href = window.location.pathname;
     };
 
@@ -39,6 +40,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             window.resetUser();
         });
     }
+
+    // Punkt 8: Auto-Logout & Auto-Cache leeren beim Verlassen / Schließen der Seite
+    window.addEventListener('beforeunload', async () => {
+        try {
+            await _supabase.auth.signOut();
+        } catch (err) {
+            console.warn('Auto-Logout Fehler beim Verlassen:', err);
+        }
+        localStorage.clear();
+        sessionStorage.clear();
+    });
 
     // 3. Session-Prüfung beim Start
     try {
