@@ -1,7 +1,9 @@
-// js/features/live.js - Vollständiges Live-Stream Modul mit Moderation
+// js/features/live.js - Vollständiges Live-Stream Modul mit Autoplay-Observer & Moderation
 import { _supabase } from '../config.js';
 import { state } from '../state.js';
 import { validateInputOrAlert } from './moderation.js';
+
+let liveObserver = null;
 
 /**
  * Vorab-Prüfung vor dem Start eines Live-Streams
@@ -15,7 +17,6 @@ export function handlePreLiveCheck() {
     const category = prompt('Wähle eine Kategorie für deinen Stream (z.B. 🎮 Gaming, 🎵 Musik, 💬 Plaudern):', '💬 Plaudern');
     if (!category) return;
     
-    // Moderations-Check für Kategorie und Standort
     if (!validateInputOrAlert(category)) return;
     
     const location = prompt('Dein Standort / Hörsaal (z.B. HS 32, Uni Wien):', 'Uni Wien Hauptgebäude');
@@ -54,6 +55,39 @@ async function startLiveStreamBroadcast(category, location) {
 }
 
 /**
+ * Initialisiert den IntersectionObserver für automatisches Live-Video-Autoplay beim Scrollen
+ */
+function initLiveAutoplayObserver() {
+    if (liveObserver) liveObserver.disconnect();
+
+    const options = {
+        root: document.getElementById('live-streams-list'),
+        rootMargin: '0px',
+        threshold: 0.6
+    };
+
+    liveObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            const item = entry.target;
+            const video = item.querySelector('video');
+            if (!video) return;
+
+            if (entry.isIntersecting) {
+                video.play().catch(err => {
+                    console.warn('Live-Video Autoplay vom Browser blockiert:', err);
+                });
+            } else {
+                video.pause();
+            }
+        });
+    }, options);
+
+    document.querySelectorAll('#live-streams-list .reel-item').forEach(item => {
+        liveObserver.observe(item);
+    });
+}
+
+/**
  * Lädt exklusiv aktive Live-Streams aus der Tabelle 'live_streams'.
  */
 export async function loadLiveStreams() {
@@ -86,27 +120,40 @@ export async function loadLiveStreams() {
         const category = stream.category || 'Live Stream';
         const location = stream.location || 'Wien / Campus';
         const streamId = stream.id ? String(stream.id) : '0000';
+        // Falls der Stream eine echte Video-/Stream-URL liefert, wird diese genutzt, ansonsten Fallback auf stylisches Live-Layout
+        const streamMediaUrl = stream.stream_url || '';
+
+        let mediaContentHtml = '';
+        if (streamMediaUrl) {
+            mediaContentHtml = `<video src="${streamMediaUrl}" muted playsinline loop class="reel-media" style="object-fit: contain; width: 100%; height: 100%;"></video>`;
+        } else {
+            mediaContentHtml = `
+                <div style="width: 100%; height: 100%; background: linear-gradient(135deg, #0f172a, #1e1b4b); display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; text-align: center; position: relative;">
+                    <span style="background: rgba(99,102,241,0.2); color: #818cf8; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 800; margin-bottom: 10px;">${category}</span>
+                    <h3 style="font-size: 22px; font-weight: 900; color: #fff; margin-bottom: 6px;">Campus Stream</h3>
+                    <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">📍 ${location}</p>
+                </div>
+            `;
+        }
 
         item.innerHTML = `
-            <div style="width: 100%; height: 100%; background: linear-gradient(135deg, #0f172a, #1e1b4b); display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; text-align: center; position: relative; cursor: pointer;" onclick="openLiveFullscreen('${streamId}', '${category}', '${location}')">
-                <div style="position: absolute; top: 16px; left: 16px; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.5); color: #ef4444; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 800; display: flex; align-items: center; gap: 4px;">
+            <div style="width: 100%; height: 100%; position: relative; cursor: pointer;" onclick="openLiveFullscreen('${streamId}', '${category}', '${location}')">
+                ${mediaContentHtml}
+                <div style="position: absolute; top: 16px; left: 16px; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.5); color: #ef4444; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 800; display: flex; align-items: center; gap: 4px; z-index: 2;">
                     <span style="width: 8px; height: 8px; background: #ef4444; border-radius: 50%; display: inline-block;"></span> LIVE
                 </div>
-                
-                <span style="background: rgba(99,102,241,0.2); color: #818cf8; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 800; margin-bottom: 10px;">${category}</span>
-                <h3 style="font-size: 22px; font-weight: 900; color: #fff; margin-bottom: 6px;">Campus Stream</h3>
-                <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">📍 ${location}</p>
-                
-                <button class="btn" style="width: auto; padding: 10px 24px; font-size: 13px; font-weight: 800; background: var(--gradient-main); box-shadow: 0 4px 15px rgba(99,102,241,0.4);" onclick="event.stopPropagation(); openLiveFullscreen('${streamId}', '${category}', '${location}')">Vollbild beitreten & Chatten 🚀</button>
             </div>
             <div class="reel-overlay" style="justify-content: flex-end; align-items: flex-start; text-align: left; background: linear-gradient(0deg, rgba(9,13,22,0.95) 0%, transparent 60%); padding: 16px;">
-                <div style="font-size: 12px; font-weight: 800; color: #818cf8; margin-bottom: 2px;">🔴 Live Broadcast</div>
-                <div style="font-size: 13px; color: #fff; font-weight: 600;">Wische für den nächsten Stream oder tippe zum Beitreten.</div>
+                <div style="font-size: 12px; font-weight: 800; color: #818cf8; margin-bottom: 2px;">🔴 ${category} • ${location}</div>
+                <div style="font-size: 13px; color: #fff; font-weight: 600; margin-bottom: 8px;">Tippe, um dem Vollbild-Stream & Chat beizutreten.</div>
+                <button class="btn" style="width: auto; padding: 8px 18px; font-size: 11px; font-weight: 800; background: var(--gradient-main);" onclick="event.stopPropagation(); openLiveFullscreen('${streamId}', '${category}', '${location}')">Vollbild beitreten 🚀</button>
             </div>
         `;
         
         liveList.appendChild(item);
     });
+
+    setTimeout(initLiveAutoplayObserver, 100);
 }
 
 /**
@@ -154,7 +201,6 @@ export function sendLiveChatMessage() {
 
     const msgText = input.value.trim();
 
-    // Moderations-Check ausführen
     if (!validateInputOrAlert(msgText)) {
         return;
     }
