@@ -1,4 +1,4 @@
-// js/features/feed.js - Vollständiges Campus-Feed & Medien Modul mit Autoren-Profilbildern & Follow-System
+// js/features/feed.js - Vollständiges Campus-Feed & Medien Modul mit Metriken (Views & Likes)
 import { _supabase } from '../config.js';
 import { state } from '../state.js';
 import { validateInputOrAlert } from './moderation.js';
@@ -202,6 +202,8 @@ export async function uploadTrimmedMedia() {
                     caption: caption, 
                     media_url: mediaUrl, 
                     media_type: selectedMediaFile.type.startsWith('video/') ? 'video' : 'image',
+                    views: 0,
+                    likes: 0,
                     created_at: new Date().toISOString()
                 }
             ]);
@@ -225,7 +227,57 @@ export async function uploadTrimmedMedia() {
 }
 
 /**
- * Initialisiert den IntersectionObserver für automatisches Video-Autoplay im Sichtfeld
+ * Erhöht die Aufrufe (Views) eines Beitrags beim Sichtbarwerden im Feed
+ */
+async function incrementPostView(postId) {
+    try {
+        const { data } = await _supabase
+            .from('media_posts')
+            .select('views')
+            .eq('id', postId)
+            .single();
+
+        if (data) {
+            const newViews = (data.views || 0) + 1;
+            await _supabase
+                .from('media_posts')
+                .update({ views: newViews })
+                .eq('id', postId);
+        }
+    } catch (e) {
+        console.warn('View-Counter Fehler:', e);
+    }
+}
+
+/**
+ * Liked einen Beitrag und erhöht den Counter
+ */
+window.likePost = async function(postId) {
+    try {
+        const { data } = await _supabase
+            .from('media_posts')
+            .select('likes')
+            .eq('id', postId)
+            .single();
+
+        if (data) {
+            const newLikes = (data.likes || 0) + 1;
+            await _supabase
+                .from('media_posts')
+                .update({ likes: newLikes })
+                .eq('id', postId);
+
+            // UI Sofort aktualisieren
+            const likeCountEl = document.getElementById(`like-count-${postId}`);
+            if (likeCountEl) likeCountEl.textContent = `${newLikes} ❤️`;
+        }
+    } catch (err) {
+        console.error('Fehler beim Liken:', err);
+    }
+};
+
+/**
+ * Initialisiert den IntersectionObserver für Video-Autoplay & View-Zählung im Sichtfeld
  */
 function initVideoAutoplayObserver() {
     if (observer) observer.disconnect();
@@ -238,15 +290,24 @@ function initVideoAutoplayObserver() {
 
     observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
-            const video = entry.target.querySelector('video');
-            if (!video) return;
+            const item = entry.target;
+            const video = item.querySelector('video');
+            const postId = item.getAttribute('data-post-id');
 
             if (entry.isIntersecting) {
-                video.play().catch(err => {
-                    console.warn('Autoplay wurde vom Browser blockiert:', err);
-                });
+                if (postId && !item.dataset.viewed) {
+                    item.dataset.viewed = 'true';
+                    incrementPostView(postId);
+                }
+                if (video) {
+                    video.play().catch(err => {
+                        console.warn('Autoplay wurde blockiert:', err);
+                    });
+                }
             } else {
-                video.pause();
+                if (video) {
+                    video.pause();
+                }
             }
         });
     }, options);
@@ -257,7 +318,7 @@ function initVideoAutoplayObserver() {
 }
 
 /**
- * Lädt die Beiträge für den Campus-Feed basierend auf dem Filter (inkl. Autoren-Profilbildern)
+ * Lädt die Beiträge für den Campus-Feed basierend auf dem Filter (inkl. Metriken)
  */
 export async function loadCampusFeed(filter = 'foryou') {
     const feedList = document.getElementById('reels-list');
@@ -295,6 +356,7 @@ export async function loadCampusFeed(filter = 'foryou') {
     for (const post of posts) {
         const item = document.createElement('div');
         item.className = 'reel-item';
+        item.setAttribute('data-post-id', post.id);
         
         let mediaHtml = '';
         if (post.media_type === 'video') {
@@ -305,8 +367,9 @@ export async function loadCampusFeed(filter = 'foryou') {
 
         const cleanCaption = (post.caption && !post.caption.includes('${post.caption}')) ? post.caption : '';
         const authorEmail = post.author_email || 'student@uni.at';
+        const viewsCount = post.views || 0;
+        const likesCount = post.likes || 0;
 
-        // Autorendaten (Profilbild & Name) aus der 'users'-Tabelle abrufen
         let authorName = authorEmail.split('@')[0];
         let authorAvatar = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150';
 
@@ -327,13 +390,21 @@ export async function loadCampusFeed(filter = 'foryou') {
 
         item.innerHTML = `
             ${mediaHtml}
-            <div class="reel-overlay" style="justify-content: flex-end; align-items: flex-start; text-align: left; background: linear-gradient(0deg, rgba(9,13,22,0.9) 0%, rgba(9,13,22,0.2) 60%, transparent 100%);">
-                <!-- Klickbare Autoreninfo mit Profilbild & Name oben links -->
-                <div onclick="window.openPublicProfile('${authorEmail}')" style="display: flex; align-items: center; gap: 8px; background: rgba(19, 27, 46, 0.85); border: 1px solid rgba(129, 140, 248, 0.4); padding: 5px 12px; border-radius: 30px; cursor: pointer; margin-bottom: 6px; backdrop-filter: blur(5px);">
+            <div class="reel-overlay" style="justify-content: space-between; align-items: flex-start; background: linear-gradient(0deg, rgba(9,13,22,0.9) 0%, rgba(9,13,22,0.2) 60%, transparent 100%);">
+                <!-- Autoreninfo oben links -->
+                <div onclick="window.openPublicProfile('${authorEmail}')" style="display: flex; align-items: center; gap: 8px; background: rgba(19, 27, 46, 0.85); border: 1px solid rgba(129, 140, 248, 0.4); padding: 5px 12px; border-radius: 30px; cursor: pointer; backdrop-filter: blur(5px);">
                     <img src="${authorAvatar}" style="width: 26px; height: 26px; border-radius: 50%; object-fit: cover; border: 1px solid var(--primary);" onerror="this.src='https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'">
                     <span style="font-size: 12px; font-weight: 800; color: #fff;">${authorName}</span>
                 </div>
-                ${cleanCaption ? `<div style="font-size: 13px; color: #fff; font-weight: 600; background: rgba(0,0,0,0.5); padding: 4px 8px; border-radius: 6px;">💬 ${cleanCaption}</div>` : ''}
+
+                <!-- Metriken & Interaktion unten -->
+                <div style="width: 100%; display: flex; flex-direction: column; gap: 6px;">
+                    ${cleanCaption ? `<div style="font-size: 13px; color: #fff; font-weight: 600; background: rgba(0,0,0,0.5); padding: 4px 8px; border-radius: 6px; width: fit-content;">💬 ${cleanCaption}</div>` : ''}
+                    <div style="display: flex; gap: 12px; align-items: center; font-size: 11px; font-weight: 700; color: #cbd5e1;">
+                        <span>👁️ ${viewsCount} Views</span>
+                        <span id="like-count-${post.id}" onclick="window.likePost('${post.id}')" style="cursor: pointer; background: rgba(236, 72, 153, 0.2); border: 1px solid rgba(236, 72, 153, 0.4); color: #ec4899; padding: 3px 8px; border-radius: 12px;">${likesCount} ❤️</span>
+                    </div>
+                </div>
             </div>
         `;
         
@@ -344,7 +415,7 @@ export async function loadCampusFeed(filter = 'foryou') {
 }
 
 /**
- * Lädt die eigenen Beiträge des angemeldeten Benutzers für das Profil
+ * Lädt die eigenen Beiträge des angemeldeten Benutzers für das Profil (inkl. Metriken)
  */
 export async function loadMyProfilePosts() {
     const grid = document.getElementById('my-profile-posts-grid');
@@ -369,15 +440,20 @@ export async function loadMyProfilePosts() {
         item.style.cssText = 'background: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; display: flex; flex-direction: column;';
         
         if (post.media_type === 'video') {
-            item.innerHTML = `<video src="${post.media_url}" muted playsinline style="width: 100%; height: 100px; object-fit: contain; background: #000;"></video>`;
+            item.innerHTML = `<video src="${post.media_url}" muted playsinline style="width: 100%; height: 90px; object-fit: contain; background: #000;"></video>`;
         } else {
-            item.innerHTML = `<img src="${post.media_url}" style="width: 100%; height: 100px; object-fit: contain; background: #000;" alt="Post">`;
+            item.innerHTML = `<img src="${post.media_url}" style="width: 100%; height: 90px; object-fit: contain; background: #000;" alt="Post">`;
         }
         
-        const cleanCaption = (post.caption && !post.caption.includes('${post.caption}')) ? post.caption : '';
-        if (cleanCaption) {
-            item.innerHTML += `<div style="padding: 6px; font-size: 10px; color: var(--text);">${cleanCaption}</div>`;
-        }
+        const views = post.views || 0;
+        const likes = post.likes || 0;
+
+        item.innerHTML += `
+            <div style="padding: 6px; font-size: 9px; color: var(--text-muted); display: flex; justify-content: space-between;">
+                <span>👁️ ${views}</span>
+                <span>❤️ ${likes}</span>
+            </div>
+        `;
         
         grid.appendChild(item);
     });
