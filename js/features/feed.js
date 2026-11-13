@@ -1,4 +1,4 @@
-// js/features/feed.js - Vollständiges Campus-Feed & Medien Modul mit Kommentaren & Like-Listen
+// js/features/feed.js - Vollständiges Campus-Feed & Medien Modul mit Autoren-Infos, Kommentaren & Like-Listen
 import { _supabase } from '../config.js';
 import { state } from '../state.js';
 import { validateInputOrAlert } from './moderation.js';
@@ -204,6 +204,7 @@ export async function uploadTrimmedMedia() {
                     media_url: mediaUrl, 
                     media_type: selectedMediaFile.type.startsWith('video/') ? 'video' : 'image',
                     views: 0,
+                    liked_by: [],
                     created_at: new Date().toISOString()
                 }
             ]);
@@ -250,7 +251,7 @@ async function incrementPostView(postId) {
 }
 
 /**
- * Liked einen Beitrag (speichert Liker in einer JSON-Liste oder erhöht Counter)
+ * Liked einen Beitrag und aktualisiert die Liker-Liste
  */
 window.likePost = async function(postId) {
     if (!state.currentUserEmail) {
@@ -259,7 +260,6 @@ window.likePost = async function(postId) {
     }
 
     try {
-        // Wir prüfen in der likes-Tabelle oder direkt über eine Spalte
         const { data: postData } = await _supabase
             .from('media_posts')
             .select('liked_by')
@@ -267,15 +267,12 @@ window.likePost = async function(postId) {
             .single();
 
         let likedByList = postData?.liked_by || [];
-        
         if (!Array.isArray(likedByList)) likedByList = [];
 
         const index = likedByList.indexOf(state.currentUserEmail);
         if (index > -1) {
-            // Bereits geliked -> Like entfernen (Unlike)
             likedByList.splice(index, 1);
         } else {
-            // Noch nicht geliked -> Like hinzufügen
             likedByList.push(state.currentUserEmail);
         }
 
@@ -284,12 +281,10 @@ window.likePost = async function(postId) {
             .update({ liked_by: likedByList })
             .eq('id', postId);
 
-        // UI aktualisieren
         const likeCountEl = document.getElementById(`like-count-${postId}`);
         if (likeCountEl) likeCountEl.textContent = `${likedByList.length} ❤️`;
 
     } catch (err) {
-        // Fallback falls liked_by Spalte noch nicht als Array existiert
         console.warn('Like-Fehler:', err);
     }
 };
@@ -458,7 +453,6 @@ window.submitNewComment = async function() {
         input.value = '';
         await loadCommentsForPost(activeCommentPostId);
 
-        // Kommentar-Zähler im Feed direkt aktualisieren
         const { count } = await _supabase
             .from('comments')
             .select('*', { count: 'exact', head: true })
@@ -473,7 +467,7 @@ window.submitNewComment = async function() {
 };
 
 /**
- * Hilfsfunktion zum Erstellen des Kommentar-Modals falls nicht vorhanden
+ * Hilfsfunktion zum Erstellen des Kommentar-Modals
  */
 function createCommentsModal() {
     const modalDiv = document.createElement('div');
@@ -498,7 +492,7 @@ function createCommentsModal() {
 }
 
 /**
- * Hilfsfunktion zum Erstellen des allgemeinen Info-Modals (für Likes)
+ * Hilfsfunktion zum Erstellen des Info-Modals
  */
 function createInfoModal() {
     const modalDiv = document.createElement('div');
@@ -560,7 +554,7 @@ function initVideoAutoplayObserver() {
 }
 
 /**
- * Lädt die Beiträge für den Campus-Feed basierend auf dem Filter (inkl. Views, Kommentare & Likes)
+ * Lädt den Campus-Feed (For You, Discover, Following)
  */
 export async function loadCampusFeed(filter = 'foryou') {
     const feedList = document.getElementById('reels-list');
@@ -614,7 +608,6 @@ export async function loadCampusFeed(filter = 'foryou') {
         const likedByList = Array.isArray(post.liked_by) ? post.liked_by : [];
         const likesCount = likedByList.length;
 
-        // Kommentaranzahl ermitteln
         let commentCount = 0;
         try {
             const { count } = await _supabase
@@ -622,9 +615,7 @@ export async function loadCampusFeed(filter = 'foryou') {
                 .select('*', { count: 'exact', head: true })
                 .eq('post_id', post.id);
             commentCount = count || 0;
-        } catch (e) {
-            // Ignorieren falls Tabelle neu
-        }
+        } catch (e) {}
 
         let authorName = authorEmail.split('@')[0];
         let authorAvatar = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150';
@@ -647,7 +638,7 @@ export async function loadCampusFeed(filter = 'foryou') {
         item.innerHTML = `
             ${mediaHtml}
             <div class="reel-overlay" style="justify-content: space-between; align-items: flex-start; background: linear-gradient(0deg, rgba(9,13,22,0.9) 0%, rgba(9,13,22,0.2) 60%, transparent 100%);">
-                <!-- Autoreninfo oben links -->
+                <!-- Autoreninfo oben links (Klickbar -> Öffentliches Profil) -->
                 <div onclick="window.openPublicProfile('${authorEmail}')" style="display: flex; align-items: center; gap: 8px; background: rgba(19, 27, 46, 0.85); border: 1px solid rgba(129, 140, 248, 0.4); padding: 5px 12px; border-radius: 30px; cursor: pointer; backdrop-filter: blur(5px);">
                     <img src="${authorAvatar}" style="width: 26px; height: 26px; border-radius: 50%; object-fit: cover; border: 1px solid var(--primary);" onerror="this.src='https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'">
                     <span style="font-size: 12px; font-weight: 800; color: #fff;">${authorName}</span>
@@ -673,7 +664,7 @@ export async function loadCampusFeed(filter = 'foryou') {
 }
 
 /**
- * Lädt die eigenen Beiträge des angemeldeten Benutzers für das Profil (inkl. Metriken)
+ * Lädt die eigenen Beiträge des angemeldeten Benutzers für das Profil
  */
 export async function loadMyProfilePosts() {
     const grid = document.getElementById('my-profile-posts-grid');
@@ -729,7 +720,7 @@ export async function loadMyProfilePosts() {
 }
 
 /**
- * Öffnet das öffentliche Profil eines beliebigen Nutzers per E-Mail und zeigt Follow-Button an
+ * Öffnet das öffentliche Profil eines beliebigen Nutzers per E-Mail
  */
 window.openPublicProfile = async function(email) {
     if (!email) return;
@@ -837,7 +828,7 @@ window.openPublicProfile = async function(email) {
 };
 
 /**
- * Umschalten der Follow-Beziehung (Folgen / Entfolgen)
+ * Umschalten der Follow-Beziehung
  */
 window.toggleFollowUser = async function(targetEmail) {
     if (!state.currentUserEmail) {
@@ -889,7 +880,7 @@ window.closePublicProfileModal = function() {
 };
 
 /**
- * Setzt den aktiven Reel-Filter ("Entdecken", "Für dich", "Gefolgt")
+ * Setzt den aktiven Reel-Filter
  */
 export function setReelFilter(filterType) {
     state.currentReelFilter = filterType;
@@ -909,15 +900,12 @@ export function setReelFilter(filterType) {
     loadCampusFeed(filterType);
 }
 
-/**
- * Filter-Funktion für Treffen
- */
 export function setFilter(element, category) {
     document.querySelectorAll('#filter-group .cat-pill').forEach(p => p.classList.remove('active'));
     element.classList.add('active');
 }
 
-// Global für HTML-Events bereitstellen
+// Global bereitstellen
 window.openUploadModal = openUploadModal;
 window.closeMediaUploadModal = closeMediaUploadModal;
 window.handleMediaSelection = handleMediaSelection;
@@ -926,4 +914,4 @@ window.loadCampusFeed = loadCampusFeed;
 window.loadMyProfilePosts = loadMyProfilePosts;
 window.setReelFilter = setReelFilter;
 window.setFilter = setFilter;
-window.claimActiveDrop = claimActiveDrop;
+window.claimActiveDrop = claimActiveDrop;[cite: 1]
