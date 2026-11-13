@@ -1,10 +1,11 @@
-// js/features/feed.js - Vollständiges Campus-Feed & Medien Modul mit Metriken (Views & Likes)
+// js/features/feed.js - Vollständiges Campus-Feed & Medien Modul mit Kommentaren & Like-Listen
 import { _supabase } from '../config.js';
 import { state } from '../state.js';
 import { validateInputOrAlert } from './moderation.js';
 
 let selectedMediaFile = null;
 let observer = null;
+let activeCommentPostId = null;
 
 /**
  * Bild-Skalierung und Komprimierung über Canvas (Standardisierung auf max 1080px)
@@ -203,7 +204,6 @@ export async function uploadTrimmedMedia() {
                     media_url: mediaUrl, 
                     media_type: selectedMediaFile.type.startsWith('video/') ? 'video' : 'image',
                     views: 0,
-                    likes: 0,
                     created_at: new Date().toISOString()
                 }
             ]);
@@ -214,7 +214,7 @@ export async function uploadTrimmedMedia() {
             return;
         }
 
-        alert('Erfolgreich hochgeladen! Dein Beitrag / deine Confession ist jetzt im Feed sichtbar 🚀');
+        alert('Erfolgreich hochgeladen! Dein Beitrag ist jetzt im Feed sichtbar 🚀');
         closeMediaUploadModal();
         
         loadCampusFeed(state.currentReelFilter || 'foryou');
@@ -250,31 +250,273 @@ async function incrementPostView(postId) {
 }
 
 /**
- * Liked einen Beitrag und erhöht den Counter
+ * Liked einen Beitrag (speichert Liker in einer JSON-Liste oder erhöht Counter)
  */
 window.likePost = async function(postId) {
+    if (!state.currentUserEmail) {
+        alert('Bitte logge dich ein, um Beiträge zu liken.');
+        return;
+    }
+
     try {
-        const { data } = await _supabase
+        // Wir prüfen in der likes-Tabelle oder direkt über eine Spalte
+        const { data: postData } = await _supabase
             .from('media_posts')
-            .select('likes')
+            .select('liked_by')
             .eq('id', postId)
             .single();
 
-        if (data) {
-            const newLikes = (data.likes || 0) + 1;
-            await _supabase
-                .from('media_posts')
-                .update({ likes: newLikes })
-                .eq('id', postId);
+        let likedByList = postData?.liked_by || [];
+        
+        if (!Array.isArray(likedByList)) likedByList = [];
 
-            // UI Sofort aktualisieren
-            const likeCountEl = document.getElementById(`like-count-${postId}`);
-            if (likeCountEl) likeCountEl.textContent = `${newLikes} ❤️`;
+        const index = likedByList.indexOf(state.currentUserEmail);
+        if (index > -1) {
+            // Bereits geliked -> Like entfernen (Unlike)
+            likedByList.splice(index, 1);
+        } else {
+            // Noch nicht geliked -> Like hinzufügen
+            likedByList.push(state.currentUserEmail);
         }
+
+        await _supabase
+            .from('media_posts')
+            .update({ liked_by: likedByList })
+            .eq('id', postId);
+
+        // UI aktualisieren
+        const likeCountEl = document.getElementById(`like-count-${postId}`);
+        if (likeCountEl) likeCountEl.textContent = `${likedByList.length} ❤️`;
+
     } catch (err) {
-        console.error('Fehler beim Liken:', err);
+        // Fallback falls liked_by Spalte noch nicht als Array existiert
+        console.warn('Like-Fehler:', err);
     }
 };
+
+/**
+ * Öffnet das Modal, um zu sehen, wer diesen Beitrag geliked hat
+ */
+window.openLikesModal = async function(postId) {
+    const modal = document.getElementById('dynamic-info-modal') || createInfoModal();
+    const title = document.getElementById('dynamic-modal-title');
+    const content = document.getElementById('dynamic-modal-content');
+
+    if (title) title.textContent = 'Geliked von ❤️';
+    if (content) content.innerHTML = '<p style="color: var(--text-muted); font-size: 12px;">Lade Personen...</p>';
+    modal.classList.remove('hidden');
+
+    try {
+        const { data: postData } = await _supabase
+            .from('media_posts')
+            .select('liked_by')
+            .eq('id', postId)
+            .single();
+
+        const likedByList = postData?.liked_by || [];
+        if (likedByList.length === 0) {
+            content.innerHTML = '<p style="color: var(--text-muted); font-size: 12px;">Noch keine Likes für diesen Beitrag.</p>';
+            return;
+        }
+
+        content.innerHTML = '<div style="display: flex; flex-direction: column; gap: 8px;"></div>';
+        const listContainer = content.firstElementChild;
+
+        for (const email of likedByList) {
+            let name = email.split('@')[0];
+            let avatar = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150';
+
+            const { data: userData } = await _supabase
+                .from('users')
+                .select('full_name, username, avatar_url')
+                .eq('email', email)
+                .maybeSingle();
+
+            if (userData) {
+                name = userData.full_name || userData.username || name;
+                if (userData.avatar_url) avatar = userData.avatar_url;
+            }
+
+            const item = document.createElement('div');
+            item.style.cssText = 'display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.04); padding: 8px; border-radius: 8px; cursor: pointer;';
+            item.onclick = () => {
+                modal.classList.add('hidden');
+                window.openPublicProfile(email);
+            };
+            item.innerHTML = `
+                <img src="${avatar}" style="width: 30px; height: 30px; border-radius: 50%; object-fit: cover; border: 1px solid var(--primary);">
+                <span style="font-size: 13px; font-weight: 700; color: #fff;">${name}</span>
+            `;
+            listContainer.appendChild(item);
+        }
+    } catch (err) {
+        console.error('Fehler beim Laden der Likes:', err);
+    }
+};
+
+/**
+ * Öffnet das Kommentar-Modal für einen spezifischen Beitrag
+ */
+window.openCommentsModal = async function(postId) {
+    activeCommentPostId = postId;
+    const modal = document.getElementById('comments-modal') || createCommentsModal();
+    modal.classList.remove('hidden');
+    await loadCommentsForPost(postId);
+};
+
+/**
+ * Lädt alle Kommentare für einen Beitrag und zeigt sie im Modal an
+ */
+async function loadCommentsForPost(postId) {
+    const listContainer = document.getElementById('comments-list-container');
+    if (!listContainer) return;
+
+    listContainer.innerHTML = '<p style="color: var(--text-muted); font-size: 12px; text-align: center;">Lade Kommentare...</p>';
+
+    try {
+        const { data: comments, error } = await _supabase
+            .from('comments')
+            .select('*')
+            .eq('post_id', postId)
+            .order('created_at', { ascending: true });
+
+        if (error || !comments || comments.length === 0) {
+            listContainer.innerHTML = '<p style="color: var(--text-muted); font-size: 12px; text-align: center; padding: 20px;">Noch keine Kommentare. Schreib den ersten! 💬</p>';
+            return;
+        }
+
+        listContainer.innerHTML = '';
+
+        for (const c of comments) {
+            let authorName = c.author_email.split('@')[0];
+            let authorAvatar = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150';
+
+            const { data: userData } = await _supabase
+                .from('users')
+                .select('full_name, username, avatar_url')
+                .eq('email', c.author_email)
+                .maybeSingle();
+
+            if (userData) {
+                authorName = userData.full_name || userData.username || authorName;
+                if (userData.avatar_url) authorAvatar = userData.avatar_url;
+            }
+
+            const commentItem = document.createElement('div');
+            commentItem.style.cssText = 'display: flex; gap: 10px; background: rgba(255,255,255,0.04); padding: 10px; border-radius: 10px; align-items: flex-start;';
+            commentItem.innerHTML = `
+                <img src="${authorAvatar}" style="width: 28px; height: 28px; border-radius: 50%; object-fit: cover; border: 1px solid var(--primary); cursor: pointer;" onclick="document.getElementById('comments-modal').classList.add('hidden'); window.openPublicProfile('${c.author_email}')">
+                <div style="display: flex; flex-direction: column; gap: 2px; flex: 1;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 12px; font-weight: 800; color: #818cf8; cursor: pointer;" onclick="document.getElementById('comments-modal').classList.add('hidden'); window.openPublicProfile('${c.author_email}')">${authorName}</span>
+                        <span style="font-size: 10px; color: var(--text-muted);">${new Date(c.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    </div>
+                    <p style="font-size: 12px; color: #fff; margin: 0; word-break: break-word;">${c.comment_text}</p>
+                </div>
+            `;
+            listContainer.appendChild(commentItem);
+        }
+    } catch (err) {
+        console.error('Fehler beim Laden der Kommentare:', err);
+    }
+}
+
+/**
+ * Sendet einen neuen Kommentar ab (inkl. Moderations-Check)
+ */
+window.submitNewComment = async function() {
+    if (!state.currentUserEmail) {
+        alert('Bitte logge dich ein, um zu kommentieren.');
+        return;
+    }
+    if (!activeCommentPostId) return;
+
+    const input = document.getElementById('new-comment-input');
+    if (!input || !input.value.trim()) return;
+
+    const text = input.value.trim();
+
+    if (!validateInputOrAlert(text)) {
+        return;
+    }
+
+    try {
+        const { error } = await _supabase
+            .from('comments')
+            .insert([
+                {
+                    id: crypto.randomUUID(),
+                    post_id: activeCommentPostId,
+                    author_email: state.currentUserEmail,
+                    comment_text: text,
+                    created_at: new Date().toISOString()
+                }
+            ]);
+
+        if (error) throw error;
+
+        input.value = '';
+        await loadCommentsForPost(activeCommentPostId);
+
+        // Kommentar-Zähler im Feed direkt aktualisieren
+        const { count } = await _supabase
+            .from('comments')
+            .select('*', { count: 'exact', head: true })
+            .eq('post_id', activeCommentPostId);
+
+        const commentCountEl = document.getElementById(`comment-count-${activeCommentPostId}`);
+        if (commentCountEl) commentCountEl.textContent = `${count || 0} 💬`;
+
+    } catch (err) {
+        alert('Fehler beim Senden des Kommentars: ' + err.message);
+    }
+};
+
+/**
+ * Hilfsfunktion zum Erstellen des Kommentar-Modals falls nicht vorhanden
+ */
+function createCommentsModal() {
+    const modalDiv = document.createElement('div');
+    modalDiv.id = 'comments-modal';
+    modalDiv.className = 'hidden';
+    modalDiv.style.cssText = 'position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); z-index: 9999; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(5px);';
+    modalDiv.innerHTML = `
+        <div style="background: var(--card); border: 1px solid var(--border); width: 90%; max-width: 450px; height: 80vh; border-radius: 16px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+            <div style="padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+                <h3 style="font-size: 15px; font-weight: 900; color: #fff; margin: 0;">Beitrag Kommentare 💬</h3>
+                <button onclick="document.getElementById('comments-modal').classList.add('hidden')" style="background: none; border: none; color: var(--text-muted); font-size: 18px; cursor: pointer;">✕</button>
+            </div>
+            <div id="comments-list-container" style="flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px;"></div>
+            <div style="padding: 12px 16px; border-top: 1px solid var(--border); display: flex; gap: 8px; background: rgba(0,0,0,0.2);">
+                <input type="text" id="new-comment-input" placeholder="Schreibe einen Kommentar..." style="flex: 1; background: rgba(255,255,255,0.06); border: 1px solid var(--border); padding: 10px 14px; border-radius: 25px; color: #fff; font-size: 12px; outline: none;">
+                <button onclick="window.submitNewComment()" class="btn" style="width: auto; padding: 8px 16px; font-size: 12px; font-weight: 800; background: var(--gradient-main);">Senden</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modalDiv);
+    return modalDiv;
+}
+
+/**
+ * Hilfsfunktion zum Erstellen des allgemeinen Info-Modals (für Likes)
+ */
+function createInfoModal() {
+    const modalDiv = document.createElement('div');
+    modalDiv.id = 'dynamic-info-modal';
+    modalDiv.className = 'hidden';
+    modalDiv.style.cssText = 'position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); z-index: 9999; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(5px);';
+    modalDiv.innerHTML = `
+        <div style="background: var(--card); border: 1px solid var(--border); width: 90%; max-width: 380px; max-height: 70vh; border-radius: 16px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+            <div style="padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+                <h3 id="dynamic-modal-title" style="font-size: 15px; font-weight: 900; color: #fff; margin: 0;">Info</h3>
+                <button onclick="document.getElementById('dynamic-info-modal').classList.add('hidden')" style="background: none; border: none; color: var(--text-muted); font-size: 18px; cursor: pointer;">✕</button>
+            </div>
+            <div id="dynamic-modal-content" style="flex: 1; overflow-y: auto; padding: 16px;"></div>
+        </div>
+    `;
+    document.body.appendChild(modalDiv);
+    return modalDiv;
+}
 
 /**
  * Initialisiert den IntersectionObserver für Video-Autoplay & View-Zählung im Sichtfeld
@@ -318,7 +560,7 @@ function initVideoAutoplayObserver() {
 }
 
 /**
- * Lädt die Beiträge für den Campus-Feed basierend auf dem Filter (inkl. Metriken)
+ * Lädt die Beiträge für den Campus-Feed basierend auf dem Filter (inkl. Views, Kommentare & Likes)
  */
 export async function loadCampusFeed(filter = 'foryou') {
     const feedList = document.getElementById('reels-list');
@@ -368,7 +610,21 @@ export async function loadCampusFeed(filter = 'foryou') {
         const cleanCaption = (post.caption && !post.caption.includes('${post.caption}')) ? post.caption : '';
         const authorEmail = post.author_email || 'student@uni.at';
         const viewsCount = post.views || 0;
-        const likesCount = post.likes || 0;
+        
+        const likedByList = Array.isArray(post.liked_by) ? post.liked_by : [];
+        const likesCount = likedByList.length;
+
+        // Kommentaranzahl ermitteln
+        let commentCount = 0;
+        try {
+            const { count } = await _supabase
+                .from('comments')
+                .select('*', { count: 'exact', head: true })
+                .eq('post_id', post.id);
+            commentCount = count || 0;
+        } catch (e) {
+            // Ignorieren falls Tabelle neu
+        }
 
         let authorName = authorEmail.split('@')[0];
         let authorAvatar = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150';
@@ -397,12 +653,14 @@ export async function loadCampusFeed(filter = 'foryou') {
                     <span style="font-size: 12px; font-weight: 800; color: #fff;">${authorName}</span>
                 </div>
 
-                <!-- Metriken & Interaktion unten -->
+                <!-- Metriken & Interaktion unten (Views | Kommentare | Likes) -->
                 <div style="width: 100%; display: flex; flex-direction: column; gap: 6px;">
                     ${cleanCaption ? `<div style="font-size: 13px; color: #fff; font-weight: 600; background: rgba(0,0,0,0.5); padding: 4px 8px; border-radius: 6px; width: fit-content;">💬 ${cleanCaption}</div>` : ''}
-                    <div style="display: flex; gap: 12px; align-items: center; font-size: 11px; font-weight: 700; color: #cbd5e1;">
+                    <div style="display: flex; gap: 10px; align-items: center; font-size: 11px; font-weight: 700; color: #cbd5e1;">
                         <span>👁️ ${viewsCount} Views</span>
-                        <span id="like-count-${post.id}" onclick="window.likePost('${post.id}')" style="cursor: pointer; background: rgba(236, 72, 153, 0.2); border: 1px solid rgba(236, 72, 153, 0.4); color: #ec4899; padding: 3px 8px; border-radius: 12px;">${likesCount} ❤️</span>
+                        <span id="comment-count-${post.id}" onclick="window.openCommentsModal('${post.id}')" style="cursor: pointer; background: rgba(99, 102, 241, 0.2); border: 1px solid rgba(99, 102, 241, 0.4); color: #818cf8; padding: 3px 8px; border-radius: 12px;">${commentCount} 💬</span>
+                        <span id="like-count-${post.id}" onclick="window.likePost('${post.id}')" oncontextmenu="event.preventDefault(); window.openLikesModal('${post.id}');" style="cursor: pointer; background: rgba(236, 72, 153, 0.2); border: 1px solid rgba(236, 72, 153, 0.4); color: #ec4899; padding: 3px 8px; border-radius: 12px;" title="Klicken zum Liken | Rechtsklick oder halten für Liker-Liste">${likesCount} ❤️</span>
+                        <span onclick="window.openLikesModal('${post.id}')" style="font-size: 10px; color: var(--text-muted); cursor: pointer; text-decoration: underline;">Wer hat geliked?</span>
                     </div>
                 </div>
             </div>
@@ -435,7 +693,8 @@ export async function loadMyProfilePosts() {
     }
 
     grid.innerHTML = '';
-    posts.forEach(post => {
+    
+    for (const post of posts) {
         const item = document.createElement('div');
         item.style.cssText = 'background: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; display: flex; flex-direction: column;';
         
@@ -446,17 +705,27 @@ export async function loadMyProfilePosts() {
         }
         
         const views = post.views || 0;
-        const likes = post.likes || 0;
+        const likes = Array.isArray(post.liked_by) ? post.liked_by.length : 0;
+        
+        let commentsCount = 0;
+        try {
+            const { count } = await _supabase
+                .from('comments')
+                .select('*', { count: 'exact', head: true })
+                .eq('post_id', post.id);
+            commentsCount = count || 0;
+        } catch (e) {}
 
         item.innerHTML += `
             <div style="padding: 6px; font-size: 9px; color: var(--text-muted); display: flex; justify-content: space-between;">
                 <span>👁️ ${views}</span>
-                <span>❤️ ${likes}</span>
+                <span style="cursor: pointer; color: #818cf8;" onclick="window.openCommentsModal('${post.id}')">💬 ${commentsCount}</span>
+                <span style="cursor: pointer; color: #ec4899;" onclick="window.openLikesModal('${post.id}')">❤️ ${likes}</span>
             </div>
         `;
         
         grid.appendChild(item);
-    });
+    }
 }
 
 /**
@@ -547,7 +816,11 @@ window.openPublicProfile = async function(email) {
                 postsGrid.innerHTML = '';
                 userPosts.forEach(post => {
                     const postItem = document.createElement('div');
-                    postItem.style.cssText = 'background: #000; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; height: 90px;';
+                    postItem.style.cssText = 'background: #000; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; height: 90px; cursor: pointer;';
+                    postItem.onclick = () => {
+                        document.getElementById('public-profile-modal').classList.add('hidden');
+                        window.openCommentsModal(post.id);
+                    };
                     if (post.media_type === 'video') {
                         postItem.innerHTML = `<video src="${post.media_url}" muted style="width: 100%; height: 100%; object-fit: cover;"></video>`;
                     } else {
