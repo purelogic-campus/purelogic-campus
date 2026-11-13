@@ -1,4 +1,4 @@
-// js/features/feed.js - Vollständiges Campus-Feed & Medien Modul mit Video-Autoplay, Moderation & Öffentlichem Profil
+// js/features/feed.js - Vollständiges Campus-Feed & Medien Modul mit Follow-System
 import { _supabase } from '../config.js';
 import { state } from '../state.js';
 import { validateInputOrAlert } from './moderation.js';
@@ -158,7 +158,6 @@ export async function uploadTrimmedMedia() {
     
     const caption = document.getElementById('media-caption-input')?.value || '';
 
-    // Moderations-Check für den Untertitel
     if (!validateInputOrAlert(caption)) {
         return;
     }
@@ -269,7 +268,16 @@ export async function loadCampusFeed(filter = 'foryou') {
     let query = _supabase.from('media_posts').select('*');
 
     if (filter === 'following' && state.currentUserEmail) {
-        query = query.eq('author_email', state.currentUserEmail);
+        // Lade Posts von Nutzern, denen der aktuelle User folgt
+        const { data: follows } = await _supabase
+            .from('follows')
+            .select('following_email')
+            .eq('follower_email', state.currentUserEmail);
+            
+        const followingEmails = follows ? follows.map(f => f.following_email) : [];
+        followingEmails.push(state.currentUserEmail); // Eigene Posts auch anzeigen
+        
+        query = query.in('author_email', followingEmails);
     } else if (filter === 'discover') {
         query = query.order('created_at', { ascending: false }).limit(20);
     } else {
@@ -354,7 +362,7 @@ export async function loadMyProfilePosts() {
 }
 
 /**
- * Öffnet das öffentliche Profil eines beliebigen Nutzers per E-Mail (Punkt 12)
+ * Öffnet das öffentliche Profil eines beliebigen Nutzers per E-Mail und zeigt Follow-Button an
  */
 window.openPublicProfile = async function(email) {
     if (!email) return;
@@ -373,6 +381,34 @@ window.openPublicProfile = async function(email) {
 
     if (fullname) fullname.textContent = 'Lädt...';
     if (postsGrid) postsGrid.innerHTML = '<p style="font-size: 11px; color: var(--text-muted);">Lade Beiträge...</p>';
+
+    // Follow-Button Container im Modal vorbereiten oder einfügen
+    let followBtnContainer = document.getElementById('pub-profile-follow-container');
+    if (!followBtnContainer && fullname && fullname.parentNode) {
+        followBtnContainer = document.createElement('div');
+        followBtnContainer.id = 'pub-profile-follow-container';
+        followBtnContainer.style.cssText = 'margin-top: 8px;';
+        fullname.parentNode.appendChild(followBtnContainer);
+    }
+
+    if (followBtnContainer && state.currentUserEmail && state.currentUserEmail !== email) {
+        // Prüfen, ob bereits gefolgt wird
+        const { data: existingFollow } = await _supabase
+            .from('follows')
+            .select('*')
+            .eq('follower_email', state.currentUserEmail)
+            .eq('following_email', email)
+            .maybeSingle();
+
+        const isFollowing = !!existingFollow;
+        followBtnContainer.innerHTML = `
+            <button onclick="window.toggleFollowUser('${email}')" class="btn" style="padding: 6px 14px; font-size: 11px; font-weight: 800; background: ${isFollowing ? 'var(--card)' : 'var(--gradient-main)'}; border: ${isFollowing ? '1px solid var(--border)' : 'none'}; color: ${isFollowing ? 'var(--text)' : '#fff'}; width: auto; margin-top: 0;">
+                ${isFollowing ? '✓ Gefolgt' : '+ Folgen'}
+            </button>
+        `;
+    } else if (followBtnContainer) {
+        followBtnContainer.innerHTML = '';
+    }
 
     try {
         const { data: userData } = await _supabase
@@ -431,6 +467,58 @@ window.openPublicProfile = async function(email) {
     }
 };
 
+/**
+ * Umschalten der Follow-Beziehung (Folgen / Entfolgen)
+ */
+window.toggleFollowUser = async function(targetEmail) {
+    if (!state.currentUserEmail) {
+        alert('Bitte logge dich ein, um anderen Nutzern zu folgen.');
+        return;
+    }
+
+    try {
+        // Prüfen, ob bereits gefolgt wird
+        const { data: existing } = await _supabase
+            .from('follows')
+            .select('*')
+            .eq('follower_email', state.currentUserEmail)
+            .eq('following_email', targetEmail)
+            .maybeSingle();
+
+        if (existing) {
+            // Entfolgen
+            await _supabase
+                .from('follows')
+                .delete()
+                .eq('follower_email', state.currentUserEmail)
+                .eq('following_email', targetEmail);
+            
+            alert(`Du folgst ${targetEmail} nicht mehr.`);
+        } else {
+            // Folgen
+            await _supabase
+                .from('follows')
+                .insert([
+                    {
+                        id: crypto.randomUUID(),
+                        follower_email: state.currentUserEmail,
+                        following_email: targetEmail,
+                        created_at: new Date().toISOString()
+                    }
+                ]);
+            
+            alert(`Du folgst jetzt ${targetEmail} 🚀`);
+        }
+
+        // Profil-Modal aktualisieren, um den Button-Zustand zu wechseln
+        window.openPublicProfile(targetEmail);
+
+    } catch (err) {
+        console.error('Fehler beim Follow-Wechsel:', err);
+        alert('Fehler: ' + err.message);
+    }
+};
+
 window.closePublicProfileModal = function() {
     document.getElementById('public-profile-modal')?.classList.add('hidden');
 };
@@ -440,10 +528,19 @@ window.closePublicProfileModal = function() {
  */
 export function setReelFilter(filterType) {
     state.currentReelFilter = filterType;
-    document.querySelectorAll('.reel-pill').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.feed-filter-bar span').forEach(s => s.style.color = 'var(--text-muted)');
     
-    const pill = document.getElementById('reel-filter-' + filterType);
-    if (pill) pill.classList.add('active');
+    // Aktiven Filter hervorheben
+    if (filterType === 'foryou') {
+        const el = document.getElementById('subtab-foryou');
+        if (el) el.style.color = 'var(--primary)';
+    } else if (filterType === 'discover') {
+        const el = document.getElementById('subtab-discover');
+        if (el) el.style.color = 'var(--primary)';
+    } else if (filterType === 'following') {
+        const el = document.getElementById('subtab-following');
+        if (el) el.style.color = 'var(--primary)';
+    }
     
     loadCampusFeed(filterType);
 }
