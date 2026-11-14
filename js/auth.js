@@ -39,18 +39,18 @@ export async function handleSignup() {
     }
 
     try {
-        // 1. Vor der Registrierung die bestehende Session hart killen
-        await _supabase.auth.signOut();
-        
-        // 2. Alle Supabase-Einträge aus dem Browser-Speicher löschen
+        // 1. Zwingender globaler Logout, um die alte Session komplett zu trennen
+        await _supabase.auth.signOut({ scope: 'global' });
+
+        // 2. Browser-Speicher von jeglichen alten Auth-Tokens bereinigen
+        localStorage.clear();
+        sessionStorage.clear();
         for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
-            if (key && key.includes('supabase.auth.token')) {
+            if (key && (key.includes('supabase') || key.includes('auth'))) {
                 localStorage.removeItem(key);
             }
         }
-        localStorage.clear();
-        sessionStorage.clear();
 
         // 3. Neuen Account registrieren
         const { data, error } = await _supabase.auth.signUp({ email, password });
