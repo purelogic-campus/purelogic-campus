@@ -41,7 +41,12 @@ export async function handleSignup() {
         state.currentUserEmail = data.user.email;
         await checkAndCreateUserRecord(data.user.email);
         
-        showAuthMsg('Account erfolgreich erstellt! Willkommen bei Pure Logic 🚀', 'success');
+        const isAcAt = email.toLowerCase().endsWith('.ac.at');
+        const successMsg = isAcAt 
+            ? 'Account erfolgreich erstellt! .ac.at Studenten-Status erkannt 🎓' 
+            : 'Account erfolgreich erstellt! Willkommen bei Pure Logic 🚀';
+
+        showAuthMsg(successMsg, 'success');
         setTimeout(initMainApp, 1000);
     } catch (err) {
         showAuthMsg('Registrierungs-Fehler: ' + err.message, 'error');
@@ -50,13 +55,13 @@ export async function handleSignup() {
 
 async function checkAndCreateUserRecord(email) {
     try {
+        const isVerifiedStudent = email.toLowerCase().endsWith('.ac.at');
+
         const { data: existingUser } = await _supabase
             .from('users')
             .select('*')
             .eq('email', email)
             .single();
-
-        const isVerifiedStudent = email.toLowerCase().endsWith('.ac.at');
 
         if (!existingUser) {
             await _supabase.from('users').insert([
@@ -65,12 +70,18 @@ async function checkAndCreateUserRecord(email) {
                     email: email,
                     username: email.split('@')[0],
                     full_name: email.split('@')[0],
-                    university: 'Universität Wien',
+                    university: isVerifiedStudent ? 'Universität Wien (Verifiziert)' : 'Universität Wien',
                     logic_score: 50,
                     is_verified_student: isVerifiedStudent,
                     created_at: new Date().toISOString()
                 }
             ]);
+        } else {
+            // Falls sich der Status geändert hat oder beim Login nachgezogen werden soll
+            await _supabase
+                .from('users')
+                .update({ is_verified_student: isVerifiedStudent })
+                .eq('email', email);
         }
         
         state.isVerifiedStudent = isVerifiedStudent;
@@ -148,8 +159,16 @@ export async function initMainApp() {
             const scoreBadge = document.getElementById('score');
             if (scoreBadge) scoreBadge.textContent = `${userData.logic_score || 0} P`;
 
-            if (userData.is_verified_student) {
-                state.isVerifiedStudent = true;
+            state.isVerifiedStudent = userData.is_verified_student || false;
+
+            // Verified Badge im Profil rendern
+            const badgeContainer = document.getElementById('verified-student-badge-container');
+            if (badgeContainer) {
+                if (state.isVerifiedStudent) {
+                    badgeContainer.innerHTML = `<span style="display: inline-block; background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.4); padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 800; margin-top: 2px;">🎓 Verified Student (.ac.at)</span>`;
+                } else {
+                    badgeContainer.innerHTML = '';
+                }
             }
 
             if (userData.is_admin || userData.role === 'admin') {
@@ -171,3 +190,42 @@ window.handleSignup = handleSignup;
 window.handleForgotPassword = handleForgotPassword;
 window.togglePasswordVisibility = togglePasswordVisibility;
 window.resetUser = resetUser;
+```[cite: 6]
+
+---
+
+### 2. `schema.sql` (Datenbankseitige Absicherung per Trigger)
+Damit auch auf Datenbankebene (falls User direkt über Supabase Auth angelegt werden) die `.ac.at`-Endung automatisch erkannt und das Flag `is_verified_student` gesetzt wird, erweitern wir das SQL-Schema wie folgt[cite: 3]:
+
+```sql
+-- Erweiterung der users Tabelle für .ac.at Verifizierung
+ALTER TABLE IF EXISTS users 
+ADD COLUMN IF NOT EXISTS is_verified_student BOOLEAN DEFAULT false,
+ADD COLUMN IF NOT EXISTS username TEXT,
+ADD COLUMN IF NOT EXISTS full_name TEXT,
+ADD COLUMN IF NOT EXISTS bio TEXT,
+ADD COLUMN IF NOT EXISTS avatar_url TEXT;
+
+-- Automatischer Trigger, der bei Registrierung prüft, ob die Mail auf .ac.at endet
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.users (id, email, university, is_verified_student, logic_score)
+  VALUES (
+    NEW.id, 
+    NEW.email, 
+    'Universität Wien', 
+    NEW.email ILIKE '%.ac.at', 
+    50
+  )
+  ON CONFLICT (email) DO UPDATE 
+  SET is_verified_student = EXCLUDED.email ILIKE '%.ac.at';
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
