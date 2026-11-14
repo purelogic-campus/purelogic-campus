@@ -39,12 +39,20 @@ export async function handleSignup() {
     }
 
     try {
-        // Vor der Registrierung sicherheitshalber ausloggen, 
-        // damit keine alte Session-ID übernommen wird
+        // 1. Vor der Registrierung die bestehende Session hart killen
         await _supabase.auth.signOut();
+        
+        // 2. Alle Supabase-Einträge aus dem Browser-Speicher löschen
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && key.includes('supabase.auth.token')) {
+                localStorage.removeItem(key);
+            }
+        }
         localStorage.clear();
         sessionStorage.clear();
 
+        // 3. Neuen Account registrieren
         const { data, error } = await _supabase.auth.signUp({ email, password });
         if (error) throw error;
 
