@@ -1,5 +1,5 @@
 // ============================================================================
-// PURE LOGIC • js/main.js (Vollständige & Ungekürzte Version)
+// PURE LOGIC • js/main.js (Vollständige & Ungekürzte Version mit Admin-Fix)
 // ============================================================================
 
 import { _supabase } from './config.js';
@@ -70,12 +70,30 @@ async function initMainAppSession() {
     const mainApp = document.getElementById('main-app');
     const logoutBtn = document.getElementById('logout-btn');
     const profileBtn = document.getElementById('header-profile-btn');
-    const adminBtn = document.getElementById('header-admin-tab-btn');
+    
+    // Admin-Button robust suchen oder als Fallback im Header erzeugen
+    let adminBtn = document.getElementById('header-admin-tab-btn') || document.querySelector('.admin-tab-btn');
+    if (!adminBtn) {
+        const headerContainer = document.querySelector('header') || document.querySelector('.header-right') || mainApp;
+        if (headerContainer) {
+            adminBtn = document.createElement('button');
+            adminBtn.id = 'header-admin-tab-btn';
+            adminBtn.className = 'hidden';
+            adminBtn.innerHTML = '⚙️ Admin UI';
+            adminBtn.style.cssText = 'background: linear-gradient(135deg, #ef4444, #dc2626); color: white; border: none; padding: 6px 12px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-right: 8px;';
+            adminBtn.onclick = () => {
+                if (typeof window.switchTab === 'function') window.switchTab('admin');
+            };
+            headerContainer.prepend(adminBtn);
+        }
+    }
 
     if (authGate) authGate.classList.add('hidden');
     if (mainApp) mainApp.classList.remove('hidden');
     if (logoutBtn) logoutBtn.classList.remove('hidden');
     if (profileBtn) profileBtn.classList.remove('hidden');
+
+    let isMasterAdmin = (state.currentUserEmail === 'office@pure-logic.at');
 
     try {
         const { data: userData } = await _supabase
@@ -89,15 +107,9 @@ async function initMainAppSession() {
             if (scoreBadge) scoreBadge.textContent = `${userData.logic_score || 0} P`;
             state.isVerifiedStudent = userData.is_verified_student || false;
 
-            // Master Admin Erkennung (über Datenbank-Flag ODER E-Mail-Adresse)
-            const isMasterAdmin = (state.currentUserEmail === 'office@pure-logic.at') || 
-                                  userData.is_admin || 
-                                  userData.role === 'admin' ||
-                                  state.currentUserEmail?.includes('admin');
-
-            if (isMasterAdmin) {
-                if (adminBtn) adminBtn.classList.remove('hidden');
-                if (scoreBadge) scoreBadge.classList.add('admin-badge');
+            // Master Admin Erkennung (DB-Flag, Rolle oder E-Mail)
+            if (isMasterAdmin || userData.is_admin || userData.role === 'admin' || state.currentUserEmail?.includes('admin')) {
+                isMasterAdmin = true;
             }
 
             // Profilfelder im Profil-Tab vorbefüllen
@@ -135,11 +147,12 @@ async function initMainAppSession() {
         console.error('Fehler beim Laden der User-Daten:', err);
     }
 
-    // Fallback für Master Admin, falls der DB-Abruf fehlschlägt
-    if (state.currentUserEmail === 'office@pure-logic.at') {
+    // Master Admin UI final erzwingen, wenn E-Mail übereinstimmt oder Flag gesetzt ist
+    if (isMasterAdmin) {
         if (adminBtn) adminBtn.classList.remove('hidden');
         const scoreBadge = document.getElementById('score');
         if (scoreBadge) scoreBadge.classList.add('admin-badge');
+        console.log('Master Admin UI erfolgreich aktiviert für:', state.currentUserEmail);
     }
 
     loadCampusFeed('foryou');
