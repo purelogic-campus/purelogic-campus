@@ -1,5 +1,5 @@
 // ============================================================================
-// PURE LOGIC • js/main.js (Vollständige & Ungekürzte Version mit robustem Admin-Watcher)
+// PURE LOGIC • js/main.js (Vollständige & Ungekürzte Version)
 // ============================================================================
 
 import { _supabase } from './config.js';
@@ -12,12 +12,15 @@ import { openProfGuideModal, closeProfGuideModal, toggleProfForm, submitProfRevi
 import { openCrushModal, closeCrushModal, submitCrush } from './features/crush.js';
 import { changeLanguage } from './i18n.js';
 
+let adminMapInstance = null;
+let adminMarkerInstance = null;
+
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('PURE LOGIC • App initialisiert & Module geladen 🚀');
 
     setupGlobalWindowHandlers();
 
-    // 1. Globale Logout- & Reset-Funktion mit sofortiger Neuladung
+    // 1. Globale Logout- & Reset-Funktion
     window.resetUser = async function() {
         try {
             await _supabase.auth.signOut();
@@ -30,7 +33,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.location.href = window.location.pathname;
     };
 
-    // 2. Expliziter Event-Listener für den Desktop/PC Logout-Button
+    // 2. Expliziter Event-Listener für den Logout-Button
     const logoutBtn = document.getElementById('logout-btn');
     if (logoutBtn) {
         logoutBtn.replaceWith(logoutBtn.cloneNode(true));
@@ -39,17 +42,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             window.resetUser();
         });
     }
-
-    // Punkt 8: Auto-Logout & Auto-Cache leeren beim Verlassen / Schließen der Seite
-    window.addEventListener('beforeunload', async () => {
-        try {
-            await _supabase.auth.signOut();
-        } catch (err) {
-            console.warn('Auto-Logout Fehler beim Verlassen:', err);
-        }
-        localStorage.clear();
-        sessionStorage.clear();
-    });
 
     // 3. Session-Prüfung beim Start
     try {
@@ -62,27 +54,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.warn('Session Check fehlgeschlagen:', err);
     }
 
-    // 4. ULTIMATIVER ADMIN-WATCHER: Erzwingt den Admin-Button permanent, sobald office@pure-logic.at aktiv ist
+    // 4. Permanenter Admin-Watcher (entfernt zuverlässig 'hidden' vom Header-Button)
     setInterval(() => {
-        const email = state.currentUserEmail;
-        const logoutButton = document.getElementById('logout-btn');
-        if (logoutButton && (email === 'office@pure-logic.at' || localStorage.getItem('supabase.auth.token')?.includes('office@pure-logic.at'))) {
-            if (!document.getElementById('header-admin-tab-btn')) {
-                const adminBtn = document.createElement('button');
-                adminBtn.id = 'header-admin-tab-btn';
-                adminBtn.innerHTML = '⚙️ Admin UI';
-                adminBtn.style.cssText = 'background: #ef4444; color: white; border: none; padding: 6px 14px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-right: 10px; font-size: 12px; display: inline-block; z-index: 9999;';
-                adminBtn.onclick = () => {
-                    if (typeof window.switchTab === 'function') {
-                        window.switchTab('admin');
-                    } else {
-                        alert('Admin-UI aktiv!');
-                    }
-                };
-                logoutButton.parentNode.insertBefore(adminBtn, logoutButton);
-            }
+        const email = state.currentUserEmail?.toLowerCase();
+        const adminTabBtn = document.getElementById('header-admin-tab-btn');
+        const scoreBadge = document.getElementById('score');
+
+        if (adminTabBtn && (email === 'office@pure-logic.at' || email?.includes('admin'))) {
+            adminTabBtn.classList.remove('hidden');
+            if (scoreBadge) scoreBadge.classList.add('admin-badge');
         }
-    }, 1000);
+    }, 500);
 });
 
 // Hauptanwendungs-Session initialisieren
@@ -91,13 +73,17 @@ async function initMainAppSession() {
     const mainApp = document.getElementById('main-app');
     const logoutBtn = document.getElementById('logout-btn');
     const profileBtn = document.getElementById('header-profile-btn');
+    const adminTabBtn = document.getElementById('header-admin-tab-btn');
 
     if (authGate) authGate.classList.add('hidden');
     if (mainApp) mainApp.classList.remove('hidden');
     if (logoutBtn) logoutBtn.classList.remove('hidden');
     if (profileBtn) profileBtn.classList.remove('hidden');
 
-    let isMasterAdmin = (state.currentUserEmail === 'office@pure-logic.at');
+    let isMasterAdmin = (
+        state.currentUserEmail?.toLowerCase() === 'office@pure-logic.at' ||
+        state.currentUserEmail?.toLowerCase().includes('admin')
+    );
 
     try {
         const { data: userData } = await _supabase
@@ -111,7 +97,7 @@ async function initMainAppSession() {
             if (scoreBadge) scoreBadge.textContent = `${userData.logic_score || 0} P`;
             state.isVerifiedStudent = userData.is_verified_student || false;
 
-            if (isMasterAdmin || userData.is_admin || userData.role === 'admin' || state.currentUserEmail?.includes('admin')) {
+            if (isMasterAdmin || userData.is_admin || userData.role === 'admin') {
                 isMasterAdmin = true;
             }
 
@@ -150,38 +136,46 @@ async function initMainAppSession() {
         console.error('Fehler beim Laden der User-Daten:', err);
     }
 
-    // Backup-Injektion bei regulärem Session-Start
-    if (isMasterAdmin || state.currentUserEmail === 'office@pure-logic.at') {
+    if (isMasterAdmin) {
         const scoreBadge = document.getElementById('score');
         if (scoreBadge) scoreBadge.classList.add('admin-badge');
-
-        setTimeout(() => {
-            if (!document.getElementById('header-admin-tab-btn')) {
-                const adminBtn = document.createElement('button');
-                adminBtn.id = 'header-admin-tab-btn';
-                adminBtn.innerHTML = '⚙️ Admin UI';
-                adminBtn.style.cssText = 'background: #ef4444; color: white; border: none; padding: 6px 14px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-right: 10px; font-size: 12px; display: inline-block; z-index: 9999;';
-                adminBtn.onclick = () => {
-                    if (typeof window.switchTab === 'function') {
-                        window.switchTab('admin');
-                    } else {
-                        alert('Admin-UI aktiv!');
-                    }
-                };
-                
-                const logoutButton = document.getElementById('logout-btn');
-                if (logoutButton && logoutButton.parentNode) {
-                    logoutButton.parentNode.insertBefore(adminBtn, logoutButton);
-                } else {
-                    document.body.appendChild(adminBtn);
-                }
-            }
-        }, 300);
+        if (adminTabBtn) adminTabBtn.classList.remove('hidden');
     }
 
     loadCampusFeed('foryou');
     loadLiveStreams();
     loadMyProfilePosts();
+}
+
+// Initialisiert die Leaflet-Karte im Admin-Tab
+function initAdminMap() {
+    const mapContainer = document.getElementById('admin-map');
+    if (!mapContainer || typeof L === 'undefined') return;
+
+    if (!adminMapInstance) {
+        const defaultLat = 48.2082;
+        const defaultLng = 16.3738;
+
+        adminMapInstance = L.map('admin-map').setView([defaultLat, defaultLng], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap'
+        }).addTo(adminMapInstance);
+
+        adminMarkerInstance = L.marker([defaultLat, defaultLng], { draggable: true }).addTo(adminMapInstance);
+
+        adminMapInstance.on('click', (e) => {
+            const { lat, lng } = e.latlng;
+            adminMarkerInstance.setLatLng([lat, lng]);
+            const latInput = document.getElementById('admin-drop-lat');
+            const lngInput = document.getElementById('admin-drop-lng');
+            if (latInput) latInput.value = lat.toFixed(6);
+            if (lngInput) lngInput.value = lng.toFixed(6);
+        });
+    }
+
+    setTimeout(() => {
+        adminMapInstance.invalidateSize();
+    }, 200);
 }
 
 // Tab-Switching und globale Handler
@@ -196,6 +190,75 @@ function setupGlobalWindowHandlers() {
         const targetTab = document.getElementById('tab-' + tabName);
         if (targetTab) {
             targetTab.classList.remove('hidden');
+        }
+
+        if (tabName === 'admin') {
+            initAdminMap();
+        }
+    };
+
+    // Admin Test-Modus: Punkte direkt setzen
+    window.adminSetTestPoints = async function() {
+        const input = document.getElementById('admin-test-points-input');
+        const points = parseInt(input?.value, 10);
+        if (isNaN(points) || !state.currentUserEmail) {
+            alert('Bitte gib eine gültige Punktzahl ein.');
+            return;
+        }
+
+        try {
+            const { error } = await _supabase
+                .from('users')
+                .update({ logic_score: points })
+                .eq('email', state.currentUserEmail);
+
+            if (error) throw error;
+
+            const scoreBadge = document.getElementById('score');
+            if (scoreBadge) scoreBadge.textContent = `${points} P`;
+            alert(`Test-Punktestand erfolgreich auf ${points} P gesetzt! ⚡`);
+        } catch (err) {
+            alert('Fehler beim Setzen der Punkte: ' + err.message);
+        }
+    };
+
+    // Admin: Neuen Campus-Drop mit GPS-Bindung erstellen
+    window.handleCreateCampusDrop = async function() {
+        const title = document.getElementById('admin-drop-title')?.value.trim();
+        const rewardType = document.getElementById('admin-drop-reward-type')?.value;
+        const rewardValue = document.getElementById('admin-drop-reward-value')?.value.trim();
+        const startTime = document.getElementById('admin-drop-start-time')?.value;
+        const lat = parseFloat(document.getElementById('admin-drop-lat')?.value);
+        const lng = parseFloat(document.getElementById('admin-drop-lng')?.value);
+        const radius = parseInt(document.getElementById('admin-drop-radius')?.value || '100', 10);
+
+        if (!title || !rewardValue || isNaN(lat) || isNaN(lng)) {
+            alert('Bitte Titel, Belohnungswert und GPS-Koordinaten angeben.');
+            return;
+        }
+
+        try {
+            const { error } = await _supabase.from('campus_drops').insert([{
+                id: crypto.randomUUID(),
+                title,
+                reward_type: rewardType,
+                reward_value: rewardValue,
+                start_time: startTime ? new Date(startTime).toISOString() : new Date().toISOString(),
+                lat,
+                lng,
+                radius,
+                created_by: state.currentUserEmail,
+                created_at: new Date().toISOString()
+            }]);
+
+            if (error) throw error;
+
+            const banner = document.getElementById('campus-drop-banner');
+            if (banner) banner.style.display = 'block';
+
+            alert('Campus-Drop erfolgreich mit GPS-Bindung freigegeben! 🚀');
+        } catch (err) {
+            alert('Fehler beim Erstellen des Drops: ' + err.message);
         }
     };
 
@@ -279,7 +342,6 @@ function setupGlobalWindowHandlers() {
             if (error) throw error;
             alert('Profil erfolgreich gespeichert! (+10 P)');
 
-            // Punkte gutschreiben (+10)
             const { data: userData } = await _supabase
                 .from('users')
                 .select('logic_score')

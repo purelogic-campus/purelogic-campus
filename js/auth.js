@@ -7,7 +7,6 @@ import { loadLiveStreams } from './features/live.js';
 export async function handleLogin() {
     const email = document.getElementById('email')?.value.trim();
     const password = document.getElementById('password')?.value.trim();
-    const msgBox = document.getElementById('auth-msg');
 
     if (!email || !password) {
         showAuthMsg('Bitte E-Mail und Passwort eingeben.', 'error');
@@ -20,7 +19,7 @@ export async function handleLogin() {
 
         state.currentUserEmail = data.user.email;
         await checkAndCreateUserRecord(data.user.email);
-        initMainApp();
+        await initMainApp();
     } catch (err) {
         showAuthMsg('Login-Fehler: ' + err.message, 'error');
     }
@@ -29,7 +28,6 @@ export async function handleLogin() {
 export async function handleSignup() {
     const email = document.getElementById('email')?.value.trim();
     const password = document.getElementById('password')?.value.trim();
-    const msgBox = document.getElementById('auth-msg');
 
     if (!email || !password) {
         showAuthMsg('Bitte E-Mail und Passwort eingeben.', 'error');
@@ -114,7 +112,9 @@ export function togglePasswordVisibility() {
 export function resetUser() {
     _supabase.auth.signOut();
     state.currentUserEmail = null;
-    location.reload();
+    localStorage.clear();
+    sessionStorage.clear();
+    window.location.href = window.location.pathname;
 }
 
 export async function initMainApp() {
@@ -124,12 +124,19 @@ export async function initMainApp() {
     document.getElementById('logout-btn')?.classList.remove('hidden');
     document.getElementById('header-profile-btn')?.classList.remove('hidden');
 
-    // Admin-Prüfung
-    if (state.currentUserEmail === 'admin@pure-logic.at' || state.currentUserEmail?.includes('admin')) {
-        document.getElementById('header-admin-tab-btn')?.classList.remove('hidden');
+    const isMasterAdmin = (
+        state.currentUserEmail?.toLowerCase() === 'office@pure-logic.at' ||
+        state.currentUserEmail?.toLowerCase() === 'admin@pure-logic.at' ||
+        state.currentUserEmail?.toLowerCase().includes('admin')
+    );
+
+    if (isMasterAdmin) {
+        const adminBtn = document.getElementById('header-admin-tab-btn');
+        if (adminBtn) adminBtn.classList.remove('hidden');
+        const scoreBadge = document.getElementById('score');
+        if (scoreBadge) scoreBadge.classList.add('admin-badge');
     }
 
-    // Punktestand & Badge laden
     try {
         const { data: userData } = await _supabase
             .from('users')
@@ -143,6 +150,11 @@ export async function initMainApp() {
 
             if (userData.is_verified_student) {
                 state.isVerifiedStudent = true;
+            }
+
+            if (userData.is_admin || userData.role === 'admin') {
+                document.getElementById('header-admin-tab-btn')?.classList.remove('hidden');
+                if (scoreBadge) scoreBadge.classList.add('admin-badge');
             }
         }
     } catch (err) {
