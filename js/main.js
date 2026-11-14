@@ -1,5 +1,5 @@
 // ============================================================================
-// PURE LOGIC • js/main.js (Vollständige & Ungekürzte Version)
+// PURE LOGIC • js/main.js (Vollständige & Ungekürzte Produktionsversion)
 // ============================================================================
 
 import { _supabase } from './config.js';
