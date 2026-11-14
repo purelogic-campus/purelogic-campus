@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log('PURE LOGIC • App initialisiert & Module geladen 🚀');
 
     setupGlobalWindowHandlers();
+    setupAuthFormHandlers();
 
     // 1. Globale Logout- & Reset-Funktion
     window.resetUser = async function() {
@@ -66,6 +67,60 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }, 500);
 });
+
+// Authentifizierungs-Handler für Login & Registrierung mit .ac.at Prüfung
+function setupAuthFormHandlers() {
+    window.handleUserSignup = async function(email, password) {
+        // STRENGER SICHERHEITS-CHECK: Nur offizielle Uni-E-Mail-Adressen (.ac.at) erlauben
+        if (!email || !email.toLowerCase().endsWith('.ac.at')) {
+            window.showAuthMsg('Registrierung nur mit offizieller Universitäts-E-Mail-Adresse (.ac.at) möglich!', 'error');
+            return;
+        }
+
+        try {
+            const { data, error } = await _supabase.auth.signUp({
+                email: email,
+                password: password,
+            });
+
+            if (error) throw error;
+
+            window.showAuthMsg('Registrierung erfolgreich! Bitte bestätige deine E-Mail-Adresse.', 'success');
+        } catch (err) {
+            window.showAuthMsg('Registrierungs-Fehler: ' + err.message, 'error');
+        }
+    };
+
+    window.handleUserLogin = async function(email, password) {
+        try {
+            const { data, error } = await _supabase.auth.signInWithPassword({
+                email: email,
+                password: password,
+            });
+
+            if (error) throw error;
+            window.location.reload();
+        } catch (err) {
+            window.showAuthMsg('Login-Fehler: ' + err.message, 'error');
+        }
+    };
+
+    // Event-Listener für den Button "Account erstellen"
+    const signupBtn = document.getElementById('signup-btn') || document.querySelector('.btn-signup');
+    if (signupBtn) {
+        signupBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email')?.value || document.querySelector('input[type="email"]')?.value;
+            const password = document.getElementById('password')?.value || document.querySelector('input[type="password"]')?.value;
+            
+            if (email && password) {
+                await window.handleUserSignup(email, password);
+            } else {
+                window.showAuthMsg('Bitte E-Mail und Passwort eingeben.', 'error');
+            }
+        });
+    }
+}
 
 // Hauptanwendungs-Session initialisieren
 async function initMainAppSession() {
