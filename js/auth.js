@@ -39,6 +39,12 @@ export async function handleSignup() {
     }
 
     try {
+        // Vor der Registrierung sicherheitshalber ausloggen, 
+        // damit keine alte Session-ID übernommen wird
+        await _supabase.auth.signOut();
+        localStorage.clear();
+        sessionStorage.clear();
+
         const { data, error } = await _supabase.auth.signUp({ email, password });
         if (error) throw error;
 
