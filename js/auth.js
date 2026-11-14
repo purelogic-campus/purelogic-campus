@@ -42,9 +42,10 @@ export async function handleSignup() {
         // Vorherige Session komplett erzwingen beenden
         await _supabase.auth.signOut();
         
-        // Lokalen Speicher komplett leeren
+        // Lokalen Speicher komplett leeren, um Admin-Cache zu verhindern
         localStorage.clear();
         sessionStorage.clear();
+        state.currentUserEmail = null;
 
         // Registrierung als neuer unabhängiger User
         const { data, error } = await _supabase.auth.signUp({ 
