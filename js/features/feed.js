@@ -914,4 +914,4 @@ window.loadCampusFeed = loadCampusFeed;
 window.loadMyProfilePosts = loadMyProfilePosts;
 window.setReelFilter = setReelFilter;
 window.setFilter = setFilter;
-window.claimActiveDrop = claimActiveDrop;[cite: 1]
+window.claimActiveDrop = claimActiveDrop;
