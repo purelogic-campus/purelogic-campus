@@ -39,15 +39,24 @@ export async function handleSignup() {
     }
 
     try {
-        // 1. Globale Session hart auf dem Client & Server beenden
+        // 1. Globale Session hart auf dem Server und Client beenden
         await _supabase.auth.signOut({ scope: 'global' });
         
-        // 2. Allen lokalen Speicher restlos bereinigen
+        // 2. Allen lokalen Speicher und Session-Storage komplett löschen, um Admin-Reste zu vernichten
         localStorage.clear();
         sessionStorage.clear();
+        
+        // Supabase-spezifische Keys im LocalStorage manuell bereinigen (falls noch Reste da sind)
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && (key.includes('supabase') || key.includes('sb-'))) {
+                localStorage.removeItem(key);
+            }
+        }
+
         state.currentUserEmail = null;
 
-        // 3. Frische Registrierung als neuer, isolierter User ausführen
+        // 3. Frische Registrierung als völlig neuer User ausführen
         const { data, error } = await _supabase.auth.signUp({ 
             email, 
             password,
@@ -60,6 +69,7 @@ export async function handleSignup() {
         
         if (error) throw error;
 
+        // Falls Supabase den User direkt einloggt oder zurückgibt
         const userEmail = data.user?.email || email;
         state.currentUserEmail = userEmail;
         await checkAndCreateUserRecord(userEmail);
@@ -234,7 +244,7 @@ export async function initMainApp() {
         console.error('Fehler beim Laden der User-Daten:', err);
     }
 
-    loadCampusFeed('foryour');
+    loadCampusFeed('foryou');
     loadLiveStreams();
     loadMyProfilePosts();
 }
