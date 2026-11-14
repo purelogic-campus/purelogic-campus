@@ -1,5 +1,5 @@
 // ============================================================================
-// PURE LOGIC • js/main.js (Vollständige & Ungekürzte Version mit erzwungenem Admin-Button)
+// PURE LOGIC • js/main.js (Vollständige & Ungekürzte Version • Finaler Admin-Fix)
 // ============================================================================
 
 import { _supabase } from './config.js';
@@ -129,38 +129,34 @@ async function initMainAppSession() {
         console.error('Fehler beim Laden der User-Daten:', err);
     }
 
-    // IMMER ERZWUNGENER ADMIN-BUTTON: Direkt oben neben den Profil-Button setzen, falls Admin
+    // SICHERER ADMIN-BUTTON: Mit kurzer Verzögerung eingefügt, damit das DOM garantiert bereit ist
     if (isMasterAdmin || state.currentUserEmail === 'office@pure-logic.at') {
         const scoreBadge = document.getElementById('score');
         if (scoreBadge) scoreBadge.classList.add('admin-badge');
 
-        let adminBtn = document.getElementById('header-admin-tab-btn');
-        if (!adminBtn) {
-            adminBtn = document.createElement('button');
-            adminBtn.id = 'header-admin-tab-btn';
-            adminBtn.innerHTML = '⚙️ Admin UI';
-            adminBtn.style.cssText = 'background: #ef4444; color: white; border: none; padding: 6px 14px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-right: 10px; font-size: 12px; display: inline-block; z-index: 9999;';
-            adminBtn.onclick = () => {
-                // Falls du eine Admin-Ansicht hast, wird sie hier aufgerufen
-                if (typeof window.switchTab === 'function') {
-                    window.switchTab('admin');
+        setTimeout(() => {
+            if (!document.getElementById('header-admin-tab-btn')) {
+                const adminBtn = document.createElement('button');
+                adminBtn.id = 'header-admin-tab-btn';
+                adminBtn.innerHTML = '⚙️ Admin UI';
+                adminBtn.style.cssText = 'background: #ef4444; color: white; border: none; padding: 6px 14px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-right: 10px; font-size: 12px; display: inline-block; z-index: 9999;';
+                adminBtn.onclick = () => {
+                    if (typeof window.switchTab === 'function') {
+                        window.switchTab('admin');
+                    } else {
+                        alert('Admin-UI aktiv!');
+                    }
+                };
+                
+                const logoutButton = document.getElementById('logout-btn');
+                if (logoutButton && logoutButton.parentNode) {
+                    logoutButton.parentNode.insertBefore(adminBtn, logoutButton);
                 } else {
-                    alert('Admin-UI aufgerufen! (Füge hier deine Admin-Logik ein)');
+                    document.body.appendChild(adminBtn);
                 }
-            };
-            
-            // Versuche, den Button direkt in die obere rechte Leiste (neben Logout/Profil) zu pflanzen
-            const logoutButton = document.getElementById('logout-btn');
-            if (logoutButton && logoutButton.parentNode) {
-                logoutButton.parentNode.insertBefore(adminBtn, logoutButton);
-            } else {
-                document.body.appendChild(adminBtn);
+                console.log('Master Admin UI Button automatisch injiziert.');
             }
-        } else {
-            adminBtn.classList.remove('hidden');
-            adminBtn.style.display = 'inline-block';
-        }
-        console.log('Master Admin UI Button erfolgreich erzwungen für:', state.currentUserEmail);
+        }, 300);
     }
 
     loadCampusFeed('foryou');
