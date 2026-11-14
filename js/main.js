@@ -1,5 +1,5 @@
 // ============================================================================
-// PURE LOGIC • js/main.js (Vollständige & Ungekürzte Version)
+// PURE LOGIC • js/main.js (Vollständige & Ungekürzte Version mit robustem Admin-Watcher)
 // ============================================================================
 
 import { _supabase } from './config.js';
@@ -15,26 +15,6 @@ import { changeLanguage } from './i18n.js';
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('PURE LOGIC • App initialisiert & Module geladen 🚀');
 
-    // Sofortiger Master-Admin-Check & Button-Erzwingung beim Start
-    setTimeout(() => {
-        const logoutBtn = document.getElementById('logout-btn');
-        if (logoutBtn && !document.getElementById('header-admin-tab-btn')) {
-            const adminBtn = document.createElement('button');
-            adminBtn.id = 'header-admin-tab-btn';
-            adminBtn.innerHTML = '⚙️ Admin UI';
-            adminBtn.style.cssText = 'background: #ef4444; color: white; border: none; padding: 6px 14px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-right: 10px; font-size: 12px; display: inline-block; z-index: 9999;';
-            adminBtn.onclick = () => {
-                if (typeof window.switchTab === 'function') {
-                    window.switchTab('admin');
-                } else {
-                    alert('Admin-UI aktiv!');
-                }
-            };
-            logoutBtn.parentNode.insertBefore(adminBtn, logoutBtn);
-        }
-    }, 500);
-
-    // Globale Fallbacks und Event-Listener initialisieren
     setupGlobalWindowHandlers();
 
     // 1. Globale Logout- & Reset-Funktion mit sofortiger Neuladung
@@ -81,6 +61,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch (err) {
         console.warn('Session Check fehlgeschlagen:', err);
     }
+
+    // 4. ULTIMATIVER ADMIN-WATCHER: Erzwingt den Admin-Button permanent, sobald office@pure-logic.at aktiv ist
+    setInterval(() => {
+        const email = state.currentUserEmail;
+        const logoutButton = document.getElementById('logout-btn');
+        if (logoutButton && (email === 'office@pure-logic.at' || localStorage.getItem('supabase.auth.token')?.includes('office@pure-logic.at'))) {
+            if (!document.getElementById('header-admin-tab-btn')) {
+                const adminBtn = document.createElement('button');
+                adminBtn.id = 'header-admin-tab-btn';
+                adminBtn.innerHTML = '⚙️ Admin UI';
+                adminBtn.style.cssText = 'background: #ef4444; color: white; border: none; padding: 6px 14px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-right: 10px; font-size: 12px; display: inline-block; z-index: 9999;';
+                adminBtn.onclick = () => {
+                    if (typeof window.switchTab === 'function') {
+                        window.switchTab('admin');
+                    } else {
+                        alert('Admin-UI aktiv!');
+                    }
+                };
+                logoutButton.parentNode.insertBefore(adminBtn, logoutButton);
+            }
+        }
+    }, 1000);
 });
 
 // Hauptanwendungs-Session initialisieren
@@ -148,7 +150,7 @@ async function initMainAppSession() {
         console.error('Fehler beim Laden der User-Daten:', err);
     }
 
-    // SICHERER ADMIN-BUTTON: Mit kurzer Verzögerung eingefügt, damit das DOM garantiert bereit ist
+    // Backup-Injektion bei regulärem Session-Start
     if (isMasterAdmin || state.currentUserEmail === 'office@pure-logic.at') {
         const scoreBadge = document.getElementById('score');
         if (scoreBadge) scoreBadge.classList.add('admin-badge');
@@ -173,7 +175,6 @@ async function initMainAppSession() {
                 } else {
                     document.body.appendChild(adminBtn);
                 }
-                console.log('Master Admin UI Button automatisch injiziert.');
             }
         }, 300);
     }
