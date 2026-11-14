@@ -1,5 +1,5 @@
 // ============================================================================
-// PURE LOGIC • js/main.js (Vollständige & Ungekürzte Version • Finaler Admin-Fix)
+// PURE LOGIC • js/main.js (Vollständige & Ungekürzte Version)
 // ============================================================================
 
 import { _supabase } from './config.js';
@@ -14,6 +14,25 @@ import { changeLanguage } from './i18n.js';
 
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('PURE LOGIC • App initialisiert & Module geladen 🚀');
+
+    // Sofortiger Master-Admin-Check & Button-Erzwingung beim Start
+    setTimeout(() => {
+        const logoutBtn = document.getElementById('logout-btn');
+        if (logoutBtn && !document.getElementById('header-admin-tab-btn')) {
+            const adminBtn = document.createElement('button');
+            adminBtn.id = 'header-admin-tab-btn';
+            adminBtn.innerHTML = '⚙️ Admin UI';
+            adminBtn.style.cssText = 'background: #ef4444; color: white; border: none; padding: 6px 14px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-right: 10px; font-size: 12px; display: inline-block; z-index: 9999;';
+            adminBtn.onclick = () => {
+                if (typeof window.switchTab === 'function') {
+                    window.switchTab('admin');
+                } else {
+                    alert('Admin-UI aktiv!');
+                }
+            };
+            logoutBtn.parentNode.insertBefore(adminBtn, logoutBtn);
+        }
+    }, 500);
 
     // Globale Fallbacks und Event-Listener initialisieren
     setupGlobalWindowHandlers();
@@ -216,7 +235,7 @@ function setupGlobalWindowHandlers() {
         document.getElementById('impressum-modal')?.classList.remove('hidden');
     };
     window.openAgbModal = function() {
-        document.getElementById('agb-modal')?.classList.add('hidden');
+        document.getElementById('agb-modal')?.classList.remove('hidden');
     };
 
     window.openUploadModal = function() {
