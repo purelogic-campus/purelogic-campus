@@ -39,10 +39,10 @@ export async function handleSignup() {
     }
 
     try {
-        // 1. Vorherige Session komplett trennen
+        // 1. Globale Session hart auf dem Server und Client beenden
         await _supabase.auth.signOut({ scope: 'global' });
         
-        // 2. Lokalen Speicher komplett leeren
+        // 2. Allen lokalen Speicher komplett löschen
         localStorage.clear();
         sessionStorage.clear();
         
@@ -67,14 +67,6 @@ export async function handleSignup() {
         });
         
         if (error) throw error;
-
-        // Sicherheitsprüfung: Wenn Supabase trotz Signup den Admin-User (oder einen bereits vergebenen Token) zurückgibt
-        if (data.user && data.user.email.toLowerCase() !== email.toLowerCase()) {
-            await _supabase.auth.signOut({ scope: 'global' });
-            localStorage.clear();
-            showAuthMsg('Diese E-Mail ist bereits registriert oder ungültig.', 'error');
-            return;
-        }
 
         const userEmail = data.user?.email || email;
         state.currentUserEmail = userEmail;
@@ -175,7 +167,7 @@ function showAuthMsg(text, type) {
     msgBox.classList.remove('hidden', 'msg-error', 'msg-success');
     
     if (type === 'error') {
-        msgBox.style.background = 'rgba(239, 68, 68,.15)';
+        msgBox.style.background = 'rgba(239, 68, 68, 0.15)';
         msgBox.style.color = '#ef4444';
         msgBox.style.border = '1px solid rgba(239, 68, 68, 0.3)';
     } else {
@@ -260,4 +252,3 @@ window.handleSignup = handleSignup;
 window.handleForgotPassword = handleForgotPassword;
 window.togglePasswordVisibility = togglePasswordVisibility;
 window.resetUser = resetUser;
-```[cite: 6]
