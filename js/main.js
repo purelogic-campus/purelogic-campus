@@ -14,6 +14,7 @@ import { changeLanguage } from './i18n.js';
 
 let adminMapInstance = null;
 let adminMarkerInstance = null;
+let currentAuthMode = 'login'; // 'login' oder 'signup'
 
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('PURE LOGIC • App initialisiert & Module geladen 🚀');
@@ -55,7 +56,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.warn('Session Check fehlgeschlagen:', err);
     }
 
-    // 4. Permanenter Admin-Watcher (entfernt zuverlässig 'hidden' vom Header-Button)
+    // 4. Permanenter Admin-Watcher
     setInterval(() => {
         const email = state.currentUserEmail?.toLowerCase();
         const adminTabBtn = document.getElementById('header-admin-tab-btn');
@@ -68,58 +69,95 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, 500);
 });
 
-// Authentifizierungs-Handler für Login & Registrierung mit .ac.at Prüfung
+// Umschalten zwischen Login und Registrierung im Auth-Gate
+window.switchAuthMode = function(mode) {
+    currentAuthMode = mode;
+    const loginBtn = document.getElementById('tab-login-btn');
+    const signupBtn = document.getElementById('tab-signup-btn');
+    const submitBtn = document.getElementById('auth-submit-btn');
+    const forgotPwLink = document.getElementById('forgot-pw-link');
+    const msgBox = document.getElementById('auth-msg');
+
+    if (msgBox) msgBox.classList.add('hidden');
+
+    if (mode === 'login') {
+        if (loginBtn) {
+            loginBtn.style.background = 'rgba(255,255,255,0.15)';
+            loginBtn.style.color = 'white';
+            loginBtn.style.borderColor = 'rgba(255,255,255,0.3)';
+        }
+        if (signupBtn) {
+            signupBtn.style.background = 'rgba(255,255,255,0.03)';
+            signupBtn.style.color = 'var(--text-muted)';
+            signupBtn.style.borderColor = 'var(--border)';
+        }
+        if (submitBtn) submitBtn.textContent = 'Einloggen';
+        if (forgotPwLink) forgotPwLink.style.display = 'block';
+    } else {
+        if (signupBtn) {
+            signupBtn.style.background = 'rgba(255,255,255,0.15)';
+            signupBtn.style.color = 'white';
+            signupBtn.style.borderColor = 'rgba(255,255,255,0.3)';
+        }
+        if (loginBtn) {
+            loginBtn.style.background = 'rgba(255,255,255,0.03)';
+            loginBtn.style.color = 'var(--text-muted)';
+            loginBtn.style.borderColor = 'var(--border)';
+        }
+        if (submitBtn) submitBtn.textContent = 'Account erstellen';
+        if (forgotPwLink) forgotPwLink.style.display = 'none';
+    }
+};
+
+// Zentraler Auth-Handler mit strikter .ac.at Validierung bei Registrierung
 function setupAuthFormHandlers() {
-    window.handleUserSignup = async function(email, password) {
-        // STRENGER SICHERHEITS-CHECK: Nur offizielle Uni-E-Mail-Adressen (.ac.at) erlauben
-        if (!email || !email.toLowerCase().endsWith('.ac.at')) {
-            window.showAuthMsg('Registrierung nur mit offizieller Universitäts-E-Mail-Adresse (.ac.at) möglich!', 'error');
+    window.handleAuthSubmit = async function() {
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+
+        if (!emailInput || !passwordInput) return;
+
+        const email = emailInput.value.trim();
+        const password = passwordInput.value.trim();
+
+        if (!email || !password) {
+            window.showAuthMsg('Bitte E-Mail und Passwort eingeben.', 'error');
             return;
         }
 
-        try {
-            const { data, error } = await _supabase.auth.signUp({
-                email: email,
-                password: password,
-            });
-
-            if (error) throw error;
-
-            window.showAuthMsg('Registrierung erfolgreich! Bitte bestätige deine E-Mail-Adresse.', 'success');
-        } catch (err) {
-            window.showAuthMsg('Registrierungs-Fehler: ' + err.message, 'error');
-        }
-    };
-
-    window.handleUserLogin = async function(email, password) {
-        try {
-            const { data, error } = await _supabase.auth.signInWithPassword({
-                email: email,
-                password: password,
-            });
-
-            if (error) throw error;
-            window.location.reload();
-        } catch (err) {
-            window.showAuthMsg('Login-Fehler: ' + err.message, 'error');
-        }
-    };
-
-    // Event-Listener für den Button "Account erstellen"
-    const signupBtn = document.getElementById('signup-btn') || document.querySelector('.btn-signup');
-    if (signupBtn) {
-        signupBtn.addEventListener('click', async (e) => {
-            e.preventDefault();
-            const email = document.getElementById('email')?.value || document.querySelector('input[type="email"]')?.value;
-            const password = document.getElementById('password')?.value || document.querySelector('input[type="password"]')?.value;
-            
-            if (email && password) {
-                await window.handleUserSignup(email, password);
-            } else {
-                window.showAuthMsg('Bitte E-Mail und Passwort eingeben.', 'error');
+        if (currentAuthMode === 'signup') {
+            // STRENGER SICHERHEITS-CHECK: Nur offizielle Uni-E-Mail-Adressen (.ac.at) erlauben
+            if (!email.toLowerCase().endsWith('.ac.at')) {
+                window.showAuthMsg('Registrierung nur mit offizieller Universitäts-E-Mail-Adresse (.ac.at) möglich!', 'error');
+                return;
             }
-        });
-    }
+
+            try {
+                const { data, error } = await _supabase.auth.signUp({
+                    email: email,
+                    password: password,
+                });
+
+                if (error) throw error;
+                window.showAuthMsg('Registrierung erfolgreich! Bitte bestätige deine E-Mail-Adresse im Postfach.', 'success');
+            } catch (err) {
+                window.showAuthMsg('Registrierungs-Fehler: ' + err.message, 'error');
+            }
+        } else {
+            // NORMALER LOGIN
+            try {
+                const { data, error } = await _supabase.auth.signInWithPassword({
+                    email: email,
+                    password: password,
+                });
+
+                if (error) throw error;
+                window.location.reload();
+            } catch (err) {
+                window.showAuthMsg('Login-Fehler: ' + err.message, 'error');
+            }
+        }
+    };
 }
 
 // Hauptanwendungs-Session initialisieren
@@ -156,7 +194,7 @@ async function initMainAppSession() {
                 isMasterAdmin = true;
             }
 
-            // Profilfelder im Profil-Tab vorbefüllen
+            // Profilfelder vorbefüllen
             const userHandleInput = document.getElementById('profile-username');
             const userFullNameInput = document.getElementById('profile-fullname');
             const userBioInput = document.getElementById('profile-bio');
@@ -177,7 +215,7 @@ async function initMainAppSession() {
             if (handleDisplay) handleDisplay.textContent = '@' + (userData.username || 'benutzername');
             if (uniSelect && userData.university) uniSelect.value = userData.university;
 
-            // Verified Student Badge im Profil rendern
+            // Verified Student Badge rendern
             const badgeContainer = document.getElementById('verified-student-badge-container');
             if (badgeContainer) {
                 if (userData.is_verified_student) {
@@ -202,7 +240,7 @@ async function initMainAppSession() {
     loadMyProfilePosts();
 }
 
-// Initialisiert die Leaflet-Karte im Admin-Tab
+// Leaflet-Karte im Admin-Tab initialisieren
 function initAdminMap() {
     const mapContainer = document.getElementById('admin-map');
     if (!mapContainer || typeof L === 'undefined') return;
@@ -252,7 +290,6 @@ function setupGlobalWindowHandlers() {
         }
     };
 
-    // Admin Test-Modus: Punkte direkt setzen
     window.adminSetTestPoints = async function() {
         const input = document.getElementById('admin-test-points-input');
         const points = parseInt(input?.value, 10);
@@ -277,7 +314,6 @@ function setupGlobalWindowHandlers() {
         }
     };
 
-    // Admin: Neuen Campus-Drop mit GPS-Bindung erstellen
     window.handleCreateCampusDrop = async function() {
         const title = document.getElementById('admin-drop-title')?.value.trim();
         const rewardType = document.getElementById('admin-drop-reward-type')?.value;
@@ -317,7 +353,6 @@ function setupGlobalWindowHandlers() {
         }
     };
 
-    // Dropdown-Menü für Punkte & Extras
     window.togglePointsDropdown = function(event) {
         event.stopPropagation();
         const menu = document.getElementById('points-dropdown-menu');
@@ -326,16 +361,22 @@ function setupGlobalWindowHandlers() {
         }
     };
 
-    // Hilfsfunktion für Fehlermeldungen im Auth-Bereich
     window.showAuthMsg = function(text, type) {
         const msgBox = document.getElementById('auth-msg');
         if (!msgBox) return;
         msgBox.textContent = text;
-        msgBox.classList.remove('hidden', 'msg-error', 'msg-success');
-        msgBox.classList.add(type === 'error' ? 'msg-error' : 'msg-success');
+        msgBox.classList.remove('hidden');
+        if (type === 'error') {
+            msgBox.style.background = 'rgba(255, 77, 77, 0.1)';
+            msgBox.style.color = '#ff4d4d';
+            msgBox.style.border = '1px solid rgba(255, 77, 77, 0.2)';
+        } else {
+            msgBox.style.background = 'rgba(16, 185, 129, 0.1)';
+            msgBox.style.color = '#10b981';
+            msgBox.style.border = '1px solid rgba(16, 185, 129, 0.2)';
+        }
     };
 
-    // Modals öffnen & schließen
     window.openMorePointsModal = function() {
         document.getElementById('more-points-modal')?.classList.remove('hidden');
     };
@@ -354,7 +395,7 @@ function setupGlobalWindowHandlers() {
         document.getElementById('impressum-modal')?.classList.remove('hidden');
     };
     window.openAgbModal = function() {
-        document.getElementById('agb-modal')?.classList.remove('hidden');
+        document.getElementById('agb-modal')?.classList.add('hidden');
     };
 
     window.openUploadModal = function() {
@@ -430,7 +471,7 @@ function setupGlobalWindowHandlers() {
     window.changeLanguage = changeLanguage;
 }
 
-// Globales Schließen des Dropdowns bei Klick außerhalb
+// Globales Schließen des Dropdowns
 document.addEventListener('click', () => {
     const menu = document.getElementById('points-dropdown-menu');
     if (menu && !menu.classList.contains('hidden')) {

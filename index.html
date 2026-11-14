@@ -75,16 +75,22 @@
     </div>
   </div>
 
-  <!-- AUTHENTIFIZIERUNGS-GATE -->
+  <!-- AUTHENTIFIZIERUNGS-GATE (Mit echten Tabs für Login / Registrierung) -->
   <div id="auth-gate" class="tab-content auth-gate-container">
     <div class="container-box" style="max-width: 420px; width: 100%;">
       <h2 style="margin-bottom: 4px; font-size: 22px; font-weight: 800;">Hey there 👋</h2>
-      <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 14px;">Logge dich ein oder starte direkt durch (.ac.at E-Mail für verifiziertes Studenten-Badge):</p>
+      <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 14px;">Wähle deinen Modus (.ac.at E-Mail für verifiziertes Studenten-Badge):</p>
       
+      <!-- Umschalter Tabs -->
+      <div class="auth-tabs" style="display: flex; gap: 8px; margin-bottom: 16px;">
+        <button type="button" id="tab-login-btn" onclick="switchAuthMode('login')" style="flex: 1; padding: 10px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: white; border-radius: 8px; font-weight: 800; cursor: pointer; font-size: 12px;">Einloggen</button>
+        <button type="button" id="tab-signup-btn" onclick="switchAuthMode('signup')" style="flex: 1; padding: 10px; background: rgba(255,255,255,0.03); border: 1px solid var(--border); color: var(--text-muted); border-radius: 8px; font-weight: 800; cursor: pointer; font-size: 12px;">Registrieren</button>
+      </div>
+
       <div id="auth-msg" class="msg-box hidden"></div>
 
       <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">E-Mail-Adresse:</label>
-      <input type="email" id="email" placeholder="deine.mail@uni.at">
+      <input type="email" id="email" placeholder="name@uni.ac.at">
       
       <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Passwort:</label>
       <div class="password-container">
@@ -92,10 +98,10 @@
         <button type="button" class="password-toggle" id="toggle-pw-btn" onclick="togglePasswordVisibility()">👁️</button>
       </div>
       
-      <a class="forgot-password" onclick="handleForgotPassword()">Passwort vergessen?</a>
+      <a class="forgot-password" id="forgot-pw-link" onclick="handleForgotPassword()">Passwort vergessen?</a>
 
-      <button type="button" class="btn" onclick="handleLogin()">Einloggen</button>
-      <button type="button" class="btn btn-secondary signup-btn" onclick="handleSignup()">Account erstellen</button>
+      <!-- Dynamischer Action-Button -->
+      <button type="button" class="btn" id="auth-submit-btn" onclick="handleAuthSubmit()">Einloggen</button>
       
       <button type="button" class="btn btn-secondary hidden" id="install-app-auth-btn" onclick="installPWA()" style="margin-top: 10px; background: rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.4); color: #818cf8; font-weight: 800;">📲 App für Homescreen herunterladen</button>
       
@@ -653,7 +659,6 @@
 <script type="module" src="js/features/crush.js?v=2"></script>
 <script type="module" src="js/features/feed.js?v=2"></script>
 
-<!-- Inline-Logik für den Fehler melden / E-Mail & Punkte-Bonus -->
 <script type="module">
   import { _supabase } from './js/config.js?v=2';
   import { state } from './js/state.js?v=2';
