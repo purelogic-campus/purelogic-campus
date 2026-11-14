@@ -637,7 +637,7 @@ export async function loadCampusFeed(filter = 'foryou') {
 
         item.innerHTML = `
             ${mediaHtml}
-            <!-- Oberes Overlay links oben: Autor + Likes, Kommentare & Views -->
+            <!-- Oberes Overlay links oben: Autor + Individuell umrandete Metriken -->
             <div style="position: absolute; top: 14px; left: 14px; right: 14px; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; z-index: 10; pointer-events: none;">
                 <!-- Autoreninfo (Klickbar -> Öffentliches Profil) -->
                 <div onclick="window.openPublicProfile('${authorEmail}')" style="pointer-events: auto; display: flex; align-items: center; gap: 8px; background: rgba(19, 27, 46, 0.85); border: 1px solid rgba(129, 140, 248, 0.4); padding: 5px 12px; border-radius: 30px; cursor: pointer; backdrop-filter: blur(6px); box-shadow: 0 4px 12px rgba(0,0,0,0.4);">
@@ -645,12 +645,22 @@ export async function loadCampusFeed(filter = 'foryou') {
                     <span style="font-size: 12px; font-weight: 800; color: #fff;">${authorName}</span>
                 </div>
 
-                <!-- Metriken & Interaktion links oben direkt unter dem Autor -->
-                <div style="pointer-events: auto; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 11px; font-weight: 700; color: #cbd5e1; background: rgba(9, 13, 22, 0.78); border: 1px solid rgba(255, 255, 255, 0.12); padding: 5px 10px; border-radius: 16px; backdrop-filter: blur(6px); box-shadow: 0 4px 12px rgba(0,0,0,0.4);">
-                    <span>👁️ ${viewsCount}</span>
-                    <span id="comment-count-${post.id}" onclick="window.openCommentsModal('${post.id}')" style="cursor: pointer; background: rgba(99, 102, 241, 0.25); border: 1px solid rgba(99, 102, 241, 0.45); color: #818cf8; padding: 2px 8px; border-radius: 12px;">${commentCount} 💬</span>
-                    <span id="like-count-${post.id}" onclick="window.likePost('${post.id}')" oncontextmenu="event.preventDefault(); window.openLikesModal('${post.id}');" style="cursor: pointer; background: rgba(236, 72, 153, 0.25); border: 1px solid rgba(236, 72, 153, 0.45); color: #ec4899; padding: 2px 8px; border-radius: 12px;" title="Klicken zum Liken | Rechtsklick für Liker-Liste">${likesCount} ❤️</span>
-                    <span onclick="window.openLikesModal('${post.id}')" style="font-size: 10px; color: var(--text-muted); cursor: pointer; text-decoration: underline; margin-left: 2px;">Likes</span>
+                <!-- Metriken links oben mit jeweils eigenen Umrandungen -->
+                <div style="pointer-events: auto; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 11px; font-weight: 700;">
+                    <!-- Auge / Views (Eigene Umrandung) -->
+                    <span style="background: rgba(148, 163, 184, 0.2); border: 1px solid rgba(148, 163, 184, 0.45); color: #cbd5e1; padding: 3px 10px; border-radius: 16px; backdrop-filter: blur(6px); box-shadow: 0 2px 8px rgba(0,0,0,0.3);">
+                        👁️ ${viewsCount}
+                    </span>
+
+                    <!-- Kommentar / Nachrichten-Symbol (Eigene Umrandung, klickbar) -->
+                    <span id="comment-count-${post.id}" onclick="window.openCommentsModal('${post.id}')" style="cursor: pointer; background: rgba(99, 102, 241, 0.25); border: 1px solid rgba(99, 102, 241, 0.45); color: #818cf8; padding: 3px 10px; border-radius: 16px; backdrop-filter: blur(6px); box-shadow: 0 2px 8px rgba(0,0,0,0.3);">
+                        ${commentCount} 💬
+                    </span>
+
+                    <!-- Herz / Likes (Eigene Umrandung, klickbar & mit Rechtsklick/Halten für Liker-Liste) -->
+                    <span id="like-count-${post.id}" onclick="window.likePost('${post.id}')" oncontextmenu="event.preventDefault(); window.openLikesModal('${post.id}');" style="cursor: pointer; background: rgba(236, 72, 153, 0.25); border: 1px solid rgba(236, 72, 153, 0.45); color: #ec4899; padding: 3px 10px; border-radius: 16px; backdrop-filter: blur(6px); box-shadow: 0 2px 8px rgba(0,0,0,0.3);" title="Klicken zum Liken | Rechtsklick für Liker-Liste">
+                        ${likesCount} ❤️
+                    </span>
                 </div>
             </div>
 
