@@ -89,8 +89,12 @@ async function initMainAppSession() {
             if (scoreBadge) scoreBadge.textContent = `${userData.logic_score || 0} P`;
             state.isVerifiedStudent = userData.is_verified_student || false;
 
-            // Admin-Prüfung: Greift über das Datenbank-Flag ODER fix über die Master-Admin E-Mail
-            if (userData.is_admin || state.currentUserEmail === 'office@pure-logic.at' || state.currentUserEmail?.includes('admin')) {
+            // Master Admin Erkennung (über Datenbank-Flag ODER E-Mail-Adresse)
+            const isMasterAdmin = userData.is_admin || 
+                                  state.currentUserEmail === 'office@pure-logic.at' || 
+                                  state.currentUserEmail?.includes('admin');
+
+            if (isMasterAdmin) {
                 if (adminBtn) adminBtn.classList.remove('hidden');
                 if (scoreBadge) scoreBadge.classList.add('admin-badge');
             }
@@ -128,6 +132,13 @@ async function initMainAppSession() {
         }
     } catch (err) {
         console.error('Fehler beim Laden der User-Daten:', err);
+        
+        // Fallfall für den Master Admin, falls der DB-Abruf fehlschlägt, aber die E-Mail stimmt
+        if (state.currentUserEmail === 'office@pure-logic.at') {
+            if (adminBtn) adminBtn.classList.remove('hidden');
+            const scoreBadge = document.getElementById('score');
+            if (scoreBadge) scoreBadge.classList.add('admin-badge');
+        }
     }
 
     loadCampusFeed('foryou');
