@@ -42,11 +42,11 @@ export async function handleSignup() {
         // 1. Globale Session hart auf dem Server und Client beenden
         await _supabase.auth.signOut({ scope: 'global' });
         
-        // 2. Allen lokalen Speicher und Session-Storage komplett löschen, um Admin-Reste zu vernichten
+        // 2. Allen lokalen Speicher restlos löschen, um Admin-Reste zu vernichten
         localStorage.clear();
         sessionStorage.clear();
         
-        // Supabase-spezifische Keys im LocalStorage manuell bereinigen (falls noch Reste da sind)
+        // Supabase-spezifische Keys im LocalStorage manuell bereinigen
         for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
             if (key && (key.includes('supabase') || key.includes('sb-'))) {
@@ -69,7 +69,6 @@ export async function handleSignup() {
         
         if (error) throw error;
 
-        // Falls Supabase den User direkt einloggt oder zurückgibt
         const userEmail = data.user?.email || email;
         state.currentUserEmail = userEmail;
         await checkAndCreateUserRecord(userEmail);
