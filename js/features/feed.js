@@ -637,24 +637,29 @@ export async function loadCampusFeed(filter = 'foryou') {
 
         item.innerHTML = `
             ${mediaHtml}
-            <div class="reel-overlay" style="justify-content: space-between; align-items: flex-start; background: linear-gradient(0deg, rgba(9,13,22,0.9) 0%, rgba(9,13,22,0.2) 60%, transparent 100%);">
-                <!-- Autoreninfo oben links (Klickbar -> Öffentliches Profil) -->
-                <div onclick="window.openPublicProfile('${authorEmail}')" style="display: flex; align-items: center; gap: 8px; background: rgba(19, 27, 46, 0.85); border: 1px solid rgba(129, 140, 248, 0.4); padding: 5px 12px; border-radius: 30px; cursor: pointer; backdrop-filter: blur(5px);">
+            <!-- Oberes Overlay links oben: Autor + Likes, Kommentare & Views -->
+            <div style="position: absolute; top: 14px; left: 14px; right: 14px; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; z-index: 10; pointer-events: none;">
+                <!-- Autoreninfo (Klickbar -> Öffentliches Profil) -->
+                <div onclick="window.openPublicProfile('${authorEmail}')" style="pointer-events: auto; display: flex; align-items: center; gap: 8px; background: rgba(19, 27, 46, 0.85); border: 1px solid rgba(129, 140, 248, 0.4); padding: 5px 12px; border-radius: 30px; cursor: pointer; backdrop-filter: blur(6px); box-shadow: 0 4px 12px rgba(0,0,0,0.4);">
                     <img src="${authorAvatar}" style="width: 26px; height: 26px; border-radius: 50%; object-fit: cover; border: 1px solid var(--primary);" onerror="this.src='https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'">
                     <span style="font-size: 12px; font-weight: 800; color: #fff;">${authorName}</span>
                 </div>
 
-                <!-- Metriken & Interaktion unten (Views | Kommentare | Likes) -->
-                <div style="width: 100%; display: flex; flex-direction: column; gap: 6px;">
-                    ${cleanCaption ? `<div style="font-size: 13px; color: #fff; font-weight: 600; background: rgba(0,0,0,0.5); padding: 4px 8px; border-radius: 6px; width: fit-content;">💬 ${cleanCaption}</div>` : ''}
-                    <div style="display: flex; gap: 10px; align-items: center; font-size: 11px; font-weight: 700; color: #cbd5e1;">
-                        <span>👁️ ${viewsCount} Views</span>
-                        <span id="comment-count-${post.id}" onclick="window.openCommentsModal('${post.id}')" style="cursor: pointer; background: rgba(99, 102, 241, 0.2); border: 1px solid rgba(99, 102, 241, 0.4); color: #818cf8; padding: 3px 8px; border-radius: 12px;">${commentCount} 💬</span>
-                        <span id="like-count-${post.id}" onclick="window.likePost('${post.id}')" oncontextmenu="event.preventDefault(); window.openLikesModal('${post.id}');" style="cursor: pointer; background: rgba(236, 72, 153, 0.2); border: 1px solid rgba(236, 72, 153, 0.4); color: #ec4899; padding: 3px 8px; border-radius: 12px;" title="Klicken zum Liken | Rechtsklick oder halten für Liker-Liste">${likesCount} ❤️</span>
-                        <span onclick="window.openLikesModal('${post.id}')" style="font-size: 10px; color: var(--text-muted); cursor: pointer; text-decoration: underline;">Wer hat geliked?</span>
-                    </div>
+                <!-- Metriken & Interaktion links oben direkt unter dem Autor -->
+                <div style="pointer-events: auto; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 11px; font-weight: 700; color: #cbd5e1; background: rgba(9, 13, 22, 0.78); border: 1px solid rgba(255, 255, 255, 0.12); padding: 5px 10px; border-radius: 16px; backdrop-filter: blur(6px); box-shadow: 0 4px 12px rgba(0,0,0,0.4);">
+                    <span>👁️ ${viewsCount}</span>
+                    <span id="comment-count-${post.id}" onclick="window.openCommentsModal('${post.id}')" style="cursor: pointer; background: rgba(99, 102, 241, 0.25); border: 1px solid rgba(99, 102, 241, 0.45); color: #818cf8; padding: 2px 8px; border-radius: 12px;">${commentCount} 💬</span>
+                    <span id="like-count-${post.id}" onclick="window.likePost('${post.id}')" oncontextmenu="event.preventDefault(); window.openLikesModal('${post.id}');" style="cursor: pointer; background: rgba(236, 72, 153, 0.25); border: 1px solid rgba(236, 72, 153, 0.45); color: #ec4899; padding: 2px 8px; border-radius: 12px;" title="Klicken zum Liken | Rechtsklick für Liker-Liste">${likesCount} ❤️</span>
+                    <span onclick="window.openLikesModal('${post.id}')" style="font-size: 10px; color: var(--text-muted); cursor: pointer; text-decoration: underline; margin-left: 2px;">Likes</span>
                 </div>
             </div>
+
+            <!-- Unteres Overlay: Nur noch Caption/Beschreibung, falls vorhanden -->
+            ${cleanCaption ? `
+            <div class="reel-overlay" style="justify-content: flex-end; align-items: flex-start; background: linear-gradient(0deg, rgba(9,13,22,0.9) 0%, transparent 100%);">
+                <div style="font-size: 13px; color: #fff; font-weight: 600; background: rgba(0,0,0,0.55); padding: 6px 10px; border-radius: 8px; max-width: 90%;">💬 ${cleanCaption}</div>
+            </div>
+            ` : ''}
         `;
         
         feedList.appendChild(item);
