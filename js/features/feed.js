@@ -716,9 +716,17 @@ export async function loadCampusFeed(filter = 'foryou') {
         item.innerHTML = `
             ${mediaHtml}
             <div style="position: absolute; top: 14px; left: 14px; right: 14px; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; z-index: 10; pointer-events: none;">
-                <div onclick="window.openPublicProfile('${authorEmail}')" style="pointer-events: auto; display: flex; align-items: center; gap: 8px; background: rgba(19, 27, 46, 0.85); border: 1px solid rgba(129, 140, 248, 0.4); padding: 5px 12px; border-radius: 30px; cursor: pointer; backdrop-filter: blur(6px); box-shadow: 0 4px 12px rgba(0,0,0,0.4);">
-                    <img src="${authorAvatar}" style="width: 26px; height: 26px; border-radius: 50%; object-fit: cover; border: 1px solid var(--primary);" onerror="this.src='https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'">
-                    <span style="font-size: 12px; font-weight: 800; color: #fff;">${authorName}</span>
+                <div style="pointer-events: auto; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; max-width: 100%;">
+                    <div onclick="window.openPublicProfile('${authorEmail}')" style="display: flex; align-items: center; gap: 8px; background: rgba(19, 27, 46, 0.85); border: 1px solid rgba(129, 140, 248, 0.4); padding: 5px 12px; border-radius: 30px; cursor: pointer; backdrop-filter: blur(6px); box-shadow: 0 4px 12px rgba(0,0,0,0.4); flex-shrink: 0;">
+                        <img src="${authorAvatar}" style="width: 26px; height: 26px; border-radius: 50%; object-fit: cover; border: 1px solid var(--primary);" onerror="this.src='https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'">
+                        <span style="font-size: 12px; font-weight: 800; color: #fff;">${authorName}</span>
+                    </div>
+
+                    ${parsedCaption ? `
+                    <div style="font-size: 12px; color: #fff; font-weight: 600; background: rgba(19, 27, 46, 0.85); border: 1px solid rgba(255, 255, 255, 0.15); padding: 6px 12px; border-radius: 20px; backdrop-filter: blur(6px); box-shadow: 0 4px 12px rgba(0,0,0,0.4); word-break: break-word; max-width: 100%;">
+                        💬 ${parsedCaption}
+                    </div>
+                    ` : ''}
                 </div>
 
                 <div style="pointer-events: auto; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 11px; font-weight: 700;">
@@ -735,12 +743,6 @@ export async function loadCampusFeed(filter = 'foryou') {
                     </span>
                 </div>
             </div>
-
-            ${parsedCaption ? `
-            <div class="reel-overlay" style="justify-content: flex-end; align-items: flex-start; background: linear-gradient(0deg, rgba(9,13,22,0.9) 0%, transparent 100%);">
-                <div style="font-size: 13px; color: #fff; font-weight: 600; background: rgba(0,0,0,0.55); padding: 6px 10px; border-radius: 8px; max-width: 90%; word-break: break-word;">💬 ${parsedCaption}</div>
-            </div>
-            ` : ''}
         `;
         
         feedList.appendChild(item);
