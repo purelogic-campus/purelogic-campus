@@ -14,7 +14,6 @@ import { changeLanguage } from './i18n.js';
 
 let adminMapInstance = null;
 let adminMarkerInstance = null;
-let currentAuthMode = 'login'; // 'login' oder 'signup'
 
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('PURE LOGIC • App initialisiert & Module geladen 🚀');
@@ -69,49 +68,90 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, 500);
 });
 
-// Umschalten zwischen Login und Registrierung im Auth-Gate
-window.switchAuthMode = function(mode) {
-    currentAuthMode = mode;
-    const loginBtn = document.getElementById('tab-login-btn');
-    const signupBtn = document.getElementById('tab-signup-btn');
-    const submitBtn = document.getElementById('auth-submit-btn');
-    const forgotPwLink = document.getElementById('forgot-pw-link');
-    const msgBox = document.getElementById('auth-msg');
+// Steuerung des separaten Registrierungs-Modals
+window.openRegisterModal = function() {
+    document.getElementById('register-modal')?.classList.remove('hidden');
+};
 
-    if (msgBox) msgBox.classList.add('hidden');
+window.closeRegisterModal = function() {
+    document.getElementById('register-modal')?.classList.add('hidden');
+};
 
-    if (mode === 'login') {
-        if (loginBtn) {
-            loginBtn.style.background = 'rgba(255,255,255,0.15)';
-            loginBtn.style.color = 'white';
-            loginBtn.style.borderColor = 'rgba(255,255,255,0.3)';
-        }
-        if (signupBtn) {
-            signupBtn.style.background = 'rgba(255,255,255,0.03)';
-            signupBtn.style.color = 'var(--text-muted)';
-            signupBtn.style.borderColor = 'var(--border)';
-        }
-        if (submitBtn) submitBtn.textContent = 'Einloggen';
-        if (forgotPwLink) forgotPwLink.style.display = 'block';
-    } else {
-        if (signupBtn) {
-            signupBtn.style.background = 'rgba(255,255,255,0.15)';
-            signupBtn.style.color = 'white';
-            signupBtn.style.borderColor = 'rgba(255,255,255,0.3)';
-        }
-        if (loginBtn) {
-            loginBtn.style.background = 'rgba(255,255,255,0.03)';
-            loginBtn.style.color = 'var(--text-muted)';
-            loginBtn.style.borderColor = 'var(--border)';
-        }
-        if (submitBtn) submitBtn.textContent = 'Account erstellen';
-        if (forgotPwLink) forgotPwLink.style.display = 'none';
+// Registrierungs-Logik mit Name, .ac.at Check & Passwort-Sicherheitsprüfung
+window.submitRegistration = async function() {
+    const fullNameInput = document.getElementById('reg-fullname');
+    const emailInput = document.getElementById('reg-email');
+    const passwordInput = document.getElementById('reg-password');
+    const msgBox = document.getElementById('reg-msg');
+
+    if (!fullNameInput || !emailInput || !passwordInput) return;
+
+    const fullName = fullNameInput.value.trim();
+    const email = emailInput.value.trim();
+    const password = passwordInput.value.trim();
+
+    if (!fullName || !email || !password) {
+        showRegMsg('Bitte alle Felder ausfüllen.', 'error');
+        return;
+    }
+
+    // 1. STRENGER .AC.AT CHECK
+    if (!email.toLowerCase().endsWith('.ac.at')) {
+        showRegMsg('Registrierung nur mit offizieller Universitäts-E-Mail-Adresse (.ac.at) möglich!', 'error');
+        return;
+    }
+
+    // 2. PASSWORT-SICHERHEIT (min. 8 Zeichen, mind. 1 Zahl, mind. 1 Sonderzeichen)
+    const hasLength = password.length >= 8;
+    const hasNumber = /\d/.test(password);
+    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>-]/.test(password);
+
+    if (!hasLength || !hasNumber || !hasSpecialChar) {
+        showRegMsg('Das Passwort muss mindestens 8 Zeichen lang sein sowie mindestens eine Zahl und ein Sonderzeichen enthalten.', 'error');
+        return;
+    }
+
+    try {
+        const { data, error } = await _supabase.auth.signUp({
+            email: email,
+            password: password,
+            options: {
+                data: {
+                    full_name: fullName
+                }
+            }
+        });
+
+        if (error) throw error;
+
+        showRegMsg('Registrierung erfolgreich! Bitte bestätige deine E-Mail-Adresse im Postfach.', 'success');
+        setTimeout(() => {
+            closeRegisterModal();
+        }, 3000);
+    } catch (err) {
+        showRegMsg('Registrierungs-Fehler: ' + err.message, 'error');
     }
 };
 
-// Zentraler Auth-Handler mit strikter .ac.at Validierung bei Registrierung
+function showRegMsg(text, type) {
+    const msgBox = document.getElementById('reg-msg');
+    if (!msgBox) return;
+    msgBox.textContent = text;
+    msgBox.classList.remove('hidden');
+    if (type === 'error') {
+        msgBox.style.background = 'rgba(255, 77, 77, 0.1)';
+        msgBox.style.color = '#ff4d4d';
+        msgBox.style.border = '1px solid rgba(255, 77, 77, 0.2)';
+    } else {
+        msgBox.style.background = 'rgba(16, 185, 129, 0.1)';
+        msgBox.style.color = '#10b981';
+        msgBox.style.border = '1px solid rgba(16, 185, 129, 0.2)';
+    }
+}
+
+// Zentraler Login-Handler
 function setupAuthFormHandlers() {
-    window.handleAuthSubmit = async function() {
+    window.handleLogin = async function() {
         const emailInput = document.getElementById('email');
         const passwordInput = document.getElementById('password');
 
@@ -125,37 +165,16 @@ function setupAuthFormHandlers() {
             return;
         }
 
-        if (currentAuthMode === 'signup') {
-            // STRENGER SICHERHEITS-CHECK: Nur offizielle Uni-E-Mail-Adressen (.ac.at) erlauben
-            if (!email.toLowerCase().endsWith('.ac.at')) {
-                window.showAuthMsg('Registrierung nur mit offizieller Universitäts-E-Mail-Adresse (.ac.at) möglich!', 'error');
-                return;
-            }
+        try {
+            const { data, error } = await _supabase.auth.signInWithPassword({
+                email: email,
+                password: password,
+            });
 
-            try {
-                const { data, error } = await _supabase.auth.signUp({
-                    email: email,
-                    password: password,
-                });
-
-                if (error) throw error;
-                window.showAuthMsg('Registrierung erfolgreich! Bitte bestätige deine E-Mail-Adresse im Postfach.', 'success');
-            } catch (err) {
-                window.showAuthMsg('Registrierungs-Fehler: ' + err.message, 'error');
-            }
-        } else {
-            // NORMALER LOGIN
-            try {
-                const { data, error } = await _supabase.auth.signInWithPassword({
-                    email: email,
-                    password: password,
-                });
-
-                if (error) throw error;
-                window.location.reload();
-            } catch (err) {
-                window.showAuthMsg('Login-Fehler: ' + err.message, 'error');
-            }
+            if (error) throw error;
+            window.location.reload();
+        } catch (err) {
+            window.showAuthMsg('Login-Fehler: ' + err.message, 'error');
         }
     };
 }
