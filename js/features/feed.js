@@ -1,4 +1,4 @@
-// js/features/feed.js - Vollständiges Campus-Feed & Medien Modul mit Autoren-Infos, Kommentaren & Like-Listen
+// js/features/feed.js - Vollständiges Campus-Feed & Medien Modul mit Engagement-Scoring Algorithmus
 import { _supabase } from '../config.js';
 import { state } from '../state.js';
 import { validateInputOrAlert } from './moderation.js';
@@ -554,7 +554,37 @@ function initVideoAutoplayObserver() {
 }
 
 /**
- * Lädt den Campus-Feed (For You, Discover, Following)
+ * TikTok/Twitter-Style Engagement-Scoring Algorithmus für den "For You" Feed
+ * Berechnet einen Score basierend auf Aktualität (Recency), Views, Likes und Kommentaren.
+ */
+async function calculateEngagementScore(post) {
+    const views = post.views || 0;
+    const likes = Array.isArray(post.liked_by) ? post.liked_by.length : 0;
+    
+    let commentsCount = 0;
+    try {
+        const { count } = await _supabase
+            .from('comments')
+            .select('*', { count: 'exact', head: true })
+            .eq('post_id', post.id);
+        commentsCount = count || 0;
+    } catch (e) {}
+
+    // Alter des Beitrags in Stunden berechnen
+    const createdAt = new Date(post.created_at).getTime();
+    const now = new Date().getTime();
+    const ageInHours = Math.max(1, (now - createdAt) / (1000 * 60 * 60));
+
+    // Engagement Formel: (Likes * 5 + Kommentare * 10 + Views * 1) / (Alters-Faktor)
+    // Neuere Beiträge erhalten einen Frische-Boost
+    const rawScore = (likes * 5) + (commentsCount * 10) + (views * 1);
+    const recencyDecay = Math.pow(ageInHours + 2, 1.5);
+    
+    return rawScore / recencyDecay;
+}
+
+/**
+ * Lädt den Campus-Feed (For You mit Algorithmus, Discover, Following)
  */
 export async function loadCampusFeed(filter = 'foryou') {
     const feedList = document.getElementById('reels-list');
@@ -577,7 +607,7 @@ export async function loadCampusFeed(filter = 'foryou') {
     } else if (filter === 'discover') {
         query = query.order('created_at', { ascending: false }).limit(20);
     } else {
-        query = query.order('created_at', { ascending: false });
+        query = query.order('created_at', { ascending: false }).limit(50);
     }
 
     const { data: posts, error } = await query;
@@ -587,9 +617,23 @@ export async function loadCampusFeed(filter = 'foryou') {
         return;
     }
 
+    let processedPosts = posts;
+
+    // Wenn "foryou" aktiv ist, wenden wir unseren Engagement-Algorithmus an
+    if (filter === 'foryou') {
+        const scoredPosts = [];
+        for (const post of posts) {
+            const score = await calculateEngagementScore(post);
+            scoredPosts.push({ post, score });
+        }
+        // Nach Score absteigend sortieren (höchste Viralität zuerst)
+        scoredPosts.sort((a, b) => b.score - a.score);
+        processedPosts = scoredPosts.map(item => item.post);
+    }
+
     feedList.innerHTML = '';
 
-    for (const post of posts) {
+    for (const post of processedPosts) {
         const item = document.createElement('div');
         item.className = 'reel-item';
         item.setAttribute('data-post-id', post.id);
