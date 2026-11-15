@@ -1,24 +1,26 @@
 {
-  "short_name": "Pure Logic",
-  "name": "Pure Logic - Campus Network",
+  "name": "PURE LOGIC • GenZ Campus",
+  "short_name": "PURE LOGIC",
+  "description": "Die exklusive Campus-Plattform für Studierende in Österreich.",
+  "start_url": "/index.html",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#090d16",
+  "theme_color": "#1a0512",
+  "categories": ["social", "education", "lifestyle"],
   "icons": [
     {
       "src": "icons/icon-192.png",
-      "type": "image/png",
       "sizes": "192x192",
+      "type": "image/png",
       "purpose": "any maskable"
     },
     {
       "src": "icons/icon-512.png",
-      "type": "image/png",
       "sizes": "512x512",
+      "type": "image/png",
       "purpose": "any maskable"
     }
-  ],
-  "start_url": "/purelogic-campus/",
-  "scope": "/purelogic-campus/",
-  "background_color": "#090d16",
-  "theme_color": "#090d16",
-  "display": "standalone",
-  "orientation": "portrait"
+  ]
 }

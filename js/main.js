@@ -1,5 +1,5 @@
 // ============================================================================
-// PURE LOGIC • js/main.js (Vollständige & Ungekürzte Produktionsversion)
+// PURE LOGIC • js/main.js (Vollständige & Ungekürzte Produktionsversion inkl. PWA)
 // ============================================================================
 
 import { _supabase } from './config.js';
@@ -17,6 +17,52 @@ import { changeLanguage } from './i18n.js';
 
 let adminMapInstance = null;
 let adminMarkerInstance = null;
+let deferredPrompt = null;
+
+// Service Worker registrieren
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+            .then((reg) => console.log('PWA Service Worker aktiv:', reg.scope))
+            .catch((err) => console.warn('Service Worker Registrierung fehlgeschlagen:', err));
+    });
+}
+
+// Install-Prompt abfangen und Install-Buttons einblenden
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+
+    const authInstallBtn = document.getElementById('install-app-auth-btn');
+    const dropdownInstallBtn = document.getElementById('install-app-dropdown-btn');
+
+    if (authInstallBtn) authInstallBtn.classList.remove('hidden');
+    if (dropdownInstallBtn) dropdownInstallBtn.classList.remove('hidden');
+});
+
+// Nach erfolgreicher Installation Buttons wieder ausblenden
+window.addEventListener('appinstalled', () => {
+    deferredPrompt = null;
+    document.getElementById('install-app-auth-btn')?.classList.add('hidden');
+    document.getElementById('install-app-dropdown-btn')?.classList.add('hidden');
+    console.log('PURE LOGIC wurde erfolgreich als App installiert! 📲');
+});
+
+// Globale Funktion für die Install-Buttons
+window.installPWA = async function() {
+    if (!deferredPrompt) {
+        alert('Tippe im Browser-Menü auf „Zum Startbildschirm hinzufügen“, um PURE LOGIC als App zu installieren! 📲');
+        return;
+    }
+
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+        deferredPrompt = null;
+        document.getElementById('install-app-auth-btn')?.classList.add('hidden');
+        document.getElementById('install-app-dropdown-btn')?.classList.add('hidden');
+    }
+};
 
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('PURE LOGIC • App initialisiert & Module geladen 🚀');
@@ -514,7 +560,6 @@ function setupGlobalWindowHandlers() {
                 url: shareUrl
             }).catch(() => {});
         } else {
-            // WhatsApp Direkt-Teilen & Clipboard Fallback
             const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText + ' ' + shareUrl)}`;
             window.open(waUrl, '_blank');
         }
