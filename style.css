@@ -450,20 +450,30 @@ input:focus, select:focus, textarea:focus {
   background: var(--card-hover);
 }
 
-/* Reels & Feed Items */
+/* Feed Container mit erzwungenem Vollbild-Snap (kein Peek / keine Ränder der Nachbar-Posts) */
+#reels-list {
+  scroll-snap-type: y mandatory;
+  overflow-y: scroll;
+  height: 100%;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Reels & Feed Items im reinen Vollbild-Modus */
 .reel-item {
-  scroll-snap-align: center;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
   position: relative;
   width: 100%;
-  height: calc(100vh - 150px);
-  min-height: 380px;
+  height: 100%;
+  min-height: 100%;
+  max-height: 100%;
   background: #000;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 16px;
   overflow: hidden;
-  margin-bottom: 10px;
+  box-sizing: border-box;
 }
 
 .reel-media {
