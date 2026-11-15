@@ -92,12 +92,11 @@ window.toggleRegisterPasswordVisibility = function() {
     }
 };
 
-// Registrierungs-Logik mit Name, .ac.at Check & Passwort-Sicherheitsprüfung
+// Registrierungs-Logik mit Name, .ac.at Check & spezifischer Passwort-Fehlermeldung
 window.submitRegistration = async function() {
     const fullNameInput = document.getElementById('reg-fullname');
     const emailInput = document.getElementById('reg-email');
     const passwordInput = document.getElementById('reg-password');
-    const msgBox = document.getElementById('reg-msg');
 
     if (!fullNameInput || !emailInput || !passwordInput) return;
 
@@ -116,13 +115,20 @@ window.submitRegistration = async function() {
         return;
     }
 
-    // 2. PASSWORT-SICHERHEIT (min. 8 Zeichen, mind. 1 Zahl, mind. 1 Sonderzeichen)
-    const hasLength = password.length >= 8;
-    const hasNumber = /\d/.test(password);
-    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>-]/.test(password);
+    // 2. SPEZIFISCHE PASSWORT-PRÜFUNG MIT DETAILLIERTER FEHLERMELDUNG
+    const missingCriteria = [];
+    if (password.length < 8) {
+        missingCriteria.push('mindestens 8 Zeichen');
+    }
+    if (!/\d/.test(password)) {
+        missingCriteria.push('mindestens eine Zahl');
+    }
+    if (!/[!@#$%^&*(),.?":{}|<>-]/.test(password)) {
+        missingCriteria.push('mindestens ein Sonderzeichen');
+    }
 
-    if (!hasLength || !hasNumber || !hasSpecialChar) {
-        showRegMsg('Das Passwort muss mindestens 8 Zeichen lang sein sowie mindestens eine Zahl und ein Sonderzeichen enthalten.', 'error');
+    if (missingCriteria.length > 0) {
+        showRegMsg('Dein Passwort erfüllt nicht alle Kriterien. Es fehlt: ' + missingCriteria.join(', ') + '.', 'error');
         return;
     }
 

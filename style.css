@@ -319,6 +319,13 @@ body {
   position: relative;
   display: flex;
   align-items: center;
+  width: 100%;
+}
+
+.password-container input {
+  width: 100%;
+  padding-right: 40px !important;
+  margin: 0 !important;
 }
 
 .password-toggle {
@@ -328,6 +335,8 @@ body {
   border: none;
   cursor: pointer;
   font-size: 16px;
+  padding: 0;
+  color: var(--text-muted);
 }
 
 .forgot-password {
@@ -799,22 +808,6 @@ input:focus, select:focus, textarea:focus {
     position: relative;
     background: var(--bg);
     overflow-y: auto;
-  }
-}
-
-/* ==========================================================================
-   ZUSÄTZLICHE HELFER & MEDIA-QUERIES FÜR SMARTELEMS
-   ========================================================================== */
-@media (max-width: 480px) {
-  .header {
-    padding: 8px 10px;
-  }
-  .logo {
-    font-size: 17px;
-  }
-  .points-badge {
-    padding: 4px 8px;
-    font-size: 10px;
   }
 }
 
