@@ -38,6 +38,7 @@
         <div id="points-dropdown-menu" class="points-dropdown hidden">
           <div class="points-dropdown-item" onclick="openActiveSpotsModal()">📍 Aktuelle Partner-Spots</div>
           <div class="points-dropdown-item" onclick="openProfGuideModal()">📚 Prof-Rating & Survival Guide</div>
+          <div class="points-dropdown-item" onclick="openBlackboardModal()">📌 Schwarzes Brett (Marktplatz)</div>
           <div class="points-dropdown-item" onclick="toggleLectureMode()">🎓 Lecture Mode (Fokus)</div>
           <div class="points-dropdown-item" onclick="openMorePointsModal()">🎁 Mehr Punkte sammeln</div>
           <div class="points-dropdown-item hidden" id="install-app-dropdown-btn" onclick="installPWA()" style="background: rgba(99, 102, 241, 0.15); color: #818cf8;">📲 App auf Gerät installieren</div>
@@ -461,8 +462,13 @@
           <div style="font-size: 11px; color: var(--text-muted);">Checke aktive Partner-Spots in Wien ab.</div>
         </div>
 
-        <div onclick="closeMorePointsModal(); switchTab('profile');" style="background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); padding: 12px; border-radius: 12px; cursor: pointer;">
-          <div style="font-weight: 800; font-size: 13px; color: var(--success); margin-bottom: 2px;">📲 Profil & Social Sharing</div>
+        <div onclick="closeMorePointsModal(); openBlackboardModal();" style="background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); padding: 12px; border-radius: 12px; cursor: pointer;">
+          <div style="font-weight: 800; font-size: 13px; color: #10b981; margin-bottom: 2px;">📌 Schwarzes Brett (Marktplatz)</div>
+          <div style="font-size: 11px; color: var(--text-muted);">Finde WG-Zimmer, Lernpartner und Skripten.</div>
+        </div>
+
+        <div onclick="closeMorePointsModal(); switchTab('profile');" style="background: rgba(236,72,153,0.15); border: 1px solid rgba(236,72,153,0.3); padding: 12px; border-radius: 12px; cursor: pointer;">
+          <div style="font-weight: 800; font-size: 13px; color: var(--accent); margin-bottom: 2px;">📲 Profil & Social Sharing</div>
           <div style="font-size: 11px; color: var(--text-muted);">Teile deine Erfolge in WhatsApp / Insta für Hype-Punkte.</div>
         </div>
       </div>
@@ -689,6 +695,7 @@
 <script type="module" src="js/features/crush.js?v=2"></script>
 <script type="module" src="js/features/feed.js?v=2"></script>
 <script type="module" src="js/features/dm.js?v=2"></script>
+<script type="module" src="js/features/board.js?v=2"></script>
 
 <script type="module">
   import { _supabase } from './js/config.js?v=2';
