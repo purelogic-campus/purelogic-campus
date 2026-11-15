@@ -33,16 +33,20 @@ export async function handleSignup() {
         return;
     }
 
-    if (password.length < 6) {
-        showAuthMsg('Das Passwort muss mindestens 6 Zeichen lang sein.', 'error');
+    // Strikter .ac.at Studenten-Check bei der Registrierung
+    if (!email.toLowerCase().endsWith('.ac.at')) {
+        showAuthMsg('Registrierung nur mit offizieller Universitäts-E-Mail (.ac.at) möglich!', 'error');
+        return;
+    }
+
+    if (password.length < 8) {
+        showAuthMsg('Das Passwort muss mindestens 8 Zeichen lang sein.', 'error');
         return;
     }
 
     try {
-        // 1. Globale Session hart auf dem Server und Client beenden
         await _supabase.auth.signOut({ scope: 'global' });
         
-        // 2. Allen lokalen Speicher komplett löschen
         localStorage.clear();
         sessionStorage.clear();
         
@@ -55,7 +59,6 @@ export async function handleSignup() {
 
         state.currentUserEmail = null;
 
-        // 3. Registrierung ausführen
         const { data, error } = await _supabase.auth.signUp({ 
             email, 
             password,
@@ -72,16 +75,11 @@ export async function handleSignup() {
         state.currentUserEmail = userEmail;
         await checkAndCreateUserRecord(userEmail);
         
-        const isAcAt = userEmail.toLowerCase().endsWith('.ac.at');
-        const successMsg = isAcAt 
-            ? 'Account erfolgreich erstellt! .ac.at Studenten-Status erkannt 🎓' 
-            : 'Account erfolgreich erstellt! Willkommen bei Pure Logic 🚀';
-
-        showAuthMsg(successMsg, 'success');
+        showAuthMsg('Account erfolgreich erstellt! .ac.at Studenten-Status erkannt 🎓. Bitte E-Mail bestätigen.', 'success');
         
         setTimeout(() => {
             initMainApp();
-        }, 1000);
+        }, 1500);
     } catch (err) {
         console.error('Signup-Fehler Details:', err);
         showAuthMsg('Registrierungs-Fehler: ' + (err.message || 'Unbekannter Fehler'), 'error');
@@ -146,8 +144,11 @@ export async function handleForgotPassword() {
 export async function checkPasswordRecoveryFlow() {
     const hash = window.location.hash;
     if (hash && hash.includes('type=recovery')) {
-        const newPassword = prompt('Bitte gib dein neues, sicheres Passwort ein:');
-        if (!newPassword) return;
+        const newPassword = prompt('Bitte gib dein neues, sicheres Passwort ein (min. 8 Zeichen):');
+        if (!newPassword || newPassword.length < 8) {
+            alert('Das Passwort muss mindestens 8 Zeichen lang sein.');
+            return;
+        }
 
         try {
             const { error } = await _supabase.auth.updateUser({ password: newPassword });
@@ -164,7 +165,7 @@ function showAuthMsg(text, type) {
     const msgBox = document.getElementById('auth-msg');
     if (!msgBox) return;
     msgBox.textContent = text;
-    msgBox.classList.remove('hidden', 'msg-error', 'msg-success');
+    msgBox.classList.remove('hidden');
     
     if (type === 'error') {
         msgBox.style.background = 'rgba(239, 68, 68, 0.15)';

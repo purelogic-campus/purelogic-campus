@@ -4,6 +4,7 @@
 
 import { _supabase } from './config.js';
 import { state } from './state.js';
+import { checkPasswordRecoveryFlow } from './auth.js';
 import { loadCampusFeed, loadMyProfilePosts, setReelFilter, setFilter, claimActiveDrop } from './features/feed.js';
 import { loadLiveStreams, setLiveFilter, handlePreLiveCheck, closeLiveFullscreen, sendLiveChatMessage } from './features/live.js';
 import { toggleLectureMode, saveLectureNotesToFile } from './features/lecture.js';
@@ -20,6 +21,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     setupGlobalWindowHandlers();
     setupAuthFormHandlers();
+    checkPasswordRecoveryFlow();
 
     // 1. Globale Logout- & Reset-Funktion
     window.resetUser = async function() {
@@ -496,15 +498,19 @@ function setupGlobalWindowHandlers() {
     };
 
     window.shareProfileCard = function() {
+        const shareText = `🚀 Check mal mein Campus-Profil und Uni-Level auf PURE LOGIC ab!`;
+        const shareUrl = window.location.href;
+
         if (navigator.share) {
             navigator.share({
                 title: 'PURE LOGIC • Campus Profil',
-                text: `Check mal mein Profil und Uni-Level auf PURE LOGIC ab! 🚀`,
-                url: window.location.href
+                text: shareText,
+                url: shareUrl
             }).catch(() => {});
         } else {
-            navigator.clipboard.writeText(window.location.href);
-            alert('Profil-Link in die Zwischenablage kopiert! 📋');
+            // WhatsApp Direkt-Teilen & Clipboard Fallback
+            const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText + ' ' + shareUrl)}`;
+            window.open(waUrl, '_blank');
         }
     };
 
