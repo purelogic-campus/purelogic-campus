@@ -77,6 +77,21 @@ window.closeRegisterModal = function() {
     document.getElementById('register-modal')?.classList.add('hidden');
 };
 
+// Passwort-Sichtbarkeit im Registrierungs-Modal umschalten
+window.toggleRegisterPasswordVisibility = function() {
+    const passwordInput = document.getElementById('reg-password');
+    const toggleBtn = document.getElementById('reg-toggle-pw-btn');
+    if (!passwordInput || !toggleBtn) return;
+
+    if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        toggleBtn.textContent = '🔒';
+    } else {
+        passwordInput.type = 'password';
+        toggleBtn.textContent = '👁️';
+    }
+};
+
 // Registrierungs-Logik mit Name, .ac.at Check & Passwort-Sicherheitsprüfung
 window.submitRegistration = async function() {
     const fullNameInput = document.getElementById('reg-fullname');
