@@ -1,4 +1,4 @@
-// js/features/feed.js - Vollständiges Campus-Feed & Medien Modul mit Engagement-Scoring Algorithmus
+// js/features/feed.js - Vollständiges Campus-Feed & Medien Modul mit Engagement-Scoring & Hashtag-Suche
 import { _supabase } from '../config.js';
 import { state } from '../state.js';
 import { validateInputOrAlert } from './moderation.js';
@@ -6,6 +6,29 @@ import { validateInputOrAlert } from './moderation.js';
 let selectedMediaFile = null;
 let observer = null;
 let activeCommentPostId = null;
+let activeSearchQuery = '';
+
+/**
+ * Hilfsfunktion: Text mit Hashtags in klickbare Links umwandeln
+ */
+export function parseHashtagsInText(text) {
+    if (!text) return '';
+    const safeText = text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
+    return safeText.replace(/#([a-zA-Z0-9_äöüÄÖÜß]+)/g, '<span class="hashtag-link" onclick="searchByHashtag(\'#$1\')" style="color: #818cf8; font-weight: 700; cursor: pointer;">#$1</span>');
+}
+
+window.searchByHashtag = function(tag) {
+    const searchInput = document.getElementById('feed-search-input');
+    if (searchInput) {
+        searchInput.value = tag;
+    }
+    activeSearchQuery = tag.toLowerCase();
+    loadCampusFeed(state.currentReelFilter || 'foryou');
+};
 
 /**
  * Bild-Skalierung und Komprimierung über Canvas (Standardisierung auf max 1080px)
@@ -414,7 +437,7 @@ async function loadCommentsForPost(postId) {
     } catch (err) {
         console.error('Fehler beim Laden der Kommentare:', err);
     }
-}
+};
 
 /**
  * Sendet einen neuen Kommentar ab (inkl. Moderations-Check)
@@ -555,7 +578,6 @@ function initVideoAutoplayObserver() {
 
 /**
  * TikTok/Twitter-Style Engagement-Scoring Algorithmus für den "For You" Feed
- * Berechnet einen Score basierend auf Aktualität (Recency), Views, Likes und Kommentaren.
  */
 async function calculateEngagementScore(post) {
     const views = post.views || 0;
@@ -570,13 +592,10 @@ async function calculateEngagementScore(post) {
         commentsCount = count || 0;
     } catch (e) {}
 
-    // Alter des Beitrags in Stunden berechnen
     const createdAt = new Date(post.created_at).getTime();
     const now = new Date().getTime();
     const ageInHours = Math.max(1, (now - createdAt) / (1000 * 60 * 60));
 
-    // Engagement Formel: (Likes * 5 + Kommentare * 10 + Views * 1) / (Alters-Faktor)
-    // Neuere Beiträge erhalten einen Frische-Boost
     const rawScore = (likes * 5) + (commentsCount * 10) + (views * 1);
     const recencyDecay = Math.pow(ageInHours + 2, 1.5);
     
@@ -584,9 +603,10 @@ async function calculateEngagementScore(post) {
 }
 
 /**
- * Lädt den Campus-Feed (For You mit Algorithmus, Discover, Following)
+ * Lädt den Campus-Feed (For You mit Algorithmus, Discover, Following, sowie Hashtag-Filter)
  */
 export async function loadCampusFeed(filter = 'foryou') {
+    state.currentReelFilter = filter;
     const feedList = document.getElementById('reels-list');
     if (!feedList) return;
 
@@ -619,16 +639,28 @@ export async function loadCampusFeed(filter = 'foryou') {
 
     let processedPosts = posts;
 
-    // Wenn "foryou" aktiv ist, wenden wir unseren Engagement-Algorithmus an
-    if (filter === 'foryou') {
+    // Optionaler Hashtag- oder Suchfilter
+    if (activeSearchQuery) {
+        processedPosts = processedPosts.filter(p => {
+            const caption = (p.caption || '').toLowerCase();
+            const author = (p.author_email || '').toLowerCase();
+            return caption.includes(activeSearchQuery) || author.includes(activeSearchQuery);
+        });
+    }
+
+    if (filter === 'foryou' && !activeSearchQuery) {
         const scoredPosts = [];
-        for (const post of posts) {
+        for (const post of processedPosts) {
             const score = await calculateEngagementScore(post);
             scoredPosts.push({ post, score });
         }
-        // Nach Score absteigend sortieren (höchste Viralität zuerst)
         scoredPosts.sort((a, b) => b.score - a.score);
         processedPosts = scoredPosts.map(item => item.post);
+    }
+
+    if (processedPosts.length === 0) {
+        feedList.innerHTML = `<p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;">Keine Beiträge für "${activeSearchQuery}" gefunden.</p>`;
+        return;
     }
 
     feedList.innerHTML = '';
@@ -645,7 +677,9 @@ export async function loadCampusFeed(filter = 'foryou') {
             mediaHtml = `<img src="${post.media_url}" class="reel-media" style="object-fit: contain; width: 100%; height: 100%;" alt="Post">`;
         }
 
-        const cleanCaption = (post.caption && !post.caption.includes('${post.caption}')) ? post.caption : '';
+        const rawCaption = (post.caption && !post.caption.includes('${post.caption}')) ? post.caption : '';
+        const parsedCaption = parseHashtagsInText(rawCaption);
+
         const authorEmail = post.author_email || 'student@uni.at';
         const viewsCount = post.views || 0;
         
@@ -681,37 +715,30 @@ export async function loadCampusFeed(filter = 'foryou') {
 
         item.innerHTML = `
             ${mediaHtml}
-            <!-- Oberes Overlay links oben: Autor + Individuell umrandete Metriken -->
             <div style="position: absolute; top: 14px; left: 14px; right: 14px; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; z-index: 10; pointer-events: none;">
-                <!-- Autoreninfo (Klickbar -> Öffentliches Profil) -->
                 <div onclick="window.openPublicProfile('${authorEmail}')" style="pointer-events: auto; display: flex; align-items: center; gap: 8px; background: rgba(19, 27, 46, 0.85); border: 1px solid rgba(129, 140, 248, 0.4); padding: 5px 12px; border-radius: 30px; cursor: pointer; backdrop-filter: blur(6px); box-shadow: 0 4px 12px rgba(0,0,0,0.4);">
                     <img src="${authorAvatar}" style="width: 26px; height: 26px; border-radius: 50%; object-fit: cover; border: 1px solid var(--primary);" onerror="this.src='https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'">
                     <span style="font-size: 12px; font-weight: 800; color: #fff;">${authorName}</span>
                 </div>
 
-                <!-- Metriken links oben mit jeweils eigenen Umrandungen -->
                 <div style="pointer-events: auto; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 11px; font-weight: 700;">
-                    <!-- Auge / Views (Eigene Umrandung) -->
                     <span style="background: rgba(148, 163, 184, 0.2); border: 1px solid rgba(148, 163, 184, 0.45); color: #cbd5e1; padding: 3px 10px; border-radius: 16px; backdrop-filter: blur(6px); box-shadow: 0 2px 8px rgba(0,0,0,0.3);">
                         👁️ ${viewsCount}
                     </span>
 
-                    <!-- Kommentar / Nachrichten-Symbol (Eigene Umrandung, klickbar) -->
                     <span id="comment-count-${post.id}" onclick="window.openCommentsModal('${post.id}')" style="cursor: pointer; background: rgba(99, 102, 241, 0.25); border: 1px solid rgba(99, 102, 241, 0.45); color: #818cf8; padding: 3px 10px; border-radius: 16px; backdrop-filter: blur(6px); box-shadow: 0 2px 8px rgba(0,0,0,0.3);">
                         ${commentCount} 💬
                     </span>
 
-                    <!-- Herz / Likes (Eigene Umrandung, klickbar & mit Rechtsklick/Halten für Liker-Liste) -->
                     <span id="like-count-${post.id}" onclick="window.likePost('${post.id}')" oncontextmenu="event.preventDefault(); window.openLikesModal('${post.id}');" style="cursor: pointer; background: rgba(236, 72, 153, 0.25); border: 1px solid rgba(236, 72, 153, 0.45); color: #ec4899; padding: 3px 10px; border-radius: 16px; backdrop-filter: blur(6px); box-shadow: 0 2px 8px rgba(0,0,0,0.3);" title="Klicken zum Liken | Rechtsklick für Liker-Liste">
                         ${likesCount} ❤️
                     </span>
                 </div>
             </div>
 
-            <!-- Unteres Overlay: Nur noch Caption/Beschreibung, falls vorhanden -->
-            ${cleanCaption ? `
+            ${parsedCaption ? `
             <div class="reel-overlay" style="justify-content: flex-end; align-items: flex-start; background: linear-gradient(0deg, rgba(9,13,22,0.9) 0%, transparent 100%);">
-                <div style="font-size: 13px; color: #fff; font-weight: 600; background: rgba(0,0,0,0.55); padding: 6px 10px; border-radius: 8px; max-width: 90%;">💬 ${cleanCaption}</div>
+                <div style="font-size: 13px; color: #fff; font-weight: 600; background: rgba(0,0,0,0.55); padding: 6px 10px; border-radius: 8px; max-width: 90%; word-break: break-word;">💬 ${parsedCaption}</div>
             </div>
             ` : ''}
         `;
