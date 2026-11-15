@@ -68,7 +68,7 @@
 
   <!-- BANNER CONTAINER -->
   <div class="banner-container">
-    <div class="uni-duell-banner" onclick="switchTab('ranking')">
+    <div class="uni-duell-banner" onclick="switchTab('ranking'); if(window.loadRankingData) loadRankingData();">
       🏆 Zum Wiener Uni-Duell & Rangliste [Klick fürs Duell 🚀]
     </div>
     <div class="match-banner" id="match-banner" onclick="openCrushModal()">
@@ -239,19 +239,21 @@
       <div id="tab-ranking" class="tab-content hidden">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px; flex-shrink:0;">
           <h3 style="font-size: 16px; font-weight: 800;">🏆 Uni-Duell & Top 100</h3>
-          <span style="font-size: 10px; color: var(--text-muted);">Reset So. 23:59</span>
+          <button type="button" class="btn btn-secondary" onclick="if(window.loadRankingData) loadRankingData();" style="width: auto; margin-top: 0; padding: 4px 10px; font-size: 10px;">🔄 Aktualisieren</button>
         </div>
 
-        <div class="container-box" style="margin-bottom: 12px;">
-          <h4 style="font-size: 13px; font-weight: 800; margin-bottom: 6px; color: #818cf8;">🎓 Wiener Uni-Duell (Pro-Kopf)</h4>
-          <div id="uni-duell-list" style="display: flex; flex-direction: column; gap: 6px;">
-            <p style="color: var(--text-muted); font-size: 12px;">Berechne Uni-Wertung...</p>
+        <div style="overflow-y: auto; flex: 1; padding-bottom: 20px;">
+          <div class="container-box" style="margin-bottom: 12px;">
+            <h4 style="font-size: 13px; font-weight: 800; margin-bottom: 8px; color: #818cf8;">🎓 Wiener Uni-Duell (Pro-Kopf)</h4>
+            <div id="uni-duell-list" style="display: flex; flex-direction: column; gap: 8px;">
+              <p style="color: var(--text-muted); font-size: 12px;">Berechne Uni-Wertung...</p>
+            </div>
           </div>
-        </div>
 
-        <h4 style="font-size: 13px; font-weight: 800; margin-bottom: 6px;">⭐ Wall of Fame (Top Creator)</h4>
-        <div id="top-creators-list" class="container-box" style="display: flex; flex-direction: column; gap: 6px; padding-bottom: 20px;">
-          <p style="color: var(--text-muted); font-size: 12px;">Lade Top Creator...</p>
+          <h4 style="font-size: 13px; font-weight: 800; margin-bottom: 6px;">⭐ Wall of Fame (Top Creator)</h4>
+          <div id="top-creators-list" class="container-box" style="display: flex; flex-direction: column; gap: 6px;">
+            <p style="color: var(--text-muted); font-size: 12px;">Lade Top Creator...</p>
+          </div>
         </div>
       </div>
 
@@ -696,6 +698,7 @@
 <script type="module" src="js/features/feed.js?v=2"></script>
 <script type="module" src="js/features/dm.js?v=2"></script>
 <script type="module" src="js/features/board.js?v=2"></script>
+<script type="module" src="js/features/ranking.js?v=2"></script>
 
 <script type="module">
   import { _supabase } from './js/config.js?v=2';

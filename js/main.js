@@ -11,6 +11,8 @@ import { toggleLectureMode, saveLectureNotesToFile } from './features/lecture.js
 import { openCampusQuizModal, closeCampusQuizModal } from './features/quiz.js';
 import { openProfGuideModal, closeProfGuideModal, toggleProfForm, submitProfReview, filterProfReviews } from './features/profguide.js';
 import { openCrushModal, closeCrushModal, submitCrush } from './features/crush.js';
+import { openBlackboardModal, closeBlackboardModal } from './features/board.js';
+import { loadRankingData } from './features/ranking.js';
 import { changeLanguage } from './i18n.js';
 
 let adminMapInstance = null;
@@ -329,6 +331,10 @@ function setupGlobalWindowHandlers() {
 
         if (tabName === 'admin') {
             initAdminMap();
+        } else if (tabName === 'ranking') {
+            if (typeof window.loadRankingData === 'function') {
+                window.loadRankingData();
+            }
         }
     };
 
