@@ -41,6 +41,7 @@ export async function handlePreLiveCheck() {
 async function startLiveStreamBroadcast(category, location, streamUrl = 'webrtc-active') {
     try {
         const streamTitle = `${category} live aus ${location}`;
+        const expiresAt = new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString(); // 3 Stunden Gültigkeit
 
         const { data, error } = await _supabase
             .from('live_streams')
@@ -52,6 +53,7 @@ async function startLiveStreamBroadcast(category, location, streamUrl = 'webrtc-
                     category: category,
                     location: location,
                     stream_url: streamUrl,
+                    expires_at: expiresAt,
                     created_at: new Date().toISOString()
                 }
             ])
