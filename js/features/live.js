@@ -9,7 +9,6 @@ let activePeerConnection = null;
 let activeStreamId = null;
 let selectedMainCategory = '💬 Plaudern';
 let selectedSubCategory = 'Allgemein';
-let pendingLocation = 'Uni Wien Hauptgebäude';
 let viewerInterval = null;
 
 const subCategoriesMap = {
@@ -319,7 +318,7 @@ export function setLiveFilter(element, category) {
 }
 
 /**
- * Öffnet den Vollbildmodus für einen Stream (mit echtem Viewer-Zähler & Live-Geschenken)
+ * Öffnet den Vollbildmodus für einen Stream (mit echtem Viewer-Zähler, fehlerfreiem Host-Video & optimiertem Mobile Layout)
  */
 export function openLiveFullscreen(streamId, category, location, streamTitle = '', isHost = false, hostEmail = '') {
     activeStreamId = streamId;
@@ -335,13 +334,11 @@ export function openLiveFullscreen(streamId, category, location, streamTitle = '
     
     const currentUserIsHost = isHost || (state.currentUserEmail && hostEmail && state.currentUserEmail.toLowerCase() === hostEmail.toLowerCase()) || (localStream !== null);
 
-    // Simulierter, dynamischer Zuschauer-Zähler (wächst leicht bei Beitritt)
     let currentViewers = Math.floor(Math.random() * 12) + 3;
     if (hostDisplay) {
         hostDisplay.innerHTML = `📍 ${location} | 👥 <span id="live-viewer-count">${currentViewers}</span> Zuschauer`;
     }
 
-    // Regelmäßiges sanftes Schwanken der Zuschauerzahl für Realismus
     if (viewerInterval) clearInterval(viewerInterval);
     viewerInterval = setInterval(() => {
         const vSpan = document.getElementById('live-viewer-count');
@@ -355,17 +352,20 @@ export function openLiveFullscreen(streamId, category, location, streamTitle = '
     if (playerContainer) {
         if (currentUserIsHost && localStream) {
             playerContainer.innerHTML = `
-                <video id="local-host-video" autoplay muted playsinline style="width: 100%; height: 100%; object-fit: cover; background: #000;"></video>
-                <div style="position: absolute; top: 16px; left: 16px; background: rgba(16,185,129,0.2); border: 1px solid #10b981; color: #10b981; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 800;">🎥 Du sendest Live (WebRTC)</div>
+                <video id="local-host-video" autoplay muted playsinline style="width: 100%; height: 100%; object-fit: cover; background: #000; position: absolute; top:0; left:0;"></video>
+                <div style="position: absolute; top: 12px; left: 12px; background: rgba(16,185,129,0.2); border: 1px solid #10b981; color: #10b981; padding: 3px 8px; border-radius: 20px; font-size: 10px; font-weight: 800; z-index: 5;">🎥 Du sendest Live</div>
             `;
             const vidEl = document.getElementById('local-host-video');
-            if (vidEl) vidEl.srcObject = localStream;
+            if (vidEl) {
+                vidEl.srcObject = localStream;
+                vidEl.play().catch(e => console.warn('Autoplay blockiert:', e));
+            }
         } else {
             playerContainer.innerHTML = `
-                <div style="width: 100%; height: 100%; background: linear-gradient(135deg, #090d16, #1e1b4b); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 20px;">
-                    <span style="background: rgba(239,68,68,0.2); border: 1px solid rgba(239,68,68,0.5); color: #ef4444; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 800; margin-bottom: 12px;">🔴 ${category}</span>
-                    <h3 style="font-size: 22px; font-weight: 900; color: #fff; margin-bottom: 6px;">${streamTitle}</h3>
-                    <p style="font-size: 12px; color: var(--text-muted);">Standort: ${location}</p>
+                <div style="width: 100%; height: 100%; background: linear-gradient(135deg, #090d16, #1e1b4b); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 16px;">
+                    <span style="background: rgba(239,68,68,0.2); border: 1px solid rgba(239,68,68,0.5); color: #ef4444; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 800; margin-bottom: 8px;">🔴 ${category}</span>
+                    <h3 style="font-size: 18px; font-weight: 900; color: #fff; margin-bottom: 4px;">${streamTitle}</h3>
+                    <p style="font-size: 11px; color: var(--text-muted);">Standort: ${location}</p>
                 </div>
             `;
         }
@@ -374,31 +374,30 @@ export function openLiveFullscreen(streamId, category, location, streamTitle = '
     if (chatInputContainer) {
         if (currentUserIsHost) {
             chatInputContainer.innerHTML = `
-                <button type="button" class="btn" style="background: #ef4444; color: #fff; font-weight: 900; font-size: 12px; padding: 10px; border-radius: 10px; width: 100%; border: none; cursor: pointer; box-shadow: 0 4px 12px rgba(239,68,68,0.4); margin-bottom: 6px;" onclick="terminateActiveStream()">🛑 Stream beenden</button>
-                <div style="display: flex; gap: 6px; width: 100%;">
-                    <input type="text" id="live-chat-input" placeholder="Als Host in den Stream schreiben..." style="margin: 0; font-size: 11px; padding: 10px 12px; flex: 1;" onkeydown="if(event.key==='Enter') sendLiveChatMessage()">
-                    <button type="button" class="btn" style="width: auto; margin: 0; padding: 0 16px; font-size: 11px; font-weight: 800;" onclick="sendLiveChatMessage()">Senden</button>
+                <button type="button" class="btn" style="background: #ef4444; color: #fff; font-weight: 900; font-size: 11px; padding: 8px; border-radius: 8px; width: 100%; border: none; cursor: pointer; box-shadow: 0 4px 12px rgba(239,68,68,0.4); margin-bottom: 4px;" onclick="terminateActiveStream()">🛑 Stream beenden</button>
+                <div style="display: flex; gap: 4px; width: 100%;">
+                    <input type="text" id="live-chat-input" placeholder="Als Host schreiben..." style="margin: 0; font-size: 11px; padding: 8px 10px; flex: 1;" onkeydown="if(event.key==='Enter') sendLiveChatMessage()">
+                    <button type="button" class="btn" style="width: auto; margin: 0; padding: 0 12px; font-size: 11px; font-weight: 800;" onclick="sendLiveChatMessage()">Senden</button>
                 </div>
             `;
         } else {
-            // Zuschauer-Ansicht inkl. Geschenk-Buttons (Punkte spenden)
             chatInputContainer.innerHTML = `
-                <div style="display: flex; gap: 4px; margin-bottom: 6px; overflow-x: auto; padding-bottom: 2px;">
-                    <button type="button" onclick="sendLiveGift('☕ Kaffee', 10, '${hostEmail}')" style="background: rgba(245,158,11,0.2); border: 1px solid #f59e0b; color: #f59e0b; padding: 4px 8px; border-radius: 12px; font-size: 10px; font-weight: 800; cursor: pointer; white-space: nowrap;">☕ Kaffee (10P)</button>
-                    <button type="button" onclick="sendLiveGift('🍕 Pizza', 25, '${hostEmail}')" style="background: rgba(236,72,153,0.2); border: 1px solid var(--accent); color: var(--accent); padding: 4px 8px; border-radius: 12px; font-size: 10px; font-weight: 800; cursor: pointer; white-space: nowrap;">🍕 Pizza (25P)</button>
-                    <button type="button" onclick="sendLiveGift('🚀 Hype Rakete', 50, '${hostEmail}')" style="background: rgba(99,102,241,0.2); border: 1px solid #818cf8; color: #818cf8; padding: 4px 8px; border-radius: 12px; font-size: 10px; font-weight: 800; cursor: pointer; white-space: nowrap;">🚀 Rakete (50P)</button>
+                <div style="display: flex; gap: 4px; margin-bottom: 4px; overflow-x: auto; padding-bottom: 2px; flex-shrink: 0;">
+                    <button type="button" onclick="sendLiveGift('☕ Kaffee', 10, '${hostEmail}')" style="background: rgba(245,158,11,0.2); border: 1px solid #f59e0b; color: #f59e0b; padding: 3px 6px; border-radius: 10px; font-size: 10px; font-weight: 800; cursor: pointer; white-space: nowrap;">☕ Kaffee (10P)</button>
+                    <button type="button" onclick="sendLiveGift('🍕 Pizza', 25, '${hostEmail}')" style="background: rgba(236,72,153,0.2); border: 1px solid var(--accent); color: var(--accent); padding: 3px 6px; border-radius: 10px; font-size: 10px; font-weight: 800; cursor: pointer; white-space: nowrap;">🍕 Pizza (25P)</button>
+                    <button type="button" onclick="sendLiveGift('🚀 Hype Rakete', 50, '${hostEmail}')" style="background: rgba(99,102,241,0.2); border: 1px solid #818cf8; color: #818cf8; padding: 3px 6px; border-radius: 10px; font-size: 10px; font-weight: 800; cursor: pointer; white-space: nowrap;">🚀 Rakete (50P)</button>
                 </div>
-                <div style="display: flex; gap: 6px; width: 100%;">
-                    <input type="text" id="live-chat-input" placeholder="Nachricht an den Stream senden..." style="margin: 0; font-size: 11px; padding: 10px 12px; flex: 1;" onkeydown="if(event.key==='Enter') sendLiveChatMessage()">
-                    <button type="button" class="btn" style="width: auto; margin: 0; padding: 0 16px; font-size: 11px; font-weight: 800;" onclick="sendLiveChatMessage()">Senden</button>
+                <div style="display: flex; gap: 4px; width: 100%;">
+                    <input type="text" id="live-chat-input" placeholder="Nachricht senden..." style="margin: 0; font-size: 11px; padding: 8px 10px; flex: 1;" onkeydown="if(event.key==='Enter') sendLiveChatMessage()">
+                    <button type="button" class="btn" style="width: auto; margin: 0; padding: 0 12px; font-size: 11px; font-weight: 800;" onclick="sendLiveChatMessage()">Senden</button>
                 </div>
             `;
         }
     }
 
-    const chatList = document.getElementById('live-chat-messages');
-    if (chatList) {
-        chatList.innerHTML = `<div style="color: var(--text-muted); text-align: center;">Willkommen im Live-Chat! 💬</div>`;
+    const chatMessagesEl = document.getElementById('live-chat-messages');
+    if (chatMessagesEl) {
+        chatMessagesEl.innerHTML = `<div style="color: var(--text-muted); text-align: center;">Willkommen im Live-Chat! 💬</div>`;
     }
 }
 
@@ -417,7 +416,6 @@ export async function sendLiveGift(giftName, cost, hostEmail) {
     }
 
     try {
-        // Eigenen Punktestand prüfen
         const { data: myData, error: myErr } = await _supabase
             .from('users')
             .select('logic_score')
@@ -431,17 +429,14 @@ export async function sendLiveGift(giftName, cost, hostEmail) {
 
         const newMyScore = myData.logic_score - cost;
 
-        // Eigene Punkte abziehen
         await _supabase
             .from('users')
             .update({ logic_score: newMyScore })
             .eq('email', state.currentUserEmail);
 
-        // UI Punktestand aktualisieren
         const scoreBadge = document.getElementById('score');
         if (scoreBadge) scoreBadge.textContent = `${newMyScore} P`;
 
-        // Punkte dem Host gutschreiben (falls Host-Email bekannt)
         if (hostEmail) {
             const { data: hostData } = await _supabase
                 .from('users')
@@ -456,11 +451,10 @@ export async function sendLiveGift(giftName, cost, hostEmail) {
                 .eq('email', hostEmail);
         }
 
-        // Geschenk im Chat als Highlight-Nachricht anzeigen
         const chatList = document.getElementById('live-chat-messages');
         if (chatList) {
             const giftDiv = document.createElement('div');
-            giftDiv.style.cssText = 'background: linear-gradient(135deg, rgba(245,158,11,0.2), rgba(236,72,153,0.2)); border: 1px solid #f59e0b; padding: 8px 10px; border-radius: 8px; font-size: 11px; margin-bottom: 4px; text-align: center;';
+            giftDiv.style.cssText = 'background: linear-gradient(135deg, rgba(245,158,11,0.2), rgba(236,72,153,0.2)); border: 1px solid #f59e0b; padding: 6px 8px; border-radius: 8px; font-size: 11px; margin-bottom: 4px; text-align: center;';
             giftDiv.innerHTML = `<strong style="color: #f59e0b;">🎁 ${state.currentUserEmail.split('@')[0]} hat ${giftName} (${cost} P) gesendet! 🎉</strong>`;
             chatList.appendChild(giftDiv);
             chatList.scrollTop = chatList.scrollHeight;
@@ -520,7 +514,7 @@ export function sendLiveChatMessage() {
     const color = isHost ? '#10b981' : '#818cf8';
 
     const msgDiv = document.createElement('div');
-    msgDiv.style.cssText = 'background: rgba(255,255,255,0.08); padding: 6px 10px; border-radius: 8px; font-size: 11px; margin-bottom: 4px;';
+    msgDiv.style.cssText = 'background: rgba(255,255,255,0.08); padding: 5px 8px; border-radius: 6px; font-size: 11px; margin-bottom: 3px;';
     msgDiv.innerHTML = `<strong style="color: ${color};">${prefix}:</strong> ${msgText}`;
     
     chatList.appendChild(msgDiv);
