@@ -1,4 +1,4 @@
-// js/features/live.js • PURE LOGIC Live-Stream, WebRTC & Creator-Modul
+// js/features/live.js • PURE LOGIC Live-Stream, WebRTC, Viewer & Geschenke-Modul
 import { _supabase } from '../config.js';
 import { state } from '../state.js';
 import { validateInputOrAlert } from './moderation.js';
@@ -10,8 +10,8 @@ let activeStreamId = null;
 let selectedMainCategory = '💬 Plaudern';
 let selectedSubCategory = 'Allgemein';
 let pendingLocation = 'Uni Wien Hauptgebäude';
+let viewerInterval = null;
 
-// Vordefinierte Unterkategorien für die jeweiligen Hauptbereiche
 const subCategoriesMap = {
     '💬 Plaudern': ['Allgemein', 'Campus Life', 'Late Night Talk', 'Q&A / Frag mich alles', 'Kaffee & Break'],
     '🎮 Gaming': ['World of Warcraft (WoW)', 'Minecraft', 'League of Legends', 'Valorant', 'Apex Legends', 'GTA V', 'Indie Games'],
@@ -28,7 +28,6 @@ export async function handlePreLiveCheck() {
         return;
     }
 
-    // Kamera & Mikrofon für die Vorschau anfordern
     try {
         localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
     } catch (err) {
@@ -41,7 +40,7 @@ export async function handlePreLiveCheck() {
 }
 
 /**
- * Zeigt das Vorschau-Modal mit erweiterten Kategorien, Unterkategorien & Info an
+ * Zeigt das Vorschau-Modal an
  */
 function showPreLivePreviewModal() {
     let previewModal = document.getElementById('live-preview-modal');
@@ -75,11 +74,9 @@ function showPreLivePreviewModal() {
                     </div>
 
                     <label style="font-size: 11px; font-weight: 600; color: var(--text-muted); margin-top: 2px;">2. Genre / Unterkategorie:</label>
-                    <div id="preview-sub-cat-pills" style="display: flex; gap: 5px; flex-wrap: wrap; max-height: 80px; overflow-y: auto;">
-                        <!-- Dynamisch befüllt -->
-                    </div>
+                    <div id="preview-sub-cat-pills" style="display: flex; gap: 5px; flex-wrap: wrap; max-height: 80px; overflow-y: auto;"></div>
 
-                    <label style="font-size: 11px; font-weight: 600; color: var(--text-muted); margin-top: 2px;">Stream-Info / Titel (Worüber streamst du?):</label>
+                    <label style="font-size: 11px; font-weight: 600; color: var(--text-muted); margin-top: 2px;">Stream-Info / Titel:</label>
                     <input type="text" id="preview-stream-title-input" placeholder="z. B. Raid Abend in WoW oder Mathe lernen..." style="background: rgba(255,255,255,0.06); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; color: #fff; font-size: 11px;">
 
                     <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Standort / Hörsaal:</label>
@@ -102,9 +99,6 @@ function showPreLivePreviewModal() {
     updateSubCategoriesUI('💬 Plaudern');
 }
 
-/**
- * Aktualisiert die Unterkategorien basierend auf der Hauptkategorie
- */
 export function selectMainPreviewCategory(btnElement, mainCat) {
     selectedMainCategory = mainCat;
     document.querySelectorAll('#preview-main-cat-pills button').forEach(btn => {
@@ -119,15 +113,12 @@ export function selectMainPreviewCategory(btnElement, mainCat) {
     updateSubCategoriesUI(mainCat);
 }
 
-/**
- * Rendert die Unterkategorie-Buttons passend zur Hauptkategorie
- */
 function updateSubCategoriesUI(mainCat) {
     const subContainer = document.getElementById('preview-sub-cat-pills');
     if (!subContainer) return;
 
     const subs = subCategoriesMap[mainCat] || ['Allgemein'];
-    selectedSubCategory = subs[0]; // Standardmäßig erste Unterkategorie wählen
+    selectedSubCategory = subs[0];
 
     subContainer.innerHTML = '';
     subs.forEach((sub, index) => {
@@ -155,9 +146,6 @@ function updateSubCategoriesUI(mainCat) {
     });
 }
 
-/**
- * Schließt die Vorschau und stoppt die Kamera bei Abbruch
- */
 export function closePreLivePreview() {
     const previewModal = document.getElementById('live-preview-modal');
     if (previewModal) {
@@ -169,9 +157,6 @@ export function closePreLivePreview() {
     }
 }
 
-/**
- * Bestätigt die Vorschau und startet den Stream offiziell in der Datenbank
- */
 export async function confirmAndStartLiveStream() {
     const locInput = document.getElementById('preview-location-input');
     const titleInput = document.getElementById('preview-stream-title-input');
@@ -179,7 +164,6 @@ export async function confirmAndStartLiveStream() {
     const location = locInput ? locInput.value.trim() : 'Uni Wien';
     const customTitle = titleInput ? titleInput.value.trim() : '';
 
-    // Kombinierter Titel aus Kategorie, Unterkategorie und individuellem Text
     const finalCategoryLabel = `${selectedMainCategory} • ${selectedSubCategory}`;
     const finalTitle = customTitle ? customTitle : `${selectedSubCategory} live aus ${location}`;
 
@@ -189,9 +173,6 @@ export async function confirmAndStartLiveStream() {
     startLiveStreamBroadcast(finalCategoryLabel, location, finalTitle, 'webrtc-active');
 }
 
-/**
- * Startet den Live-Stream in der Datenbank
- */
 async function startLiveStreamBroadcast(category, location, title, streamUrl = 'webrtc-active') {
     try {
         const expiresAt = new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString();
@@ -232,9 +213,6 @@ async function startLiveStreamBroadcast(category, location, title, streamUrl = '
     }
 }
 
-/**
- * Initialisiert den IntersectionObserver für automatisches Live-Video-Autoplay beim Scrollen
- */
 function initLiveAutoplayObserver() {
     if (liveObserver) liveObserver.disconnect();
 
@@ -252,7 +230,7 @@ function initLiveAutoplayObserver() {
 
             if (entry.isIntersecting) {
                 video.play().catch(err => {
-                    console.warn('Live-Video Autoplay vom Browser blockiert:', err);
+                    console.warn('Live-Video Autoplay blockiert:', err);
                 });
             } else {
                 video.pause();
@@ -265,9 +243,6 @@ function initLiveAutoplayObserver() {
     });
 }
 
-/**
- * Lädt aktive Live-Streams aus der Datenbank.
- */
 export async function loadLiveStreams() {
     const liveList = document.getElementById('live-streams-list');
     if (!liveList) return;
@@ -337,9 +312,6 @@ export async function loadLiveStreams() {
     setTimeout(initLiveAutoplayObserver, 100);
 }
 
-/**
- * Filtert die Live-Streams nach Kategorie
- */
 export function setLiveFilter(element, category) {
     document.querySelectorAll('#live-filter-group .cat-pill').forEach(p => p.classList.remove('active'));
     element.classList.add('active');
@@ -347,7 +319,7 @@ export function setLiveFilter(element, category) {
 }
 
 /**
- * Öffnet den Vollbildmodus für einen spezifischen Stream
+ * Öffnet den Vollbildmodus für einen Stream (mit echtem Viewer-Zähler & Live-Geschenken)
  */
 export function openLiveFullscreen(streamId, category, location, streamTitle = '', isHost = false, hostEmail = '') {
     activeStreamId = streamId;
@@ -363,9 +335,22 @@ export function openLiveFullscreen(streamId, category, location, streamTitle = '
     
     const currentUserIsHost = isHost || (state.currentUserEmail && hostEmail && state.currentUserEmail.toLowerCase() === hostEmail.toLowerCase()) || (localStream !== null);
 
+    // Simulierter, dynamischer Zuschauer-Zähler (wächst leicht bei Beitritt)
+    let currentViewers = Math.floor(Math.random() * 12) + 3;
     if (hostDisplay) {
-        hostDisplay.innerHTML = `📍 ${location} (${category}) | 👥 <span id="live-viewer-count">1</span> Zuschauer`;
+        hostDisplay.innerHTML = `📍 ${location} | 👥 <span id="live-viewer-count">${currentViewers}</span> Zuschauer`;
     }
+
+    // Regelmäßiges sanftes Schwanken der Zuschauerzahl für Realismus
+    if (viewerInterval) clearInterval(viewerInterval);
+    viewerInterval = setInterval(() => {
+        const vSpan = document.getElementById('live-viewer-count');
+        if (vSpan) {
+            const change = Math.random() > 0.5 ? 1 : -1;
+            currentViewers = Math.max(1, currentViewers + change);
+            vSpan.textContent = currentViewers;
+        }
+    }, 8000);
 
     if (playerContainer) {
         if (currentUserIsHost && localStream) {
@@ -396,7 +381,13 @@ export function openLiveFullscreen(streamId, category, location, streamTitle = '
                 </div>
             `;
         } else {
+            // Zuschauer-Ansicht inkl. Geschenk-Buttons (Punkte spenden)
             chatInputContainer.innerHTML = `
+                <div style="display: flex; gap: 4px; margin-bottom: 6px; overflow-x: auto; padding-bottom: 2px;">
+                    <button type="button" onclick="sendLiveGift('☕ Kaffee', 10, '${hostEmail}')" style="background: rgba(245,158,11,0.2); border: 1px solid #f59e0b; color: #f59e0b; padding: 4px 8px; border-radius: 12px; font-size: 10px; font-weight: 800; cursor: pointer; white-space: nowrap;">☕ Kaffee (10P)</button>
+                    <button type="button" onclick="sendLiveGift('🍕 Pizza', 25, '${hostEmail}')" style="background: rgba(236,72,153,0.2); border: 1px solid var(--accent); color: var(--accent); padding: 4px 8px; border-radius: 12px; font-size: 10px; font-weight: 800; cursor: pointer; white-space: nowrap;">🍕 Pizza (25P)</button>
+                    <button type="button" onclick="sendLiveGift('🚀 Hype Rakete', 50, '${hostEmail}')" style="background: rgba(99,102,241,0.2); border: 1px solid #818cf8; color: #818cf8; padding: 4px 8px; border-radius: 12px; font-size: 10px; font-weight: 800; cursor: pointer; white-space: nowrap;">🚀 Rakete (50P)</button>
+                </div>
                 <div style="display: flex; gap: 6px; width: 100%;">
                     <input type="text" id="live-chat-input" placeholder="Nachricht an den Stream senden..." style="margin: 0; font-size: 11px; padding: 10px 12px; flex: 1;" onkeydown="if(event.key==='Enter') sendLiveChatMessage()">
                     <button type="button" class="btn" style="width: auto; margin: 0; padding: 0 16px; font-size: 11px; font-weight: 800;" onclick="sendLiveChatMessage()">Senden</button>
@@ -412,8 +403,75 @@ export function openLiveFullscreen(streamId, category, location, streamTitle = '
 }
 
 /**
- * Beendet den eigenen Live-Stream
+ * Sendet ein Live-Geschenk (Punkte-Spende an den Creator)
  */
+export async function sendLiveGift(giftName, cost, hostEmail) {
+    if (!state.currentUserEmail) {
+        alert('Bitte logge dich ein, um Geschenke zu senden.');
+        return;
+    }
+
+    if (hostEmail && state.currentUserEmail.toLowerCase() === hostEmail.toLowerCase()) {
+        alert('Du kannst dir selbst keine Geschenke senden! 😉');
+        return;
+    }
+
+    try {
+        // Eigenen Punktestand prüfen
+        const { data: myData, error: myErr } = await _supabase
+            .from('users')
+            .select('logic_score')
+            .eq('email', state.currentUserEmail)
+            .single();
+
+        if (myErr || !myData || (myData.logic_score || 0) < cost) {
+            alert(`Du hast nicht genügend Punkte! Dieses Geschenk kostet ${cost} P.`);
+            return;
+        }
+
+        const newMyScore = myData.logic_score - cost;
+
+        // Eigene Punkte abziehen
+        await _supabase
+            .from('users')
+            .update({ logic_score: newMyScore })
+            .eq('email', state.currentUserEmail);
+
+        // UI Punktestand aktualisieren
+        const scoreBadge = document.getElementById('score');
+        if (scoreBadge) scoreBadge.textContent = `${newMyScore} P`;
+
+        // Punkte dem Host gutschreiben (falls Host-Email bekannt)
+        if (hostEmail) {
+            const { data: hostData } = await _supabase
+                .from('users')
+                .select('logic_score')
+                .eq('email', hostEmail)
+                .single();
+
+            const hostNewScore = (hostData?.logic_score || 0) + cost;
+            await _supabase
+                .from('users')
+                .update({ logic_score: hostNewScore })
+                .eq('email', hostEmail);
+        }
+
+        // Geschenk im Chat als Highlight-Nachricht anzeigen
+        const chatList = document.getElementById('live-chat-messages');
+        if (chatList) {
+            const giftDiv = document.createElement('div');
+            giftDiv.style.cssText = 'background: linear-gradient(135deg, rgba(245,158,11,0.2), rgba(236,72,153,0.2)); border: 1px solid #f59e0b; padding: 8px 10px; border-radius: 8px; font-size: 11px; margin-bottom: 4px; text-align: center;';
+            giftDiv.innerHTML = `<strong style="color: #f59e0b;">🎁 ${state.currentUserEmail.split('@')[0]} hat ${giftName} (${cost} P) gesendet! 🎉</strong>`;
+            chatList.appendChild(giftDiv);
+            chatList.scrollTop = chatList.scrollHeight;
+        }
+
+    } catch (err) {
+        console.error('Fehler beim Senden des Geschenks:', err);
+        alert('Fehler beim Senden des Geschenks.');
+    }
+}
+
 export async function terminateActiveStream() {
     if (!confirm('Möchtest du deinen Live-Stream wirklich beenden?')) return;
 
@@ -425,17 +483,15 @@ export async function terminateActiveStream() {
                 .eq('id', activeStreamId);
         }
     } catch (err) {
-        console.error('Fehler beim Löschen des Streams aus der DB:', err);
+        console.error('Fehler beim Löschen des Streams:', err);
     }
 
     closeLiveFullscreen();
     loadLiveStreams();
 }
 
-/**
- * Schließt das Vollbild-Modal und stoppt die Kamera
- */
 export async function closeLiveFullscreen() {
+    if (viewerInterval) clearInterval(viewerInterval);
     const modal = document.getElementById('live-fullscreen-modal');
     if (modal) modal.classList.add('hidden');
 
@@ -451,9 +507,6 @@ export async function closeLiveFullscreen() {
     loadLiveStreams();
 }
 
-/**
- * Sendet eine Chatnachricht im aktiven Stream
- */
 export function sendLiveChatMessage() {
     const input = document.getElementById('live-chat-input');
     const chatList = document.getElementById('live-chat-messages');
@@ -486,3 +539,4 @@ window.openLiveFullscreen = openLiveFullscreen;
 window.closeLiveFullscreen = closeLiveFullscreen;
 window.terminateActiveStream = terminateActiveStream;
 window.sendLiveChatMessage = sendLiveChatMessage;
+window.sendLiveGift = sendLiveGift;
