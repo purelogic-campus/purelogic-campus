@@ -324,13 +324,13 @@ export function setLiveFilter(element, category) {
     element.classList.add('active');
     currentActiveFilter = category;
     
-    // Wichtig: Hier wird nur die Stream-Liste im Hintergrund aktualisiert.
-    // Ein aktiver Stream oder offenes Vollbildfenster wird absolut nicht angetastet oder abgebrochen!
+    // WICHTIG: Hier wird rein die Stream-Liste im Hintergrund geladen. 
+    // Lokale Streams oder aktive Vollbild-Modi werden absolut NICHT berührt oder abgebrochen!
     loadLiveStreams();
 }
 
 /**
- * Öffnet den Vollbildmodus (Inklusive permanentem Viewer-Zähler für Host & Zuschauer)
+ * Öffnet den Vollbildmodus (Inklusive permanentem, stabilem Viewer-Zähler für Host & Zuschauer)
  */
 export function openLiveFullscreen(streamId, category, location, streamTitle = '', isHost = false, hostEmail = '') {
     activeStreamId = streamId;
