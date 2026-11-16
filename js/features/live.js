@@ -202,9 +202,11 @@ export function openLiveFullscreen(streamId, category, location, isHost = false,
     const titleDisplay = document.getElementById('active-live-title-display');
     const hostDisplay = document.getElementById('active-live-host-display');
     const playerContainer = document.getElementById('live-stream-player-container');
+    const chatInputContainer = document.getElementById('live-chat-input-container');
 
     if (titleDisplay) titleDisplay.textContent = `🔴 ${category}`;
     
+    // Prüfen ob aktueller Nutzer der Host ist
     const currentUserIsHost = isHost || (state.currentUserEmail && hostEmail && state.currentUserEmail.toLowerCase() === hostEmail.toLowerCase()) || (localStream !== null);
 
     if (hostDisplay) {
@@ -230,26 +232,21 @@ export function openLiveFullscreen(streamId, category, location, isHost = false,
         }
     }
 
-    // Ersetze jeglichen bestehenden unteren Eingabebereich im Modal dynamisch
-    const inputField = document.querySelector('input[placeholder*="Nachricht"], input[placeholder*="Creator"], #live-chat-input');
-    const parentContainer = inputField ? inputField.closest('div').parentNode : modal.querySelector('.modal-footer, footer, div:last-child');
-
-    if (parentContainer) {
+    // Creator-Steuerung (Stream beenden Button + Chat) vs Zuschauer-Ansicht
+    if (chatInputContainer) {
         if (currentUserIsHost) {
-            parentContainer.innerHTML = `
-                <div style="display: flex; flex-direction: column; gap: 8px; width: 100%; padding: 8px;">
-                    <button class="btn" style="background: #ef4444; color: #fff; font-weight: 800; font-size: 13px; padding: 12px; border-radius: 10px; width: 100%; border: none; cursor: pointer; box-shadow: 0 4px 12px rgba(239,68,68,0.4);" onclick="terminateActiveStream()">🛑 Stream beenden</button>
-                    <div style="display: flex; gap: 6px; width: 100%;">
-                        <input type="text" id="live-chat-input" placeholder="Als Host in den Stream schreiben..." style="flex: 1; background: rgba(255,255,255,0.06); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; color: #fff; font-size: 12px;" onkeypress="if(event.key==='Enter') sendLiveChatMessage()">
-                        <button class="btn" style="width: auto; padding: 10px 18px; background: var(--gradient-main); font-size: 12px; font-weight: 800;" onclick="sendLiveChatMessage()">Senden</button>
-                    </div>
+            chatInputContainer.innerHTML = `
+                <button type="button" class="btn" style="background: #ef4444; color: #fff; font-weight: 900; font-size: 12px; padding: 10px; border-radius: 10px; width: 100%; border: none; cursor: pointer; box-shadow: 0 4px 12px rgba(239,68,68,0.4); margin-bottom: 6px;" onclick="terminateActiveStream()">🛑 Stream beenden</button>
+                <div style="display: flex; gap: 6px; width: 100%;">
+                    <input type="text" id="live-chat-input" placeholder="Als Host in den Stream schreiben..." style="margin: 0; font-size: 11px; padding: 10px 12px; flex: 1;" onkeydown="if(event.key==='Enter') sendLiveChatMessage()">
+                    <button type="button" class="btn" style="width: auto; margin: 0; padding: 0 16px; font-size: 11px; font-weight: 800;" onclick="sendLiveChatMessage()">Senden</button>
                 </div>
             `;
         } else {
-            parentContainer.innerHTML = `
-                <div style="display: flex; gap: 6px; width: 100%; padding: 8px;">
-                    <input type="text" id="live-chat-input" placeholder="Nachricht an den Stream senden..." style="flex: 1; background: rgba(255,255,255,0.06); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; color: #fff; font-size: 12px;" onkeypress="if(event.key==='Enter') sendLiveChatMessage()">
-                    <button class="btn" style="width: auto; padding: 10px 18px; background: var(--gradient-main); font-size: 12px; font-weight: 800;" onclick="sendLiveChatMessage()">Senden</button>
+            chatInputContainer.innerHTML = `
+                <div style="display: flex; gap: 6px; width: 100%;">
+                    <input type="text" id="live-chat-input" placeholder="Nachricht an den Stream senden..." style="margin: 0; font-size: 11px; padding: 10px 12px; flex: 1;" onkeydown="if(event.key==='Enter') sendLiveChatMessage()">
+                    <button type="button" class="btn" style="width: auto; margin: 0; padding: 0 16px; font-size: 11px; font-weight: 800;" onclick="sendLiveChatMessage()">Senden</button>
                 </div>
             `;
         }
