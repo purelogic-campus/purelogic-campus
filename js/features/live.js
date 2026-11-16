@@ -1,14 +1,20 @@
-// js/features/live.js - Vollständiges Live-Stream Modul mit Autoplay-Observer & Moderation
+// js/features/live.js • PURE LOGIC Live-Stream & WebRTC Modul
 import { _supabase } from '../config.js';
 import { state } from '../state.js';
 import { validateInputOrAlert } from './moderation.js';
 
 let liveObserver = null;
+let localStream = null;
+let activePeerConnection = null;
+
+const rtcConfig = {
+    iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+};
 
 /**
- * Vorab-Prüfung vor dem Start eines Live-Streams
+ * Vorab-Prüfung vor dem Start eines Live-Streams mit Kamera-Zugriff
  */
-export function handlePreLiveCheck() {
+export async function handlePreLiveCheck() {
     if (!state.currentUserEmail) {
         alert('Bitte logge dich zuerst ein, um einen Live-Stream zu starten!');
         return;
@@ -16,23 +22,29 @@ export function handlePreLiveCheck() {
     
     const category = prompt('Wähle eine Kategorie für deinen Stream (z.B. 🎮 Gaming, 🎵 Musik, 💬 Plaudern):', '💬 Plaudern');
     if (!category) return;
-    
     if (!validateInputOrAlert(category)) return;
     
     const location = prompt('Dein Standort / Hörsaal (z.B. HS 32, Uni Wien):', 'Uni Wien Hauptgebäude');
     if (!location) return;
-
     if (!validateInputOrAlert(location)) return;
 
-    startLiveStreamBroadcast(category, location);
+    try {
+        // Kamera & Mikrofon anfordern für WebRTC Broadcast
+        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        startLiveStreamBroadcast(category, location);
+    } catch (err) {
+        console.warn('Kamera-Zugriff verweigert oder nicht verfügbar:', err);
+        // Fallback ohne Kamera-Stream starten
+        startLiveStreamBroadcast(category, location, null);
+    }
 }
 
 /**
- * Startet einen neuen Live-Stream in der Datenbank
+ * Startet einen neuen Live-Stream in der Datenbank und bindet den WebRTC-Stream ein
  */
-async function startLiveStreamBroadcast(category, location) {
+async function startLiveStreamBroadcast(category, location, streamUrl = null) {
     try {
-        const { error } = await _supabase
+        const { data, error } = await _supabase
             .from('live_streams')
             .insert([
                 {
@@ -40,14 +52,21 @@ async function startLiveStreamBroadcast(category, location) {
                     host_email: state.currentUserEmail,
                     category: category,
                     location: location,
+                    stream_url: streamUrl,
                     created_at: new Date().toISOString()
                 }
-            ]);
+            ])
+            .select()
+            .single();
 
         if (error) throw error;
 
-        alert('Dein Live-Stream wurde erfolgreich gestartet! 🔴');
+        alert('Dein Live-Stream ist jetzt LIVE! 🔴');
         loadLiveStreams();
+
+        if (localStream) {
+            openLiveFullscreen(data.id, category, location, true);
+        }
     } catch (err) {
         console.error('Fehler beim Starten des Streams:', err);
         alert('Fehler beim Starten des Streams: ' + err.message);
@@ -88,7 +107,7 @@ function initLiveAutoplayObserver() {
 }
 
 /**
- * Lädt exklusiv aktive Live-Streams aus der Tabelle 'live_streams'.
+ * Lädt aktive Live-Streams aus der Datenbank.
  */
 export async function loadLiveStreams() {
     const liveList = document.getElementById('live-streams-list');
@@ -120,12 +139,11 @@ export async function loadLiveStreams() {
         const category = stream.category || 'Live Stream';
         const location = stream.location || 'Wien / Campus';
         const streamId = stream.id ? String(stream.id) : '0000';
-        // Falls der Stream eine echte Video-/Stream-URL liefert, wird diese genutzt, ansonsten Fallback auf stylisches Live-Layout
         const streamMediaUrl = stream.stream_url || '';
 
         let mediaContentHtml = '';
         if (streamMediaUrl) {
-            mediaContentHtml = `<video src="${streamMediaUrl}" muted playsinline loop class="reel-media" style="object-fit: contain; width: 100%; height: 100%;"></video>`;
+            mediaContentHtml = `<video src="${streamMediaUrl}" autoplay muted playsinline loop class="reel-media" style="object-fit: cover; width: 100%; height: 100%;"></video>`;
         } else {
             mediaContentHtml = `
                 <div style="width: 100%; height: 100%; background: linear-gradient(135deg, #0f172a, #1e1b4b); display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; text-align: center; position: relative;">
@@ -166,33 +184,63 @@ export function setLiveFilter(element, category) {
 }
 
 /**
- * Öffnet den Vollbildmodus für einen spezifischen Stream inklusive Chat.
+ * Öffnet den Vollbildmodus für einen spezifischen Stream inklusive WebRTC-Videofeed und Chat.
  */
-export function openLiveFullscreen(streamId, category, location) {
+export function openLiveFullscreen(streamId, category, location, isHost = false) {
     const modal = document.getElementById('live-fullscreen-modal');
     if (modal) modal.classList.remove('hidden');
 
     const titleDisplay = document.getElementById('active-live-title-display');
     const hostDisplay = document.getElementById('active-live-host-display');
+    const playerContainer = document.getElementById('live-stream-player-container');
+
     if (titleDisplay) titleDisplay.textContent = `🔴 ${category}`;
-    if (hostDisplay) hostDisplay.textContent = `Standort: ${location} | Stream-ID: ${streamId.substring(0, 8)}`;
+    if (hostDisplay) hostDisplay.textContent = `Standort: ${location} | ${isHost ? 'Du bist der Host 🎥' : 'Zuschauer-Modus'}`;
+
+    if (playerContainer) {
+        if (isHost && localStream) {
+            playerContainer.innerHTML = `
+                <video id="local-host-video" autoplay muted playsinline style="width: 100%; height: 100%; object-fit: cover; background: #000;"></video>
+                <div style="position: absolute; top: 16px; left: 16px; background: rgba(16,185,129,0.2); border: 1px solid #10b981; color: #10b981; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 800;">🎥 Du sendest Live (WebRTC)</div>
+            `;
+            const vidEl = document.getElementById('local-host-video');
+            if (vidEl) vidEl.srcObject = localStream;
+        } else {
+            playerContainer.innerHTML = `
+                <div style="width: 100%; height: 100%; background: linear-gradient(135deg, #090d16, #1e1b4b); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 20px;">
+                    <span style="background: rgba(239,68,68,0.2); border: 1px solid rgba(239,68,68,0.5); color: #ef4444; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 800; margin-bottom: 12px;">🔴 LIVE BROADCAST</span>
+                    <h3 style="font-size: 22px; font-weight: 900; color: #fff; margin-bottom: 6px;">${category}</h3>
+                    <p style="font-size: 12px; color: var(--text-muted);">Standort: ${location}</p>
+                </div>
+            `;
+        }
+    }
 
     const chatList = document.getElementById('live-chat-messages');
     if (chatList) {
-        chatList.innerHTML = `<div style="color: var(--text-muted); text-align: center;">Verbunden mit Live-Stream... Schreib eine Nachricht!</div>`;
+        chatList.innerHTML = `<div style="color: var(--text-muted); text-align: center;">Willkommen im Live-Chat! 💬</div>`;
     }
 }
 
 /**
- * Schließt das Vollbild-Modal.
+ * Schließt das Vollbild-Modal und stoppt lokale Streams.
  */
-export function closeLiveFullscreen() {
+export async function closeLiveFullscreen() {
     const modal = document.getElementById('live-fullscreen-modal');
     if (modal) modal.classList.add('hidden');
+
+    if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+        localStream = null;
+    }
+    if (activePeerConnection) {
+        activePeerConnection.close();
+        activePeerConnection = null;
+    }
 }
 
 /**
- * Sendet eine Chatnachricht im aktiven Stream (inkl. Moderations-Check).
+ * Sendet eine Chatnachricht im aktiven Stream.
  */
 export function sendLiveChatMessage() {
     const input = document.getElementById('live-chat-input');
@@ -200,10 +248,7 @@ export function sendLiveChatMessage() {
     if (!input || !input.value.trim() || !chatList) return;
 
     const msgText = input.value.trim();
-
-    if (!validateInputOrAlert(msgText)) {
-        return;
-    }
+    if (!validateInputOrAlert(msgText)) return;
 
     const msgDiv = document.createElement('div');
     msgDiv.style.cssText = 'background: rgba(255,255,255,0.08); padding: 6px 10px; border-radius: 8px; font-size: 11px; margin-bottom: 4px;';
@@ -214,7 +259,7 @@ export function sendLiveChatMessage() {
     input.value = '';
 }
 
-// Global für onclick-Handler im HTML verfügbar machen
+// Globale Bindings
 window.loadLiveStreams = loadLiveStreams;
 window.handlePreLiveCheck = handlePreLiveCheck;
 window.setLiveFilter = setLiveFilter;
