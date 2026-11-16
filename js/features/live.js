@@ -169,7 +169,6 @@ export async function confirmAndStartLiveStream() {
 
     if (!validateInputOrAlert(finalCategoryLabel) || !validateInputOrAlert(location)) return;
 
-    // FIX: Nur das Modal ausblenden, OHNE den localStream zu zerstören!
     const previewModal = document.getElementById('live-preview-modal');
     if (previewModal) {
         previewModal.classList.add('hidden');
@@ -192,6 +191,7 @@ async function startLiveStreamBroadcast(category, location, title, streamUrl = '
                     category: category,
                     location: location,
                     stream_url: streamUrl,
+                    viewers_count: 1, // Startet mit 1 (dem Host)
                     expires_at: expiresAt,
                     created_at: new Date().toISOString()
                 }
@@ -291,6 +291,7 @@ export async function loadLiveStreams() {
         const streamId = stream.id ? String(stream.id) : '0000';
         const hostEmail = stream.host_email || '';
         const streamMediaUrl = stream.stream_url && stream.stream_url.startsWith('http') ? stream.stream_url : '';
+        const viewers = stream.viewers_count || 1;
 
         let mediaContentHtml = '';
         if (streamMediaUrl) {
@@ -301,7 +302,7 @@ export async function loadLiveStreams() {
                     <div style="font-size: 42px; margin-bottom: 8px;">🔴</div>
                     <span style="background: rgba(99,102,241,0.3); color: #818cf8; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 800; margin-bottom: 8px;">${category}</span>
                     <h3 style="font-size: 18px; font-weight: 900; color: #fff; margin-bottom: 4px;">${streamTitle}</h3>
-                    <p style="font-size: 11px; color: var(--text-muted);">📍 ${location}</p>
+                    <p style="font-size: 11px; color: var(--text-muted);">📍 ${location} | 👥 ${viewers} Zuschauer</p>
                 </div>
             `;
         }
@@ -317,7 +318,8 @@ export async function loadLiveStreams() {
             </div>
             <div class="reel-overlay" style="justify-content: flex-end; align-items: flex-start; text-align: left; background: linear-gradient(0deg, rgba(9,13,22,0.95) 0%, transparent 60%); padding: 16px;">
                 <div style="font-size: 12px; font-weight: 800; color: #818cf8; margin-bottom: 2px;">🔴 ${category} • ${location}</div>
-                <div style="font-size: 13px; color: #fff; font-weight: 600; margin-bottom: 8px;">${streamTitle}</div>
+                <div style="font-size: 13px; color: #fff; font-weight: 600; margin-bottom: 4px;">${streamTitle}</div>
+                <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">👥 ${viewers} Zuschauer aktiv</div>
                 <button class="btn" style="width: auto; padding: 8px 18px; font-size: 11px; font-weight: 800; background: var(--gradient-main);" onclick="event.stopPropagation(); openLiveFullscreen('${streamId}', '${category}', '${location}', '${streamTitle}', ${isMyStream}, '${hostEmail}')">Vollbild beitreten 🚀</button>
             </div>
         `;
@@ -336,9 +338,9 @@ export function setLiveFilter(element, category) {
 }
 
 /**
- * Öffnet den Vollbildmodus (Inklusive permanentem, stabilem Viewer-Zähler für Host & Zuschauer)
+ * Öffnet den Vollbildmodus und erhöht/synchronisiert die Zuschaueranzahl in Supabase
  */
-export function openLiveFullscreen(streamId, category, location, streamTitle = '', isHost = false, hostEmail = '') {
+export async function openLiveFullscreen(streamId, category, location, streamTitle = '', isHost = false, hostEmail = '') {
     activeStreamId = streamId;
     const modal = document.getElementById('live-fullscreen-modal');
     if (modal) modal.classList.remove('hidden');
@@ -352,20 +354,49 @@ export function openLiveFullscreen(streamId, category, location, streamTitle = '
     
     const currentUserIsHost = isHost || (state.currentUserEmail && hostEmail && state.currentUserEmail.toLowerCase() === hostEmail.toLowerCase()) || (localStream !== null);
 
-    let currentViewers = currentUserIsHost ? Math.floor(Math.random() * 8) + 4 : Math.floor(Math.random() * 12) + 3;
+    // Zuschaueranzahl aus Datenbank laden
+    let currentViewers = 1;
+    try {
+        const { data: streamData } = await _supabase
+            .from('live_streams')
+            .select('viewers_count')
+            .eq('id', streamId)
+            .single();
+
+        if (streamData) {
+            currentViewers = (streamData.viewers_count || 0) + (currentUserIsHost ? 0 : 1);
+            if (!currentUserIsHost) {
+                // In Datenbank hochzählen
+                await _supabase
+                    .from('live_streams')
+                    .update({ viewers_count: currentViewers })
+                    .eq('id', streamId);
+            }
+        }
+    } catch (e) {
+        console.warn('Viewer Count Sync Fehler:', e);
+    }
+
     if (hostDisplay) {
         hostDisplay.innerHTML = `📍 ${location} | 👥 <span id="live-viewer-count">${currentViewers}</span> Zuschauer`;
     }
 
+    // Regelmäßiges Aktualisieren / Polling der echten Viewer-Anzahl alle 5 Sekunden
     if (viewerInterval) clearInterval(viewerInterval);
-    viewerInterval = setInterval(() => {
-        const vSpan = document.getElementById('live-viewer-count');
-        if (vSpan) {
-            const change = Math.random() > 0.5 ? 1 : -1;
-            currentViewers = Math.max(1, currentViewers + change);
-            vSpan.textContent = currentViewers;
-        }
-    }, 6000);
+    viewerInterval = setInterval(async () => {
+        try {
+            const { data: sData } = await _supabase
+                .from('live_streams')
+                .select('viewers_count')
+                .eq('id', activeStreamId)
+                .single();
+
+            if (sData) {
+                const vSpan = document.getElementById('live-viewer-count');
+                if (vSpan) vSpan.textContent = sData.viewers_count || 1;
+            }
+        } catch (err) {}
+    }, 5000);
 
     if (playerContainer) {
         if (currentUserIsHost && localStream) {
@@ -506,6 +537,29 @@ export async function terminateActiveStream() {
 
 export async function closeLiveFullscreen() {
     if (viewerInterval) clearInterval(viewerInterval);
+    
+    // Viewer-Zähler beim Verlassen in Supabase verringern
+    if (activeStreamId) {
+        try {
+            const { data: sData } = await _supabase
+                .from('live_streams')
+                .select('viewers_count, host_email')
+                .eq('id', activeStreamId)
+                .single();
+
+            if (sData) {
+                const isHost = state.currentUserEmail && sData.host_email && state.currentUserEmail.toLowerCase() === sData.host_email.toLowerCase();
+                if (!isHost) {
+                    const newCount = Math.max(1, (sData.viewers_count || 1) - 1);
+                    await _supabase
+                        .from('live_streams')
+                        .update({ viewers_count: newCount })
+                        .eq('id', activeStreamId);
+                }
+            }
+        } catch (e) {}
+    }
+
     const modal = document.getElementById('live-fullscreen-modal');
     if (modal) modal.classList.add('hidden');
 
