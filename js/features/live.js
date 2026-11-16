@@ -7,10 +7,6 @@ let liveObserver = null;
 let localStream = null;
 let activePeerConnection = null;
 
-const rtcConfig = {
-    iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
-};
-
 /**
  * Vorab-Prüfung vor dem Start eines Live-Streams mit Kamera-Zugriff
  */
@@ -44,12 +40,15 @@ export async function handlePreLiveCheck() {
  */
 async function startLiveStreamBroadcast(category, location, streamUrl = null) {
     try {
+        const streamTitle = `${category} live aus ${location}`;
+
         const { data, error } = await _supabase
             .from('live_streams')
             .insert([
                 {
                     id: crypto.randomUUID(),
                     host_email: state.currentUserEmail,
+                    title: streamTitle,
                     category: category,
                     location: location,
                     stream_url: streamUrl,
@@ -235,7 +234,6 @@ export async function closeLiveFullscreen() {
     const modal = document.getElementById('live-fullscreen-modal');
     if (modal) modal.classList.add('hidden');
 
-    // Kamera-Hardware explizit stoppen, damit die LED ausgeht
     if (localStream) {
         localStream.getTracks().forEach(track => track.stop());
         localStream = null;
