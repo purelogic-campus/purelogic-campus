@@ -185,9 +185,10 @@
         <div style="padding: 10px 16px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; background: rgba(0,0,0,0.2);">
           <div class="category-group" id="live-filter-group" style="margin: 0; overflow-x: auto;">
             <div class="cat-pill active" onclick="setLiveFilter(this, 'Alle')">Alle</div>
+            <div class="cat-pill" onclick="setLiveFilter(this, '💬 Plaudern')">💬 Plaudern</div>
             <div class="cat-pill" onclick="setLiveFilter(this, '🎮 Gaming')">🎮 Gaming</div>
             <div class="cat-pill" onclick="setLiveFilter(this, '🎵 Musik')">🎵 Musik</div>
-            <div class="cat-pill" onclick="setLiveFilter(this, '💬 Plaudern')">💬 Plaudern</div>
+            <div class="cat-pill" onclick="setLiveFilter(this, '📚 Lernen')">📚 Lernen</div>
           </div>
           <button type="button" class="btn" id="start-stream-btn" style="width: auto; margin: 0; padding: 6px 12px; font-size: 11px;" onclick="handlePreLiveCheck()">+ Start</button>
         </div>
@@ -421,7 +422,7 @@
 
   </div>
 
-  <!-- VOLLSTÄNDIG FLEXIBLES & OPTIMIERTES LIVE FULLSCREEN MODAL (NICHTS WIRD GESCHNITTEN) -->
+  <!-- VOLLSTÄNDIG FLEXIBLES & OPTIMIERTES LIVE FULLSCREEN MODAL -->
   <div id="live-fullscreen-modal" class="hidden tab-content" style="position: absolute; top:0; left:0; width:100%; height:100%; background: #000; z-index: 200; display: flex; flex-direction: column; overflow: hidden;">
     
     <!-- Modal Header -->
@@ -433,12 +434,12 @@
       <button type="button" class="btn btn-secondary" onclick="closeLiveFullscreen()" style="padding: 4px 10px; font-size: 11px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); width: auto; margin:0;">✕ Schließen</button>
     </div>
     
-    <!-- Video Player Container (Nimmt den restlichen Platz flexibel ein) -->
+    <!-- Video Player Container -->
     <div id="live-stream-player-container" style="flex: 1; position: relative; width: 100%; background: #000; display: flex; align-items: center; justify-content: center; overflow: hidden; min-height: 0;">
       <!-- Dynamischer Inhalt -->
     </div>
 
-    <!-- Unterer Bereich für Chat & Geschenke (Fester Footer, skaliert sauber auf Smartphones) -->
+    <!-- Unterer Bereich für Chat & Geschenke -->
     <div style="width: 100%; background: rgba(9,13,22,0.98); border-top: 1px solid var(--border); display: flex; flex-direction: column; padding: 8px 12px; box-sizing: border-box; flex-shrink: 0; max-height: 42vh;">
       
       <!-- Chat Nachrichten -->

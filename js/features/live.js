@@ -9,6 +9,7 @@ let activePeerConnection = null;
 let activeStreamId = null;
 let selectedMainCategory = '💬 Plaudern';
 let selectedSubCategory = 'Allgemein';
+let currentActiveFilter = 'Alle';
 let viewerInterval = null;
 
 const subCategoriesMap = {
@@ -248,15 +249,21 @@ export async function loadLiveStreams() {
 
     liveList.innerHTML = '<p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;">Lade aktive Live-Streams...</p>';
 
-    const { data: streams, error } = await _supabase
+    let query = _supabase
         .from('live_streams')
         .select('*')
         .order('created_at', { ascending: false });
 
+    if (currentActiveFilter && currentActiveFilter !== 'Alle') {
+        query = query.ilike('category', `%${currentActiveFilter}%`);
+    }
+
+    const { data: streams, error } = await query;
+
     if (error || !streams || streams.length === 0) {
         liveList.innerHTML = `
             <div style="text-align: center; padding: 40px 20px;">
-                <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 12px;">Aktuell sind keine Live-Streams aktiv.</p>
+                <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 12px;">Keine aktiven Streams für "${currentActiveFilter}".</p>
                 <p style="color: var(--text-muted); font-size: 11px;">Starte deinen eigenen Stream mit dem "+ Start"-Button!</p>
             </div>
         `;
@@ -282,9 +289,10 @@ export async function loadLiveStreams() {
         } else {
             mediaContentHtml = `
                 <div style="width: 100%; height: 100%; background: linear-gradient(135deg, #0f172a, #1e1b4b); display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; text-align: center; position: relative;">
-                    <span style="background: rgba(99,102,241,0.2); color: #818cf8; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 800; margin-bottom: 10px;">${category}</span>
-                    <h3 style="font-size: 20px; font-weight: 900; color: #fff; margin-bottom: 6px;">${streamTitle}</h3>
-                    <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">📍 ${location}</p>
+                    <div style="font-size: 42px; margin-bottom: 8px;">🔴</div>
+                    <span style="background: rgba(99,102,241,0.3); color: #818cf8; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 800; margin-bottom: 8px;">${category}</span>
+                    <h3 style="font-size: 18px; font-weight: 900; color: #fff; margin-bottom: 4px;">${streamTitle}</h3>
+                    <p style="font-size: 11px; color: var(--text-muted);">📍 ${location}</p>
                 </div>
             `;
         }
@@ -314,11 +322,12 @@ export async function loadLiveStreams() {
 export function setLiveFilter(element, category) {
     document.querySelectorAll('#live-filter-group .cat-pill').forEach(p => p.classList.remove('active'));
     element.classList.add('active');
+    currentActiveFilter = category;
     loadLiveStreams();
 }
 
 /**
- * Öffnet den Vollbildmodus für einen Stream (mit echtem Viewer-Zähler, fehlerfreiem Host-Video & optimiertem Mobile Layout)
+ * Öffnet den Vollbildmodus (Inklusive permanentem Viewer-Zähler für Host & Zuschauer)
  */
 export function openLiveFullscreen(streamId, category, location, streamTitle = '', isHost = false, hostEmail = '') {
     activeStreamId = streamId;
@@ -334,7 +343,7 @@ export function openLiveFullscreen(streamId, category, location, streamTitle = '
     
     const currentUserIsHost = isHost || (state.currentUserEmail && hostEmail && state.currentUserEmail.toLowerCase() === hostEmail.toLowerCase()) || (localStream !== null);
 
-    let currentViewers = Math.floor(Math.random() * 12) + 3;
+    let currentViewers = currentUserIsHost ? Math.floor(Math.random() * 8) + 4 : Math.floor(Math.random() * 12) + 3;
     if (hostDisplay) {
         hostDisplay.innerHTML = `📍 ${location} | 👥 <span id="live-viewer-count">${currentViewers}</span> Zuschauer`;
     }
@@ -347,7 +356,7 @@ export function openLiveFullscreen(streamId, category, location, streamTitle = '
             currentViewers = Math.max(1, currentViewers + change);
             vSpan.textContent = currentViewers;
         }
-    }, 8000);
+    }, 6000);
 
     if (playerContainer) {
         if (currentUserIsHost && localStream) {
@@ -362,10 +371,12 @@ export function openLiveFullscreen(streamId, category, location, streamTitle = '
             }
         } else {
             playerContainer.innerHTML = `
-                <div style="width: 100%; height: 100%; background: linear-gradient(135deg, #090d16, #1e1b4b); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 16px;">
-                    <span style="background: rgba(239,68,68,0.2); border: 1px solid rgba(239,68,68,0.5); color: #ef4444; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 800; margin-bottom: 8px;">🔴 ${category}</span>
-                    <h3 style="font-size: 18px; font-weight: 900; color: #fff; margin-bottom: 4px;">${streamTitle}</h3>
-                    <p style="font-size: 11px; color: var(--text-muted);">Standort: ${location}</p>
+                <div style="width: 100%; height: 100%; background: linear-gradient(135deg, #090d16, #1e1b4b); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 16px; position: relative;">
+                    <div style="font-size: 54px; margin-bottom: 12px;">🔴</div>
+                    <span style="background: rgba(239,68,68,0.2); border: 1px solid rgba(239,68,68,0.5); color: #ef4444; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 800; margin-bottom: 8px;">${category}</span>
+                    <h3 style="font-size: 18px; font-weight: 900; color: #fff; margin-bottom: 6px;">${streamTitle}</h3>
+                    <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Streamer: ${hostEmail ? hostEmail.split('@')[0] : 'Campus Creator'}</p>
+                    <p style="font-size: 11px; color: #818cf8;">📍 ${location}</p>
                 </div>
             `;
         }
@@ -388,7 +399,7 @@ export function openLiveFullscreen(streamId, category, location, streamTitle = '
                     <button type="button" onclick="sendLiveGift('🚀 Hype Rakete', 50, '${hostEmail}')" style="background: rgba(99,102,241,0.2); border: 1px solid #818cf8; color: #818cf8; padding: 3px 6px; border-radius: 10px; font-size: 10px; font-weight: 800; cursor: pointer; white-space: nowrap;">🚀 Rakete (50P)</button>
                 </div>
                 <div style="display: flex; gap: 4px; width: 100%;">
-                    <input type="text" id="live-chat-input" placeholder="Nachricht senden..." style="margin: 0; font-size: 11px; padding: 8px 10px; flex: 1;" onkeydown="if(event.key==='Enter') sendLiveChatMessage()">
+                    <input type="text" id="live-chat-input" placeholder="Nachricht in den Chat schreiben..." style="margin: 0; font-size: 11px; padding: 8px 10px; flex: 1;" onkeydown="if(event.key==='Enter') sendLiveChatMessage()">
                     <button type="button" class="btn" style="width: auto; margin: 0; padding: 0 12px; font-size: 11px; font-weight: 800;" onclick="sendLiveChatMessage()">Senden</button>
                 </div>
             `;
@@ -510,7 +521,7 @@ export function sendLiveChatMessage() {
     if (!validateInputOrAlert(msgText)) return;
 
     const isHost = localStream !== null;
-    const prefix = isHost ? '👑 Host (Du)' : 'Du';
+    const prefix = isHost ? '👑 Host (Du)' : (state.currentUserEmail ? state.currentUserEmail.split('@')[0] : 'Du');
     const color = isHost ? '#10b981' : '#818cf8';
 
     const msgDiv = document.createElement('div');
