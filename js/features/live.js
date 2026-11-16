@@ -7,8 +7,17 @@ let liveObserver = null;
 let localStream = null;
 let activePeerConnection = null;
 let activeStreamId = null;
-let selectedCategory = '💬 Plaudern';
+let selectedMainCategory = '💬 Plaudern';
+let selectedSubCategory = 'Allgemein';
 let pendingLocation = 'Uni Wien Hauptgebäude';
+
+// Vordefinierte Unterkategorien für die jeweiligen Hauptbereiche
+const subCategoriesMap = {
+    '💬 Plaudern': ['Allgemein', 'Campus Life', 'Late Night Talk', 'Q&A / Frag mich alles', 'Kaffee & Break'],
+    '🎮 Gaming': ['World of Warcraft (WoW)', 'Minecraft', 'League of Legends', 'Valorant', 'Apex Legends', 'GTA V', 'Indie Games'],
+    '🎵 Musik': ['Rock / Metal', 'Pop & Charts', 'Hip-Hop / Rap', 'Electronic / Techno', 'Lo-Fi / Chill Beats', 'Akustik / Live Jam'],
+    '📚 Lernen': ['Study With Me (Pomodoro)', 'Coding & Programming', 'Mathematik & Statistik', 'Vorbereitung Klausur', 'Fremdsprachen']
+};
 
 /**
  * Öffnet die Kamera-Vorschau vor dem Stream-Start
@@ -28,47 +37,55 @@ export async function handlePreLiveCheck() {
         return;
     }
 
-    // Vorschau-Modal öffnen oder erstellen
     showPreLivePreviewModal();
 }
 
 /**
- * Zeigt das Vorschau-Modal mit interaktiven Kategorie-Buttons an
+ * Zeigt das Vorschau-Modal mit erweiterten Kategorien, Unterkategorien & Info an
  */
 function showPreLivePreviewModal() {
     let previewModal = document.getElementById('live-preview-modal');
-    selectedCategory = '💬 Plaudern'; // Standardkategorie zurücksetzen
+    selectedMainCategory = '💬 Plaudern';
+    selectedSubCategory = 'Allgemein';
     
     if (!previewModal) {
         previewModal = document.createElement('div');
         previewModal.id = 'live-preview-modal';
-        previewModal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(9, 13, 22, 0.95); z-index: 10000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 16px; box-sizing: border-box;';
+        previewModal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(9, 13, 22, 0.96); z-index: 10000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 12px; box-sizing: border-box; overflow-y: auto;';
         
         previewModal.innerHTML = `
-            <div style="width: 100%; max-width: 420px; background: #0f172a; border: 1px solid var(--border); border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 20px 40px rgba(0,0,0,0.8);">
-                <div style="padding: 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
-                    <h3 style="font-size: 16px; font-weight: 900; color: #fff; margin: 0;">🎥 Stream-Vorschau & Setup</h3>
+            <div style="width: 100%; max-width: 440px; background: #0f172a; border: 1px solid var(--border); border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 20px 40px rgba(0,0,0,0.8); max-height: 95vh;">
+                <div style="padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
+                    <h3 style="font-size: 15px; font-weight: 900; color: #fff; margin: 0;">🎥 Stream-Setup & Vorschau</h3>
                     <button type="button" onclick="closePreLivePreview()" style="background: none; border: none; color: #fff; font-size: 22px; cursor: pointer;">&times;</button>
                 </div>
                 
-                <div style="position: relative; width: 100%; height: 240px; background: #000;">
+                <div style="position: relative; width: 100%; height: 180px; background: #000; flex-shrink: 0;">
                     <video id="preview-camera-video" autoplay muted playsinline style="width: 100%; height: 100%; object-fit: cover;"></video>
-                    <div style="position: absolute; top: 12px; left: 12px; background: rgba(16,185,129,0.2); border: 1px solid #10b981; color: #10b981; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 800;">Kamera bereit 🎥</div>
+                    <div style="position: absolute; top: 10px; left: 10px; background: rgba(16,185,129,0.2); border: 1px solid #10b981; color: #10b981; padding: 3px 8px; border-radius: 20px; font-size: 10px; font-weight: 800;">Kamera bereit 🎥</div>
                 </div>
 
-                <div style="padding: 16px; display: flex; flex-direction: column; gap: 10px;">
-                    <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Wähle deine Kategorie:</label>
-                    <div id="preview-category-pills" style="display: flex; gap: 6px; flex-wrap: wrap;">
-                        <button type="button" class="cat-pill active" onclick="selectPreviewCategory(this, '💬 Plaudern')" style="background: var(--gradient-main); border: none; padding: 6px 12px; border-radius: 20px; color: #fff; font-size: 11px; font-weight: 800; cursor: pointer;">💬 Plaudern</button>
-                        <button type="button" class="cat-pill" onclick="selectPreviewCategory(this, '🎮 Gaming')" style="background: rgba(255,255,255,0.06); border: 1px solid var(--border); padding: 6px 12px; border-radius: 20px; color: #fff; font-size: 11px; font-weight: 800; cursor: pointer;">🎮 Gaming</button>
-                        <button type="button" class="cat-pill" onclick="selectPreviewCategory(this, '🎵 Musik')" style="background: rgba(255,255,255,0.06); border: 1px solid var(--border); padding: 6px 12px; border-radius: 20px; color: #fff; font-size: 11px; font-weight: 800; cursor: pointer;">🎵 Musik</button>
-                        <button type="button" class="cat-pill" onclick="selectPreviewCategory(this, '📚 Lernen')" style="background: rgba(255,255,255,0.06); border: 1px solid var(--border); padding: 6px 12px; border-radius: 20px; color: #fff; font-size: 11px; font-weight: 800; cursor: pointer;">📚 Lernen</button>
+                <div style="padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; flex: 1;">
+                    <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">1. Hauptkategorie wählen:</label>
+                    <div id="preview-main-cat-pills" style="display: flex; gap: 6px; flex-wrap: wrap;">
+                        <button type="button" class="cat-pill active" onclick="selectMainPreviewCategory(this, '💬 Plaudern')" style="background: var(--gradient-main); border: none; padding: 5px 10px; border-radius: 20px; color: #fff; font-size: 11px; font-weight: 800; cursor: pointer;">💬 Plaudern</button>
+                        <button type="button" class="cat-pill" onclick="selectMainPreviewCategory(this, '🎮 Gaming')" style="background: rgba(255,255,255,0.06); border: 1px solid var(--border); padding: 5px 10px; border-radius: 20px; color: #fff; font-size: 11px; font-weight: 800; cursor: pointer;">🎮 Gaming</button>
+                        <button type="button" class="cat-pill" onclick="selectMainPreviewCategory(this, '🎵 Musik')" style="background: rgba(255,255,255,0.06); border: 1px solid var(--border); padding: 5px 10px; border-radius: 20px; color: #fff; font-size: 11px; font-weight: 800; cursor: pointer;">🎵 Musik</button>
+                        <button type="button" class="cat-pill" onclick="selectMainPreviewCategory(this, '📚 Lernen')" style="background: rgba(255,255,255,0.06); border: 1px solid var(--border); padding: 5px 10px; border-radius: 20px; color: #fff; font-size: 11px; font-weight: 800; cursor: pointer;">📚 Lernen</button>
                     </div>
 
-                    <label style="font-size: 11px; font-weight: 600; color: var(--text-muted); margin-top: 4px;">Standort / Hörsaal:</label>
-                    <input type="text" id="preview-location-input" value="Uni Wien Hauptgebäude" style="background: rgba(255,255,255,0.06); border: 1px solid var(--border); border-radius: 8px; padding: 10px; color: #fff; font-size: 12px;">
+                    <label style="font-size: 11px; font-weight: 600; color: var(--text-muted); margin-top: 2px;">2. Genre / Unterkategorie:</label>
+                    <div id="preview-sub-cat-pills" style="display: flex; gap: 5px; flex-wrap: wrap; max-height: 80px; overflow-y: auto;">
+                        <!-- Dynamisch befüllt -->
+                    </div>
 
-                    <button type="button" class="btn" onclick="confirmAndStartLiveStream()" style="margin-top: 6px; background: var(--gradient-main); font-weight: 900; padding: 12px; font-size: 13px;">Jetzt live gehen 🚀</button>
+                    <label style="font-size: 11px; font-weight: 600; color: var(--text-muted); margin-top: 2px;">Stream-Info / Titel (Worüber streamst du?):</label>
+                    <input type="text" id="preview-stream-title-input" placeholder="z. B. Raid Abend in WoW oder Mathe lernen..." style="background: rgba(255,255,255,0.06); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; color: #fff; font-size: 11px;">
+
+                    <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Standort / Hörsaal:</label>
+                    <input type="text" id="preview-location-input" value="Uni Wien Hauptgebäude" style="background: rgba(255,255,255,0.06); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; color: #fff; font-size: 11px;">
+
+                    <button type="button" class="btn" onclick="confirmAndStartLiveStream()" style="margin-top: 4px; background: var(--gradient-main); font-weight: 900; padding: 10px; font-size: 12px;">Jetzt live gehen 🚀</button>
                 </div>
             </div>
         `;
@@ -81,14 +98,16 @@ function showPreLivePreviewModal() {
     if (vidEl && localStream) {
         vidEl.srcObject = localStream;
     }
+
+    updateSubCategoriesUI('💬 Plaudern');
 }
 
 /**
- * Markiert die angeklickte Kategorie-Pill als aktiv in der Vorschau
+ * Aktualisiert die Unterkategorien basierend auf der Hauptkategorie
  */
-export function selectPreviewCategory(btnElement, categoryName) {
-    selectedCategory = categoryName;
-    document.querySelectorAll('#preview-category-pills button').forEach(btn => {
+export function selectMainPreviewCategory(btnElement, mainCat) {
+    selectedMainCategory = mainCat;
+    document.querySelectorAll('#preview-main-cat-pills button').forEach(btn => {
         btn.classList.remove('active');
         btn.style.background = 'rgba(255,255,255,0.06)';
         btn.style.border = '1px solid var(--border)';
@@ -96,10 +115,48 @@ export function selectPreviewCategory(btnElement, categoryName) {
     btnElement.classList.add('active');
     btnElement.style.background = 'var(--gradient-main)';
     btnElement.style.border = 'none';
+
+    updateSubCategoriesUI(mainCat);
 }
 
 /**
- * Schließt die Vorschau und stoppt die Kamera, falls abgebrochen wird
+ * Rendert die Unterkategorie-Buttons passend zur Hauptkategorie
+ */
+function updateSubCategoriesUI(mainCat) {
+    const subContainer = document.getElementById('preview-sub-cat-pills');
+    if (!subContainer) return;
+
+    const subs = subCategoriesMap[mainCat] || ['Allgemein'];
+    selectedSubCategory = subs[0]; // Standardmäßig erste Unterkategorie wählen
+
+    subContainer.innerHTML = '';
+    subs.forEach((sub, index) => {
+        const subBtn = document.createElement('button');
+        subBtn.type = 'button';
+        subBtn.className = index === 0 ? 'cat-pill active' : 'cat-pill';
+        subBtn.textContent = sub;
+        subBtn.style.cssText = index === 0 
+            ? 'background: rgba(99,102,241,0.3); border: 1px solid #818cf8; padding: 4px 10px; border-radius: 16px; color: #fff; font-size: 10px; font-weight: 700; cursor: pointer;'
+            : 'background: rgba(255,255,255,0.04); border: 1px solid var(--border); padding: 4px 10px; border-radius: 16px; color: var(--text-muted); font-size: 10px; font-weight: 700; cursor: pointer;';
+        
+        subBtn.onclick = () => {
+            selectedSubCategory = sub;
+            document.querySelectorAll('#preview-sub-cat-pills button').forEach(b => {
+                b.style.background = 'rgba(255,255,255,0.04)';
+                b.style.border = '1px solid var(--border)';
+                b.style.color = 'var(--text-muted)';
+            });
+            subBtn.style.background = 'rgba(99,102,241,0.3)';
+            subBtn.style.border = '1px solid #818cf8';
+            subBtn.style.color = '#fff';
+        };
+
+        subContainer.appendChild(subBtn);
+    });
+}
+
+/**
+ * Schließt die Vorschau und stoppt die Kamera bei Abbruch
  */
 export function closePreLivePreview() {
     const previewModal = document.getElementById('live-preview-modal');
@@ -117,20 +174,26 @@ export function closePreLivePreview() {
  */
 export async function confirmAndStartLiveStream() {
     const locInput = document.getElementById('preview-location-input');
-    pendingLocation = locInput ? locInput.value.trim() : 'Uni Wien';
+    const titleInput = document.getElementById('preview-stream-title-input');
+    
+    const location = locInput ? locInput.value.trim() : 'Uni Wien';
+    const customTitle = titleInput ? titleInput.value.trim() : '';
 
-    if (!validateInputOrAlert(selectedCategory) || !validateInputOrAlert(pendingLocation)) return;
+    // Kombinierter Titel aus Kategorie, Unterkategorie und individuellem Text
+    const finalCategoryLabel = `${selectedMainCategory} • ${selectedSubCategory}`;
+    const finalTitle = customTitle ? customTitle : `${selectedSubCategory} live aus ${location}`;
+
+    if (!validateInputOrAlert(finalCategoryLabel) || !validateInputOrAlert(location)) return;
 
     closePreLivePreview();
-    startLiveStreamBroadcast(selectedCategory, pendingLocation, 'webrtc-active');
+    startLiveStreamBroadcast(finalCategoryLabel, location, finalTitle, 'webrtc-active');
 }
 
 /**
  * Startet den Live-Stream in der Datenbank
  */
-async function startLiveStreamBroadcast(category, location, streamUrl = 'webrtc-active') {
+async function startLiveStreamBroadcast(category, location, title, streamUrl = 'webrtc-active') {
     try {
-        const streamTitle = `${category} live aus ${location}`;
         const expiresAt = new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString();
 
         const { data, error } = await _supabase
@@ -139,7 +202,7 @@ async function startLiveStreamBroadcast(category, location, streamUrl = 'webrtc-
                 {
                     id: crypto.randomUUID(),
                     host_email: state.currentUserEmail,
-                    title: streamTitle,
+                    title: title,
                     category: category,
                     location: location,
                     stream_url: streamUrl,
@@ -156,7 +219,7 @@ async function startLiveStreamBroadcast(category, location, streamUrl = 'webrtc-
         loadLiveStreams();
 
         if (localStream) {
-            openLiveFullscreen(data.id, category, location, true, data.host_email);
+            openLiveFullscreen(data.id, category, location, title, true, data.host_email);
         }
     } catch (err) {
         console.error('Fehler beim Starten des Streams:', err);
@@ -234,6 +297,7 @@ export async function loadLiveStreams() {
 
         const category = stream.category || 'Live Stream';
         const location = stream.location || 'Wien / Campus';
+        const streamTitle = stream.title || 'Campus Stream';
         const streamId = stream.id ? String(stream.id) : '0000';
         const hostEmail = stream.host_email || '';
         const streamMediaUrl = stream.stream_url && stream.stream_url.startsWith('http') ? stream.stream_url : '';
@@ -245,7 +309,7 @@ export async function loadLiveStreams() {
             mediaContentHtml = `
                 <div style="width: 100%; height: 100%; background: linear-gradient(135deg, #0f172a, #1e1b4b); display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; text-align: center; position: relative;">
                     <span style="background: rgba(99,102,241,0.2); color: #818cf8; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 800; margin-bottom: 10px;">${category}</span>
-                    <h3 style="font-size: 22px; font-weight: 900; color: #fff; margin-bottom: 6px;">Campus Stream</h3>
+                    <h3 style="font-size: 20px; font-weight: 900; color: #fff; margin-bottom: 6px;">${streamTitle}</h3>
                     <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 16px;">📍 ${location}</p>
                 </div>
             `;
@@ -254,7 +318,7 @@ export async function loadLiveStreams() {
         const isMyStream = state.currentUserEmail && hostEmail.toLowerCase() === state.currentUserEmail.toLowerCase();
 
         item.innerHTML = `
-            <div style="width: 100%; height: 100%; position: relative; cursor: pointer;" onclick="openLiveFullscreen('${streamId}', '${category}', '${location}', ${isMyStream}, '${hostEmail}')">
+            <div style="width: 100%; height: 100%; position: relative; cursor: pointer;" onclick="openLiveFullscreen('${streamId}', '${category}', '${location}', '${streamTitle}', ${isMyStream}, '${hostEmail}')">
                 ${mediaContentHtml}
                 <div style="position: absolute; top: 16px; left: 16px; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.5); color: #ef4444; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 800; display: flex; align-items: center; gap: 4px; z-index: 2;">
                     <span style="width: 8px; height: 8px; background: #ef4444; border-radius: 50%; display: inline-block;"></span> LIVE
@@ -262,8 +326,8 @@ export async function loadLiveStreams() {
             </div>
             <div class="reel-overlay" style="justify-content: flex-end; align-items: flex-start; text-align: left; background: linear-gradient(0deg, rgba(9,13,22,0.95) 0%, transparent 60%); padding: 16px;">
                 <div style="font-size: 12px; font-weight: 800; color: #818cf8; margin-bottom: 2px;">🔴 ${category} • ${location}</div>
-                <div style="font-size: 13px; color: #fff; font-weight: 600; margin-bottom: 8px;">Tippe, um dem Vollbild-Stream & Chat beizutreten.</div>
-                <button class="btn" style="width: auto; padding: 8px 18px; font-size: 11px; font-weight: 800; background: var(--gradient-main);" onclick="event.stopPropagation(); openLiveFullscreen('${streamId}', '${category}', '${location}', ${isMyStream}, '${hostEmail}')">Vollbild beitreten 🚀</button>
+                <div style="font-size: 13px; color: #fff; font-weight: 600; margin-bottom: 8px;">${streamTitle}</div>
+                <button class="btn" style="width: auto; padding: 8px 18px; font-size: 11px; font-weight: 800; background: var(--gradient-main);" onclick="event.stopPropagation(); openLiveFullscreen('${streamId}', '${category}', '${location}', '${streamTitle}', ${isMyStream}, '${hostEmail}')">Vollbild beitreten 🚀</button>
             </div>
         `;
         
@@ -283,9 +347,9 @@ export function setLiveFilter(element, category) {
 }
 
 /**
- * Öffnet den Vollbildmodus für einen spezifischen Stream (mit Creator-Steuerung & Zuschauer-Zähler)
+ * Öffnet den Vollbildmodus für einen spezifischen Stream
  */
-export function openLiveFullscreen(streamId, category, location, isHost = false, hostEmail = '') {
+export function openLiveFullscreen(streamId, category, location, streamTitle = '', isHost = false, hostEmail = '') {
     activeStreamId = streamId;
     const modal = document.getElementById('live-fullscreen-modal');
     if (modal) modal.classList.remove('hidden');
@@ -295,12 +359,12 @@ export function openLiveFullscreen(streamId, category, location, isHost = false,
     const playerContainer = document.getElementById('live-stream-player-container');
     const chatInputContainer = document.getElementById('live-chat-input-container');
 
-    if (titleDisplay) titleDisplay.textContent = `🔴 ${category}`;
+    if (titleDisplay) titleDisplay.textContent = `🔴 ${streamTitle || category}`;
     
     const currentUserIsHost = isHost || (state.currentUserEmail && hostEmail && state.currentUserEmail.toLowerCase() === hostEmail.toLowerCase()) || (localStream !== null);
 
     if (hostDisplay) {
-        hostDisplay.innerHTML = `📍 ${location} | 👥 <span id="live-viewer-count">1</span> Zuschauer`;
+        hostDisplay.innerHTML = `📍 ${location} (${category}) | 👥 <span id="live-viewer-count">1</span> Zuschauer`;
     }
 
     if (playerContainer) {
@@ -314,8 +378,8 @@ export function openLiveFullscreen(streamId, category, location, isHost = false,
         } else {
             playerContainer.innerHTML = `
                 <div style="width: 100%; height: 100%; background: linear-gradient(135deg, #090d16, #1e1b4b); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 20px;">
-                    <span style="background: rgba(239,68,68,0.2); border: 1px solid rgba(239,68,68,0.5); color: #ef4444; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 800; margin-bottom: 12px;">🔴 LIVE BROADCAST</span>
-                    <h3 style="font-size: 22px; font-weight: 900; color: #fff; margin-bottom: 6px;">${category}</h3>
+                    <span style="background: rgba(239,68,68,0.2); border: 1px solid rgba(239,68,68,0.5); color: #ef4444; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 800; margin-bottom: 12px;">🔴 ${category}</span>
+                    <h3 style="font-size: 22px; font-weight: 900; color: #fff; margin-bottom: 6px;">${streamTitle}</h3>
                     <p style="font-size: 12px; color: var(--text-muted);">Standort: ${location}</p>
                 </div>
             `;
@@ -348,7 +412,7 @@ export function openLiveFullscreen(streamId, category, location, isHost = false,
 }
 
 /**
- * Beendet den eigenen Live-Stream (löscht ihn aus der DB und stoppt die Kamera)
+ * Beendet den eigenen Live-Stream
  */
 export async function terminateActiveStream() {
     if (!confirm('Möchtest du deinen Live-Stream wirklich beenden?')) return;
@@ -369,7 +433,7 @@ export async function terminateActiveStream() {
 }
 
 /**
- * Schließt das Vollbild-Modal und stoppt lokale Streams sowie Kamera-Hardware.
+ * Schließt das Vollbild-Modal und stoppt die Kamera
  */
 export async function closeLiveFullscreen() {
     const modal = document.getElementById('live-fullscreen-modal');
@@ -388,7 +452,7 @@ export async function closeLiveFullscreen() {
 }
 
 /**
- * Sendet eine Chatnachricht im aktiven Stream (speziell für Host oder Zuschauer).
+ * Sendet eine Chatnachricht im aktiven Stream
  */
 export function sendLiveChatMessage() {
     const input = document.getElementById('live-chat-input');
@@ -415,7 +479,7 @@ export function sendLiveChatMessage() {
 window.loadLiveStreams = loadLiveStreams;
 window.handlePreLiveCheck = handlePreLiveCheck;
 window.closePreLivePreview = closePreLivePreview;
-window.selectPreviewCategory = selectPreviewCategory;
+window.selectMainPreviewCategory = selectMainPreviewCategory;
 window.confirmAndStartLiveStream = confirmAndStartLiveStream;
 window.setLiveFilter = setLiveFilter;
 window.openLiveFullscreen = openLiveFullscreen;
