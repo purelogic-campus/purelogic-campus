@@ -63,7 +63,6 @@ async function startLiveStreamBroadcast(category, location, streamUrl = 'webrtc-
         if (error) throw error;
 
         activeStreamId = data.id;
-        alert('Dein Live-Stream ist jetzt LIVE! 🔴');
         loadLiveStreams();
 
         if (localStream) {
@@ -209,7 +208,7 @@ export function openLiveFullscreen(streamId, category, location, isHost = false,
     if (titleDisplay) titleDisplay.textContent = `🔴 ${category}`;
     
     // Prüfen ob aktueller Nutzer der Host ist
-    const currentUserIsHost = isHost || (state.currentUserEmail && hostEmail && state.currentUserEmail.toLowerCase() === hostEmail.toLowerCase());
+    const currentUserIsHost = isHost || (state.currentUserEmail && hostEmail && state.currentUserEmail.toLowerCase() === hostEmail.toLowerCase()) || (localStream !== null);
 
     if (hostDisplay) {
         hostDisplay.innerHTML = `📍 ${location} | 👥 <span id="live-viewer-count">1</span> Zuschauer`;
@@ -281,7 +280,6 @@ export async function terminateActiveStream() {
 
     closeLiveFullscreen();
     loadLiveStreams();
-    alert('Dein Live-Stream wurde beendet.');
 }
 
 /**
