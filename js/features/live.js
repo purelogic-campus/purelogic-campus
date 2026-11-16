@@ -31,14 +31,14 @@ export async function handlePreLiveCheck() {
     } catch (err) {
         console.warn('Kamera-Zugriff verweigert oder nicht verfügbar:', err);
         // Fallback ohne Kamera-Stream starten
-        startLiveStreamBroadcast(category, location, null);
+        startLiveStreamBroadcast(category, location, 'webrtc-fallback');
     }
 }
 
 /**
  * Startet einen neuen Live-Stream in der Datenbank und bindet den WebRTC-Stream ein
  */
-async function startLiveStreamBroadcast(category, location, streamUrl = null) {
+async function startLiveStreamBroadcast(category, location, streamUrl = 'webrtc-active') {
     try {
         const streamTitle = `${category} live aus ${location}`;
 
@@ -144,7 +144,7 @@ export async function loadLiveStreams() {
         const category = stream.category || 'Live Stream';
         const location = stream.location || 'Wien / Campus';
         const streamId = stream.id ? String(stream.id) : '0000';
-        const streamMediaUrl = stream.stream_url || '';
+        const streamMediaUrl = stream.stream_url && stream.stream_url.startsWith('http') ? stream.stream_url : '';
 
         let mediaContentHtml = '';
         if (streamMediaUrl) {
