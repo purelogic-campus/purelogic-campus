@@ -191,7 +191,7 @@ async function startLiveStreamBroadcast(category, location, title, streamUrl = '
                     category: category,
                     location: location,
                     stream_url: streamUrl,
-                    viewers_count: 1, // Startet mit 1 (dem Host)
+                    viewers_count: 1,
                     expires_at: expiresAt,
                     created_at: new Date().toISOString()
                 }
@@ -338,7 +338,7 @@ export function setLiveFilter(element, category) {
 }
 
 /**
- * Öffnet den Vollbildmodus und erhöht/synchronisiert die Zuschaueranzahl in Supabase
+ * Öffnet den Vollbildmodus und synchronisiert die echten Viewer mit Supabase
  */
 export async function openLiveFullscreen(streamId, category, location, streamTitle = '', isHost = false, hostEmail = '') {
     activeStreamId = streamId;
@@ -354,7 +354,6 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
     
     const currentUserIsHost = isHost || (state.currentUserEmail && hostEmail && state.currentUserEmail.toLowerCase() === hostEmail.toLowerCase()) || (localStream !== null);
 
-    // Zuschaueranzahl aus Datenbank laden
     let currentViewers = 1;
     try {
         const { data: streamData } = await _supabase
@@ -364,9 +363,9 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
             .single();
 
         if (streamData) {
-            currentViewers = (streamData.viewers_count || 0) + (currentUserIsHost ? 0 : 1);
+            currentViewers = streamData.viewers_count || 1;
             if (!currentUserIsHost) {
-                // In Datenbank hochzählen
+                currentViewers += 1;
                 await _supabase
                     .from('live_streams')
                     .update({ viewers_count: currentViewers })
@@ -379,9 +378,17 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
 
     if (hostDisplay) {
         hostDisplay.innerHTML = `📍 ${location} | 👥 <span id="live-viewer-count">${currentViewers}</span> Zuschauer`;
+    } else {
+        const fallbackHeader = document.getElementById('active-live-title-display');
+        if (fallbackHeader && !document.getElementById('live-viewer-count')) {
+            const span = document.createElement('div');
+            span.id = 'active-live-host-display';
+            span.style.cssText = 'font-size: 11px; color: var(--text-muted); margin-top: 2px;';
+            span.innerHTML = `📍 ${location} | 👥 <span id="live-viewer-count">${currentViewers}</span> Zuschauer`;
+            fallbackHeader.parentNode.appendChild(span);
+        }
     }
 
-    // Regelmäßiges Aktualisieren / Polling der echten Viewer-Anzahl alle 5 Sekunden
     if (viewerInterval) clearInterval(viewerInterval);
     viewerInterval = setInterval(async () => {
         try {
@@ -393,10 +400,14 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
 
             if (sData) {
                 const vSpan = document.getElementById('live-viewer-count');
-                if (vSpan) vSpan.textContent = sData.viewers_count || 1;
+                if (vSpan) {
+                    vSpan.textContent = sData.viewers_count || 1;
+                } else if (hostDisplay) {
+                    hostDisplay.innerHTML = `📍 ${location} | 👥 <span id="live-viewer-count">${sData.viewers_count || 1}</span> Zuschauer`;
+                }
             }
         } catch (err) {}
-    }, 5000);
+    }, 4000);
 
     if (playerContainer) {
         if (currentUserIsHost && localStream) {
@@ -538,7 +549,6 @@ export async function terminateActiveStream() {
 export async function closeLiveFullscreen() {
     if (viewerInterval) clearInterval(viewerInterval);
     
-    // Viewer-Zähler beim Verlassen in Supabase verringern
     if (activeStreamId) {
         try {
             const { data: sData } = await _supabase
