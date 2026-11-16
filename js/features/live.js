@@ -70,6 +70,12 @@ async function startLiveStreamBroadcast(category, location, streamUrl = null) {
     } catch (err) {
         console.error('Fehler beim Starten des Streams:', err);
         alert('Fehler beim Starten des Streams: ' + err.message);
+        
+        // Bei Fehler Hardware-Ressourcen sofort wieder freigeben
+        if (localStream) {
+            localStream.getTracks().forEach(track => track.stop());
+            localStream = null;
+        }
     }
 }
 
@@ -223,12 +229,13 @@ export function openLiveFullscreen(streamId, category, location, isHost = false)
 }
 
 /**
- * Schließt das Vollbild-Modal und stoppt lokale Streams.
+ * Schließt das Vollbild-Modal und stoppt lokale Streams sowie Kamera-Hardware.
  */
 export async function closeLiveFullscreen() {
     const modal = document.getElementById('live-fullscreen-modal');
     if (modal) modal.classList.add('hidden');
 
+    // Kamera-Hardware explizit stoppen, damit die LED ausgeht
     if (localStream) {
         localStream.getTracks().forEach(track => track.stop());
         localStream = null;
