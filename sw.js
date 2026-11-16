@@ -1,9 +1,6 @@
-// ============================================================================
-// PURE LOGIC • Service Worker (sw.js)
-// ============================================================================
+const CACHE_NAME = 'pure-logic-v1.4.3';
 
-const CACHE_NAME = 'pure-logic-v1.4.2';
-
+// Definition aller statischen Assets, die für den Offline-Modus vorgecacht werden
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -14,6 +11,7 @@ const STATIC_ASSETS = [
   '/js/i18n.js?v=2',
   '/js/auth.js?v=2',
   '/js/main.js?v=2',
+  '/js/features/notifications.js?v=2',
   '/js/features/lecture.js?v=2',
   '/js/features/quiz.js?v=2',
   '/js/features/profguide.js?v=2',
@@ -25,7 +23,7 @@ const STATIC_ASSETS = [
   '/js/features/ranking.js?v=2'
 ];
 
-// Installation: Grundgerüst cachen
+// Installation: Grundgerüst und Assets cachen
 self.addEventListener('install', (event) => {
   self.skipWaiting();
   event.waitUntil(
@@ -37,7 +35,7 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// Aktivierung: Alte Caches aufräumen
+// Aktivierung: Alte Caches bereinigen und neue Version übernehmen
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
@@ -50,7 +48,7 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch-Handling: Network-First für App-Dateien, Supabase-API immer direkt
+// Fetch-Handling: Network-First für App-Dateien, Supabase-API immer direkt durchlassen
 self.addEventListener('fetch', (event) => {
   const requestUrl = new URL(event.request.url);
 
@@ -62,7 +60,6 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     fetch(event.request)
       .then((networkResponse) => {
-        // Erfolgreiche Antwort im Cache aktualisieren
         if (networkResponse && networkResponse.status === 200 && requestUrl.origin === location.origin) {
           const responseClone = networkResponse.clone();
           caches.open(CACHE_NAME).then((cache) => {
@@ -72,7 +69,6 @@ self.addEventListener('fetch', (event) => {
         return networkResponse;
       })
       .catch(() => {
-        // Offline-Fallback aus dem Cache
         return caches.match(event.request).then((cachedResponse) => {
           if (cachedResponse) {
             return cachedResponse;

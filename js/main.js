@@ -1,10 +1,7 @@
-// ============================================================================
-// PURE LOGIC • js/main.js (Vollständige & Ungekürzte Produktionsversion inkl. PWA)
-// ============================================================================
-
 import { _supabase } from './config.js';
 import { state } from './state.js';
 import { checkPasswordRecoveryFlow } from './auth.js';
+import { initPushNotifications, subscribeToRealtimeNotifications } from './features/notifications.js';
 import { loadCampusFeed, loadMyProfilePosts, setReelFilter, setFilter, claimActiveDrop } from './features/feed.js';
 import { loadLiveStreams, setLiveFilter, handlePreLiveCheck, closeLiveFullscreen, sendLiveChatMessage } from './features/live.js';
 import { toggleLectureMode, saveLectureNotesToFile } from './features/lecture.js';
@@ -19,7 +16,7 @@ let adminMapInstance = null;
 let adminMarkerInstance = null;
 let deferredPrompt = null;
 
-// Service Worker registrieren
+// Service Worker Registrierung für PWA
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js')
@@ -28,7 +25,7 @@ if ('serviceWorker' in navigator) {
     });
 }
 
-// Install-Prompt abfangen und Install-Buttons einblenden
+// PWA Install Prompt abfangen
 window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredPrompt = e;
@@ -40,7 +37,6 @@ window.addEventListener('beforeinstallprompt', (e) => {
     if (dropdownInstallBtn) dropdownInstallBtn.classList.remove('hidden');
 });
 
-// Nach erfolgreicher Installation Buttons wieder ausblenden
 window.addEventListener('appinstalled', () => {
     deferredPrompt = null;
     document.getElementById('install-app-auth-btn')?.classList.add('hidden');
@@ -48,7 +44,6 @@ window.addEventListener('appinstalled', () => {
     console.log('PURE LOGIC wurde erfolgreich als App installiert! 📲');
 });
 
-// Globale Funktion für die Install-Buttons
 window.installPWA = async function() {
     if (!deferredPrompt) {
         alert('Tippe im Browser-Menü auf „Zum Startbildschirm hinzufügen“, um PURE LOGIC als App zu installieren! 📲');
@@ -64,6 +59,7 @@ window.installPWA = async function() {
     }
 };
 
+// Haupt-Initialisierung beim Laden des DOM
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('PURE LOGIC • App initialisiert & Module geladen 🚀');
 
@@ -71,7 +67,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupAuthFormHandlers();
     checkPasswordRecoveryFlow();
 
-    // 1. Globale Logout- & Reset-Funktion
     window.resetUser = async function() {
         try {
             await _supabase.auth.signOut();
@@ -84,7 +79,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.location.href = window.location.pathname;
     };
 
-    // 2. Expliziter Event-Listener für den Logout-Button
     const logoutBtn = document.getElementById('logout-btn');
     if (logoutBtn) {
         logoutBtn.replaceWith(logoutBtn.cloneNode(true));
@@ -94,7 +88,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // 3. Session-Prüfung beim Start
+    // Session prüfen
     try {
         const { data: { session } } = await _supabase.auth.getSession();
         if (session && session.user) {
@@ -105,7 +99,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.warn('Session Check fehlgeschlagen:', err);
     }
 
-    // 4. Permanenter Admin-Watcher
+    // Master-Admin Erkennung im Intervall prüfen
     setInterval(() => {
         const email = state.currentUserEmail?.toLowerCase();
         const adminTabBtn = document.getElementById('header-admin-tab-btn');
@@ -118,7 +112,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, 500);
 });
 
-// Steuerung des separaten Registrierungs-Modals
+// Registrierungs-Modale Steuerung
 window.openRegisterModal = function() {
     document.getElementById('register-modal')?.classList.remove('hidden');
 };
@@ -127,7 +121,6 @@ window.closeRegisterModal = function() {
     document.getElementById('register-modal')?.classList.add('hidden');
 };
 
-// Passwort-Sichtbarkeit im Registrierungs-Modal umschalten
 window.toggleRegisterPasswordVisibility = function() {
     const passwordInput = document.getElementById('reg-password');
     const toggleBtn = document.getElementById('reg-toggle-pw-btn');
@@ -142,7 +135,6 @@ window.toggleRegisterPasswordVisibility = function() {
     }
 };
 
-// Registrierungs-Logik mit Name, .ac.at Check & spezifischer Passwort-Fehlermeldung
 window.submitRegistration = async function() {
     const fullNameInput = document.getElementById('reg-fullname');
     const emailInput = document.getElementById('reg-email');
@@ -159,13 +151,11 @@ window.submitRegistration = async function() {
         return;
     }
 
-    // 1. STRENGER .AC.AT CHECK
     if (!email.toLowerCase().endsWith('.ac.at')) {
         showRegMsg('Registrierung nur mit offizieller Universitäts-E-Mail-Adresse (.ac.at) möglich!', 'error');
         return;
     }
 
-    // 2. SPEZIFISCHE PASSWORT-PRÜFUNG MIT DETAILLIERTER FEHLERMELDUNG
     const missingCriteria = [];
     if (password.length < 8) {
         missingCriteria.push('mindestens 8 Zeichen');
@@ -220,7 +210,6 @@ function showRegMsg(text, type) {
     }
 }
 
-// Zentraler Login-Handler
 function setupAuthFormHandlers() {
     window.handleLogin = async function() {
         const emailInput = document.getElementById('email');
@@ -250,7 +239,7 @@ function setupAuthFormHandlers() {
     };
 }
 
-// Hauptanwendungs-Session initialisieren
+// Initialisierung der Haupt-App nach erfolgreichem Login
 async function initMainAppSession() {
     const authGate = document.getElementById('auth-gate');
     const mainApp = document.getElementById('main-app');
@@ -262,6 +251,10 @@ async function initMainAppSession() {
     if (mainApp) mainApp.classList.remove('hidden');
     if (logoutBtn) logoutBtn.classList.remove('hidden');
     if (profileBtn) profileBtn.classList.remove('hidden');
+
+    // Push-Benachrichtigungen und Realtime-Subscriptions starten
+    await initPushNotifications();
+    subscribeToRealtimeNotifications();
 
     let isMasterAdmin = (
         state.currentUserEmail?.toLowerCase() === 'office@pure-logic.at' ||
@@ -284,7 +277,6 @@ async function initMainAppSession() {
                 isMasterAdmin = true;
             }
 
-            // Profilfelder vorbefüllen
             const userHandleInput = document.getElementById('profile-username');
             const userFullNameInput = document.getElementById('profile-fullname');
             const userBioInput = document.getElementById('profile-bio');
@@ -305,7 +297,6 @@ async function initMainAppSession() {
             if (handleDisplay) handleDisplay.textContent = '@' + (userData.username || 'benutzername');
             if (uniSelect && userData.university) uniSelect.value = userData.university;
 
-            // Verified Student Badge rendern
             const badgeContainer = document.getElementById('verified-student-badge-container');
             if (badgeContainer) {
                 if (userData.is_verified_student) {
@@ -330,7 +321,7 @@ async function initMainAppSession() {
     loadMyProfilePosts();
 }
 
-// Leaflet-Karte im Admin-Tab initialisieren
+// Leaflet Admin Karte initialisieren
 function initAdminMap() {
     const mapContainer = document.getElementById('admin-map');
     if (!mapContainer || typeof L === 'undefined') return;
@@ -361,7 +352,7 @@ function initAdminMap() {
     }, 200);
 }
 
-// Tab-Switching und globale Handler
+// Globale Fenster-Handler und Admin-Tools
 function setupGlobalWindowHandlers() {
     window.switchTab = function(tabName) {
         document.querySelectorAll('.tab-content').forEach(el => {
@@ -489,7 +480,7 @@ function setupGlobalWindowHandlers() {
         document.getElementById('impressum-modal')?.classList.remove('hidden');
     };
     window.openAgbModal = function() {
-        document.getElementById('agb-modal')?.classList.add('hidden');
+        document.getElementById('agb-modal')?.classList.remove('hidden');
     };
 
     window.openUploadModal = function() {
@@ -568,7 +559,7 @@ function setupGlobalWindowHandlers() {
     window.changeLanguage = changeLanguage;
 }
 
-// Globales Schließen des Dropdowns
+// Dropdown Menü bei Klick außerhalb schließen
 document.addEventListener('click', () => {
     const menu = document.getElementById('points-dropdown-menu');
     if (menu && !menu.classList.contains('hidden')) {
