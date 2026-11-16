@@ -26,7 +26,6 @@ export async function handlePreLiveCheck() {
     if (!validateInputOrAlert(location)) return;
 
     try {
-        // Kamera & Mikrofon anfordern für WebRTC Broadcast
         localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         startLiveStreamBroadcast(category, location);
     } catch (err) {
@@ -193,7 +192,7 @@ export function setLiveFilter(element, category) {
 }
 
 /**
- * Öffnet den Vollbildmodus für einen spezifischen Stream (mit erzwungener Creator-Steuerung & Zuschauer-Zähler)
+ * Öffnet den Vollbildmodus für einen spezifischen Stream (mit Creator-Steuerung & Zuschauer-Zähler)
  */
 export function openLiveFullscreen(streamId, category, location, isHost = false, hostEmail = '') {
     activeStreamId = streamId;
@@ -203,15 +202,13 @@ export function openLiveFullscreen(streamId, category, location, isHost = false,
     const titleDisplay = document.getElementById('active-live-title-display');
     const hostDisplay = document.getElementById('active-live-host-display');
     const playerContainer = document.getElementById('live-stream-player-container');
-    const chatContainer = document.getElementById('live-chat-input-container') || modal.querySelector('.live-chat-footer') || modal.querySelector('[id*="chat"]');
 
     if (titleDisplay) titleDisplay.textContent = `🔴 ${category}`;
     
-    // Erzwinge Host-Ansicht wenn localStream aktiv ist oder der Nutzer der Ersteller ist
     const currentUserIsHost = isHost || (state.currentUserEmail && hostEmail && state.currentUserEmail.toLowerCase() === hostEmail.toLowerCase()) || (localStream !== null);
 
     if (hostDisplay) {
-        hostDisplay.innerHTML = `📍 ${location} | 👥 <span id="live-viewer-count">${currentUserIsHost ? '1' : '1'}</span> Zuschauer`;
+        hostDisplay.innerHTML = `📍 ${location} | 👥 <span id="live-viewer-count">1</span> Zuschauer`;
     }
 
     if (playerContainer) {
@@ -233,11 +230,13 @@ export function openLiveFullscreen(streamId, category, location, isHost = false,
         }
     }
 
-    // Direktes Ersetzen des Chat-Bereichs unten im Modal für den Host (mit Stream Beenden Button)
-    const targetChatArea = chatContainer || modal.querySelector('footer') || modal.lastElementChild;
-    if (targetChatArea) {
+    // Ersetze jeglichen bestehenden unteren Eingabebereich im Modal dynamisch
+    const inputField = document.querySelector('input[placeholder*="Nachricht"], input[placeholder*="Creator"], #live-chat-input');
+    const parentContainer = inputField ? inputField.closest('div').parentNode : modal.querySelector('.modal-footer, footer, div:last-child');
+
+    if (parentContainer) {
         if (currentUserIsHost) {
-            targetChatArea.innerHTML = `
+            parentContainer.innerHTML = `
                 <div style="display: flex; flex-direction: column; gap: 8px; width: 100%; padding: 8px;">
                     <button class="btn" style="background: #ef4444; color: #fff; font-weight: 800; font-size: 13px; padding: 12px; border-radius: 10px; width: 100%; border: none; cursor: pointer; box-shadow: 0 4px 12px rgba(239,68,68,0.4);" onclick="terminateActiveStream()">🛑 Stream beenden</button>
                     <div style="display: flex; gap: 6px; width: 100%;">
@@ -247,7 +246,7 @@ export function openLiveFullscreen(streamId, category, location, isHost = false,
                 </div>
             `;
         } else {
-            targetChatArea.innerHTML = `
+            parentContainer.innerHTML = `
                 <div style="display: flex; gap: 6px; width: 100%; padding: 8px;">
                     <input type="text" id="live-chat-input" placeholder="Nachricht an den Stream senden..." style="flex: 1; background: rgba(255,255,255,0.06); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; color: #fff; font-size: 12px;" onkeypress="if(event.key==='Enter') sendLiveChatMessage()">
                     <button class="btn" style="width: auto; padding: 10px 18px; background: var(--gradient-main); font-size: 12px; font-weight: 800;" onclick="sendLiveChatMessage()">Senden</button>
