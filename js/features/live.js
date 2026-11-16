@@ -194,7 +194,11 @@ async function startLiveStreamBroadcast(category, location, title, streamUrl = '
             .select()
             .single();
 
-        if (error) throw error;
+        if (error) {
+            console.error('Supabase Insert Fehler:', error);
+            alert('Datenbank-Fehler beim Starten: ' + error.message);
+            return;
+        }
 
         activeStreamId = data.id;
         loadLiveStreams();
@@ -324,8 +328,7 @@ export function setLiveFilter(element, category) {
     element.classList.add('active');
     currentActiveFilter = category;
     
-    // WICHTIG: Hier wird rein die Stream-Liste im Hintergrund geladen. 
-    // Lokale Streams oder aktive Vollbild-Modi werden absolut NICHT berührt oder abgebrochen!
+    // Lädt nur die Liste neu, der aktive Stream bleibt absolut unberührt!
     loadLiveStreams();
 }
 
