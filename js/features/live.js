@@ -323,6 +323,9 @@ export function setLiveFilter(element, category) {
     document.querySelectorAll('#live-filter-group .cat-pill').forEach(p => p.classList.remove('active'));
     element.classList.add('active');
     currentActiveFilter = category;
+    
+    // Wichtig: Hier wird nur die Stream-Liste im Hintergrund aktualisiert.
+    // Ein aktiver Stream oder offenes Vollbildfenster wird absolut nicht angetastet oder abgebrochen!
     loadLiveStreams();
 }
 
