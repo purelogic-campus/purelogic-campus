@@ -7,35 +7,126 @@ let liveObserver = null;
 let localStream = null;
 let activePeerConnection = null;
 let activeStreamId = null;
+let selectedCategory = '💬 Plaudern';
+let pendingLocation = 'Uni Wien Hauptgebäude';
 
 /**
- * Vorab-Prüfung vor dem Start eines Live-Streams mit Kamera-Zugriff
+ * Öffnet die Kamera-Vorschau vor dem Stream-Start
  */
 export async function handlePreLiveCheck() {
     if (!state.currentUserEmail) {
         alert('Bitte logge dich zuerst ein, um einen Live-Stream zu starten!');
         return;
     }
-    
-    const category = prompt('Wähle eine Kategorie für deinen Stream (z.B. 🎮 Gaming, 🎵 Musik, 💬 Plaudern):', '💬 Plaudern');
-    if (!category) return;
-    if (!validateInputOrAlert(category)) return;
-    
-    const location = prompt('Dein Standort / Hörsaal (z.B. HS 32, Uni Wien):', 'Uni Wien Hauptgebäude');
-    if (!location) return;
-    if (!validateInputOrAlert(location)) return;
 
+    // Kamera & Mikrofon für die Vorschau anfordern
     try {
         localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        startLiveStreamBroadcast(category, location);
     } catch (err) {
         console.warn('Kamera-Zugriff verweigert oder nicht verfügbar:', err);
-        startLiveStreamBroadcast(category, location, 'webrtc-fallback');
+        alert('Kamera-Zugriff wird für den Live-Stream benötigt.');
+        return;
+    }
+
+    // Vorschau-Modal öffnen oder erstellen
+    showPreLivePreviewModal();
+}
+
+/**
+ * Zeigt das Vorschau-Modal mit interaktiven Kategorie-Buttons an
+ */
+function showPreLivePreviewModal() {
+    let previewModal = document.getElementById('live-preview-modal');
+    selectedCategory = '💬 Plaudern'; // Standardkategorie zurücksetzen
+    
+    if (!previewModal) {
+        previewModal = document.createElement('div');
+        previewModal.id = 'live-preview-modal';
+        previewModal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(9, 13, 22, 0.95); z-index: 10000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 16px; box-sizing: border-box;';
+        
+        previewModal.innerHTML = `
+            <div style="width: 100%; max-width: 420px; background: #0f172a; border: 1px solid var(--border); border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 20px 40px rgba(0,0,0,0.8);">
+                <div style="padding: 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+                    <h3 style="font-size: 16px; font-weight: 900; color: #fff; margin: 0;">🎥 Stream-Vorschau & Setup</h3>
+                    <button type="button" onclick="closePreLivePreview()" style="background: none; border: none; color: #fff; font-size: 22px; cursor: pointer;">&times;</button>
+                </div>
+                
+                <div style="position: relative; width: 100%; height: 240px; background: #000;">
+                    <video id="preview-camera-video" autoplay muted playsinline style="width: 100%; height: 100%; object-fit: cover;"></video>
+                    <div style="position: absolute; top: 12px; left: 12px; background: rgba(16,185,129,0.2); border: 1px solid #10b981; color: #10b981; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 800;">Kamera bereit 🎥</div>
+                </div>
+
+                <div style="padding: 16px; display: flex; flex-direction: column; gap: 10px;">
+                    <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Wähle deine Kategorie:</label>
+                    <div id="preview-category-pills" style="display: flex; gap: 6px; flex-wrap: wrap;">
+                        <button type="button" class="cat-pill active" onclick="selectPreviewCategory(this, '💬 Plaudern')" style="background: var(--gradient-main); border: none; padding: 6px 12px; border-radius: 20px; color: #fff; font-size: 11px; font-weight: 800; cursor: pointer;">💬 Plaudern</button>
+                        <button type="button" class="cat-pill" onclick="selectPreviewCategory(this, '🎮 Gaming')" style="background: rgba(255,255,255,0.06); border: 1px solid var(--border); padding: 6px 12px; border-radius: 20px; color: #fff; font-size: 11px; font-weight: 800; cursor: pointer;">🎮 Gaming</button>
+                        <button type="button" class="cat-pill" onclick="selectPreviewCategory(this, '🎵 Musik')" style="background: rgba(255,255,255,0.06); border: 1px solid var(--border); padding: 6px 12px; border-radius: 20px; color: #fff; font-size: 11px; font-weight: 800; cursor: pointer;">🎵 Musik</button>
+                        <button type="button" class="cat-pill" onclick="selectPreviewCategory(this, '📚 Lernen')" style="background: rgba(255,255,255,0.06); border: 1px solid var(--border); padding: 6px 12px; border-radius: 20px; color: #fff; font-size: 11px; font-weight: 800; cursor: pointer;">📚 Lernen</button>
+                    </div>
+
+                    <label style="font-size: 11px; font-weight: 600; color: var(--text-muted); margin-top: 4px;">Standort / Hörsaal:</label>
+                    <input type="text" id="preview-location-input" value="Uni Wien Hauptgebäude" style="background: rgba(255,255,255,0.06); border: 1px solid var(--border); border-radius: 8px; padding: 10px; color: #fff; font-size: 12px;">
+
+                    <button type="button" class="btn" onclick="confirmAndStartLiveStream()" style="margin-top: 6px; background: var(--gradient-main); font-weight: 900; padding: 12px; font-size: 13px;">Jetzt live gehen 🚀</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(previewModal);
+    } else {
+        previewModal.classList.remove('hidden');
+    }
+
+    const vidEl = document.getElementById('preview-camera-video');
+    if (vidEl && localStream) {
+        vidEl.srcObject = localStream;
     }
 }
 
 /**
- * Startet einen neuen Live-Stream in der Datenbank und bindet den WebRTC-Stream ein
+ * Markiert die angeklickte Kategorie-Pill als aktiv in der Vorschau
+ */
+export function selectPreviewCategory(btnElement, categoryName) {
+    selectedCategory = categoryName;
+    document.querySelectorAll('#preview-category-pills button').forEach(btn => {
+        btn.classList.remove('active');
+        btn.style.background = 'rgba(255,255,255,0.06)';
+        btn.style.border = '1px solid var(--border)';
+    });
+    btnElement.classList.add('active');
+    btnElement.style.background = 'var(--gradient-main)';
+    btnElement.style.border = 'none';
+}
+
+/**
+ * Schließt die Vorschau und stoppt die Kamera, falls abgebrochen wird
+ */
+export function closePreLivePreview() {
+    const previewModal = document.getElementById('live-preview-modal');
+    if (previewModal) {
+        previewModal.classList.add('hidden');
+    }
+    if (localStream && !activeStreamId) {
+        localStream.getTracks().forEach(track => track.stop());
+        localStream = null;
+    }
+}
+
+/**
+ * Bestätigt die Vorschau und startet den Stream offiziell in der Datenbank
+ */
+export async function confirmAndStartLiveStream() {
+    const locInput = document.getElementById('preview-location-input');
+    pendingLocation = locInput ? locInput.value.trim() : 'Uni Wien';
+
+    if (!validateInputOrAlert(selectedCategory) || !validateInputOrAlert(pendingLocation)) return;
+
+    closePreLivePreview();
+    startLiveStreamBroadcast(selectedCategory, pendingLocation, 'webrtc-active');
+}
+
+/**
+ * Startet den Live-Stream in der Datenbank
  */
 async function startLiveStreamBroadcast(category, location, streamUrl = 'webrtc-active') {
     try {
@@ -206,7 +297,6 @@ export function openLiveFullscreen(streamId, category, location, isHost = false,
 
     if (titleDisplay) titleDisplay.textContent = `🔴 ${category}`;
     
-    // Prüfen ob aktueller Nutzer der Host ist
     const currentUserIsHost = isHost || (state.currentUserEmail && hostEmail && state.currentUserEmail.toLowerCase() === hostEmail.toLowerCase()) || (localStream !== null);
 
     if (hostDisplay) {
@@ -232,7 +322,6 @@ export function openLiveFullscreen(streamId, category, location, isHost = false,
         }
     }
 
-    // Creator-Steuerung (Stream beenden Button + Chat) vs Zuschauer-Ansicht
     if (chatInputContainer) {
         if (currentUserIsHost) {
             chatInputContainer.innerHTML = `
@@ -325,6 +414,9 @@ export function sendLiveChatMessage() {
 // Globale Bindings
 window.loadLiveStreams = loadLiveStreams;
 window.handlePreLiveCheck = handlePreLiveCheck;
+window.closePreLivePreview = closePreLivePreview;
+window.selectPreviewCategory = selectPreviewCategory;
+window.confirmAndStartLiveStream = confirmAndStartLiveStream;
 window.setLiveFilter = setLiveFilter;
 window.openLiveFullscreen = openLiveFullscreen;
 window.closeLiveFullscreen = closeLiveFullscreen;
