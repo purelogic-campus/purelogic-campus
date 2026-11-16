@@ -1,4 +1,4 @@
-// js/features/live.js • PURE LOGIC Live-Stream & WebRTC Modul
+// js/features/live.js • PURE LOGIC Live-Stream, WebRTC & Creator-Modul
 import { _supabase } from '../config.js';
 import { state } from '../state.js';
 import { validateInputOrAlert } from './moderation.js';
@@ -6,6 +6,7 @@ import { validateInputOrAlert } from './moderation.js';
 let liveObserver = null;
 let localStream = null;
 let activePeerConnection = null;
+let activeStreamId = null;
 
 /**
  * Vorab-Prüfung vor dem Start eines Live-Streams mit Kamera-Zugriff
@@ -30,7 +31,6 @@ export async function handlePreLiveCheck() {
         startLiveStreamBroadcast(category, location);
     } catch (err) {
         console.warn('Kamera-Zugriff verweigert oder nicht verfügbar:', err);
-        // Fallback ohne Kamera-Stream starten
         startLiveStreamBroadcast(category, location, 'webrtc-fallback');
     }
 }
@@ -41,7 +41,7 @@ export async function handlePreLiveCheck() {
 async function startLiveStreamBroadcast(category, location, streamUrl = 'webrtc-active') {
     try {
         const streamTitle = `${category} live aus ${location}`;
-        const expiresAt = new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString(); // 3 Stunden Gültigkeit
+        const expiresAt = new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString();
 
         const { data, error } = await _supabase
             .from('live_streams')
@@ -62,17 +62,17 @@ async function startLiveStreamBroadcast(category, location, streamUrl = 'webrtc-
 
         if (error) throw error;
 
+        activeStreamId = data.id;
         alert('Dein Live-Stream ist jetzt LIVE! 🔴');
         loadLiveStreams();
 
         if (localStream) {
-            openLiveFullscreen(data.id, category, location, true);
+            openLiveFullscreen(data.id, category, location, true, data.host_email);
         }
     } catch (err) {
         console.error('Fehler beim Starten des Streams:', err);
         alert('Fehler beim Starten des Streams: ' + err.message);
         
-        // Bei Fehler Hardware-Ressourcen sofort wieder freigeben
         if (localStream) {
             localStream.getTracks().forEach(track => track.stop());
             localStream = null;
@@ -146,6 +146,7 @@ export async function loadLiveStreams() {
         const category = stream.category || 'Live Stream';
         const location = stream.location || 'Wien / Campus';
         const streamId = stream.id ? String(stream.id) : '0000';
+        const hostEmail = stream.host_email || '';
         const streamMediaUrl = stream.stream_url && stream.stream_url.startsWith('http') ? stream.stream_url : '';
 
         let mediaContentHtml = '';
@@ -161,8 +162,10 @@ export async function loadLiveStreams() {
             `;
         }
 
+        const isMyStream = state.currentUserEmail && hostEmail.toLowerCase() === state.currentUserEmail.toLowerCase();
+
         item.innerHTML = `
-            <div style="width: 100%; height: 100%; position: relative; cursor: pointer;" onclick="openLiveFullscreen('${streamId}', '${category}', '${location}')">
+            <div style="width: 100%; height: 100%; position: relative; cursor: pointer;" onclick="openLiveFullscreen('${streamId}', '${category}', '${location}', ${isMyStream}, '${hostEmail}')">
                 ${mediaContentHtml}
                 <div style="position: absolute; top: 16px; left: 16px; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.5); color: #ef4444; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 800; display: flex; align-items: center; gap: 4px; z-index: 2;">
                     <span style="width: 8px; height: 8px; background: #ef4444; border-radius: 50%; display: inline-block;"></span> LIVE
@@ -171,7 +174,7 @@ export async function loadLiveStreams() {
             <div class="reel-overlay" style="justify-content: flex-end; align-items: flex-start; text-align: left; background: linear-gradient(0deg, rgba(9,13,22,0.95) 0%, transparent 60%); padding: 16px;">
                 <div style="font-size: 12px; font-weight: 800; color: #818cf8; margin-bottom: 2px;">🔴 ${category} • ${location}</div>
                 <div style="font-size: 13px; color: #fff; font-weight: 600; margin-bottom: 8px;">Tippe, um dem Vollbild-Stream & Chat beizutreten.</div>
-                <button class="btn" style="width: auto; padding: 8px 18px; font-size: 11px; font-weight: 800; background: var(--gradient-main);" onclick="event.stopPropagation(); openLiveFullscreen('${streamId}', '${category}', '${location}')">Vollbild beitreten 🚀</button>
+                <button class="btn" style="width: auto; padding: 8px 18px; font-size: 11px; font-weight: 800; background: var(--gradient-main);" onclick="event.stopPropagation(); openLiveFullscreen('${streamId}', '${category}', '${location}', ${isMyStream}, '${hostEmail}')">Vollbild beitreten 🚀</button>
             </div>
         `;
         
@@ -191,21 +194,29 @@ export function setLiveFilter(element, category) {
 }
 
 /**
- * Öffnet den Vollbildmodus für einen spezifischen Stream inklusive WebRTC-Videofeed und Chat.
+ * Öffnet den Vollbildmodus für einen spezifischen Stream (mit Creator-Steuerung & Zuschauer-Zähler)
  */
-export function openLiveFullscreen(streamId, category, location, isHost = false) {
+export function openLiveFullscreen(streamId, category, location, isHost = false, hostEmail = '') {
+    activeStreamId = streamId;
     const modal = document.getElementById('live-fullscreen-modal');
     if (modal) modal.classList.remove('hidden');
 
     const titleDisplay = document.getElementById('active-live-title-display');
     const hostDisplay = document.getElementById('active-live-host-display');
     const playerContainer = document.getElementById('live-stream-player-container');
+    const chatContainer = document.getElementById('live-chat-input-container');
 
     if (titleDisplay) titleDisplay.textContent = `🔴 ${category}`;
-    if (hostDisplay) hostDisplay.textContent = `Standort: ${location} | ${isHost ? 'Du bist der Host 🎥' : 'Zuschauer-Modus'}`;
+    
+    // Prüfen ob aktueller Nutzer der Host ist
+    const currentUserIsHost = isHost || (state.currentUserEmail && hostEmail && state.currentUserEmail.toLowerCase() === hostEmail.toLowerCase());
+
+    if (hostDisplay) {
+        hostDisplay.innerHTML = `📍 ${location} | 👥 <span id="live-viewer-count">1</span> Zuschauer`;
+    }
 
     if (playerContainer) {
-        if (isHost && localStream) {
+        if (currentUserIsHost && localStream) {
             playerContainer.innerHTML = `
                 <video id="local-host-video" autoplay muted playsinline style="width: 100%; height: 100%; object-fit: cover; background: #000;"></video>
                 <div style="position: absolute; top: 16px; left: 16px; background: rgba(16,185,129,0.2); border: 1px solid #10b981; color: #10b981; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 800;">🎥 Du sendest Live (WebRTC)</div>
@@ -223,10 +234,54 @@ export function openLiveFullscreen(streamId, category, location, isHost = false)
         }
     }
 
+    // Chatbox & Stream-Beenden Button für den Host anpassen
+    if (chatContainer) {
+        if (currentUserIsHost) {
+            chatContainer.innerHTML = `
+                <div style="display: flex; flex-direction: column; gap: 8px; width: 100%; padding: 8px;">
+                    <button class="btn" style="background: #ef4444; color: #fff; font-weight: 800; font-size: 12px; padding: 10px; border-radius: 10px; width: 100%; border: none; cursor: pointer;" onclick="terminateActiveStream()">🛑 Stream beenden</button>
+                    <div style="display: flex; gap: 6px; width: 100%;">
+                        <input type="text" id="live-chat-input" placeholder="Als Host in den Stream schreiben..." style="flex: 1; background: rgba(255,255,255,0.06); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; color: #fff; font-size: 12px;" onkeypress="if(event.key==='Enter') sendLiveChatMessage()">
+                        <button class="btn" style="width: auto; padding: 8px 16px; background: var(--gradient-main); font-size: 12px; font-weight: 800;" onclick="sendLiveChatMessage()">Senden</button>
+                    </div>
+                </div>
+            `;
+        } else {
+            chatContainer.innerHTML = `
+                <div style="display: flex; gap: 6px; width: 100%; padding: 8px;">
+                    <input type="text" id="live-chat-input" placeholder="Nachricht an den Stream senden..." style="flex: 1; background: rgba(255,255,255,0.06); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; color: #fff; font-size: 12px;" onkeypress="if(event.key==='Enter') sendLiveChatMessage()">
+                    <button class="btn" style="width: auto; padding: 8px 16px; background: var(--gradient-main); font-size: 12px; font-weight: 800;" onclick="sendLiveChatMessage()">Senden</button>
+                </div>
+            `;
+        }
+    }
+
     const chatList = document.getElementById('live-chat-messages');
     if (chatList) {
         chatList.innerHTML = `<div style="color: var(--text-muted); text-align: center;">Willkommen im Live-Chat! 💬</div>`;
     }
+}
+
+/**
+ * Beendet den eigenen Live-Stream (löscht ihn aus der DB und stoppt die Kamera)
+ */
+export async function terminateActiveStream() {
+    if (!confirm('Möchtest du deinen Live-Stream wirklich beenden?')) return;
+
+    try {
+        if (activeStreamId) {
+            await _supabase
+                .from('live_streams')
+                .delete()
+                .eq('id', activeStreamId);
+        }
+    } catch (err) {
+        console.error('Fehler beim Löschen des Streams aus der DB:', err);
+    }
+
+    closeLiveFullscreen();
+    loadLiveStreams();
+    alert('Dein Live-Stream wurde beendet.');
 }
 
 /**
@@ -244,10 +299,12 @@ export async function closeLiveFullscreen() {
         activePeerConnection.close();
         activePeerConnection = null;
     }
+    activeStreamId = null;
+    loadLiveStreams();
 }
 
 /**
- * Sendet eine Chatnachricht im aktiven Stream.
+ * Sendet eine Chatnachricht im aktiven Stream (speziell für Host oder Zuschauer).
  */
 export function sendLiveChatMessage() {
     const input = document.getElementById('live-chat-input');
@@ -257,9 +314,13 @@ export function sendLiveChatMessage() {
     const msgText = input.value.trim();
     if (!validateInputOrAlert(msgText)) return;
 
+    const isHost = localStream !== null;
+    const prefix = isHost ? '👑 Host (Du)' : 'Du';
+    const color = isHost ? '#10b981' : '#818cf8';
+
     const msgDiv = document.createElement('div');
     msgDiv.style.cssText = 'background: rgba(255,255,255,0.08); padding: 6px 10px; border-radius: 8px; font-size: 11px; margin-bottom: 4px;';
-    msgDiv.innerHTML = `<strong style="color: #818cf8;">Du:</strong> ${msgText}`;
+    msgDiv.innerHTML = `<strong style="color: ${color};">${prefix}:</strong> ${msgText}`;
     
     chatList.appendChild(msgDiv);
     chatList.scrollTop = chatList.scrollHeight;
@@ -272,4 +333,5 @@ window.handlePreLiveCheck = handlePreLiveCheck;
 window.setLiveFilter = setLiveFilter;
 window.openLiveFullscreen = openLiveFullscreen;
 window.closeLiveFullscreen = closeLiveFullscreen;
+window.terminateActiveStream = terminateActiveStream;
 window.sendLiveChatMessage = sendLiveChatMessage;
