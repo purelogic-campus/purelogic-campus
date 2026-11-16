@@ -169,8 +169,13 @@ export async function confirmAndStartLiveStream() {
 
     if (!validateInputOrAlert(finalCategoryLabel) || !validateInputOrAlert(location)) return;
 
-    closePreLivePreview();
-    startLiveStreamBroadcast(finalCategoryLabel, location, finalTitle, 'webrtc-active');
+    // FIX: Nur das Modal ausblenden, OHNE den localStream zu zerstören!
+    const previewModal = document.getElementById('live-preview-modal');
+    if (previewModal) {
+        previewModal.classList.add('hidden');
+    }
+
+    await startLiveStreamBroadcast(finalCategoryLabel, location, finalTitle, 'webrtc-active');
 }
 
 async function startLiveStreamBroadcast(category, location, title, streamUrl = 'webrtc-active') {
@@ -327,8 +332,6 @@ export function setLiveFilter(element, category) {
     document.querySelectorAll('#live-filter-group .cat-pill').forEach(p => p.classList.remove('active'));
     element.classList.add('active');
     currentActiveFilter = category;
-    
-    // Lädt nur die Liste neu, der aktive Stream bleibt absolut unberührt!
     loadLiveStreams();
 }
 
