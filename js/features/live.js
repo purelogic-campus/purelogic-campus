@@ -537,13 +537,23 @@ function appendMessageToChatUI(msg) {
 
 export async function sendLiveChatMessage() {
     const input = document.getElementById('live-chat-input');
-    if (!input || !input.value.trim() || !activeStreamId) return;
+    if (!input) {
+        console.warn('Chat-Input Feld nicht gefunden!');
+        return;
+    }
 
     const msgText = input.value.trim();
+    if (!msgText) return;
+
     if (!validateInputOrAlert(msgText)) return;
 
     if (!state.currentUserEmail) {
         alert('Bitte logge dich ein, um im Chat zu schreiben.');
+        return;
+    }
+
+    if (!activeStreamId) {
+        alert('Kein aktiver Stream verbunden!');
         return;
     }
 
@@ -560,7 +570,12 @@ export async function sendLiveChatMessage() {
                 }
             ]);
 
-        if (error) throw error;
+        if (error) {
+            console.error('Supabase Chat Insert Fehler:', error);
+            alert('Fehler beim Senden der Nachricht: ' + error.message);
+            return;
+        }
+
         input.value = '';
     } catch (err) {
         console.error('Fehler beim Senden der Chat-Nachricht:', err);
