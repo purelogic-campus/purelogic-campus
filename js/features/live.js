@@ -1,4 +1,4 @@
-// js/features/live.js • PURE LOGIC Live-Stream, WebRTC, Viewer & Geschenke-Modul
+// js/features/live.js • PURE LOGIC Live-Stream, WebRTC, Viewer & Geschenke-Galerie Modul
 import { _supabase } from '../config.js';
 import { state } from '../state.js';
 import { validateInputOrAlert } from './moderation.js';
@@ -11,6 +11,25 @@ let selectedMainCategory = '💬 Plaudern';
 let selectedSubCategory = 'Allgemein';
 let currentActiveFilter = 'Alle';
 let viewerInterval = null;
+
+// Die 15 verschiedenen Campus-Geschenke (angefangen beim Günstigsten)
+const campusGifts = [
+    { id: 1, name: 'Kaffee ☕', cost: 10 },
+    { id: 2, name: 'Brezel 🥨', cost: 20 },
+    { id: 3, name: 'Energiedrink ⚡', cost: 35 },
+    { id: 4, name: 'Pizza-Slice 🍕', cost: 50 },
+    { id: 5, name: 'Skript 📖', cost: 75 },
+    { id: 6, name: 'Club Mate 🧉', cost: 100 },
+    { id: 7, name: 'Spickzettel 📝', cost: 150 },
+    { id: 8, name: 'Tischrechner 🧮', cost: 200 },
+    { id: 9, name: 'Vorlesungs-Stift ✒️', cost: 300 },
+    { id: 10, name: 'Mensa-Gutschein 🍔', cost: 450 },
+    { id: 11, name: 'Bib-Platz (1. Reihe) 🪑', cost: 600 },
+    { id: 12, name: 'Hype Rakete 🚀', cost: 800 },
+    { id: 13, name: 'Professoren-Respekt 🎓', cost: 1000 },
+    { id: 14, name: 'Goldene Mensa-Card 💳', cost: 1500 },
+    { id: 15, name: 'Master-Admin Krone 👑', cost: 2500 }
+];
 
 const subCategoriesMap = {
     '💬 Plaudern': ['Allgemein', 'Campus Life', 'Late Night Talk', 'Q&A / Frag mich alles', 'Kaffee & Break'],
@@ -338,7 +357,7 @@ export function setLiveFilter(element, category) {
 }
 
 /**
- * Öffnet den Vollbildmodus und platziert ein garantiertes, unübersehbares Viewer-Badge direkt über dem Videoplayer
+ * Öffnet den Vollbildmodus, synchronisiert Viewer und stellt die Geschenke-Galerie bereit
  */
 export async function openLiveFullscreen(streamId, category, location, streamTitle = '', isHost = false, hostEmail = '') {
     activeStreamId = streamId;
@@ -375,20 +394,18 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
         console.warn('Viewer Count Sync Fehler:', e);
     }
 
-    // --- ABSOLUTE GARANTIE: Wir erzeugen ein unübersehbares Viewer-Badge direkt im Player-Bereich ---
     let badge = document.getElementById('guaranteed-live-viewer-badge');
     if (!badge && playerContainer) {
         badge = document.createElement('div');
         badge.id = 'guaranteed-live-viewer-badge';
         badge.style.cssText = 'position: absolute; top: 16px; right: 16px; background: rgba(15, 23, 42, 0.85); border: 2px solid #10b981; color: #fff; padding: 6px 14px; border-radius: 30px; font-size: 12px; font-weight: 900; z-index: 99999; backdrop-filter: blur(8px); box-shadow: 0 4px 20px rgba(0,0,0,0.6); display: flex; align-items: center; gap: 6px;';
-        playerContainer.style.position = 'relative'; // Wichtig für absolute Platzierung
+        playerContainer.style.position = 'relative';
         playerContainer.appendChild(badge);
     }
     if (badge) {
         badge.innerHTML = `👥 <span id="live-viewer-count" style="color: #10b981;">${currentViewers}</span> Zuschauer`;
     }
 
-    // Polling im Sekundentakt für den Live-Zähler
     if (viewerInterval) clearInterval(viewerInterval);
     viewerInterval = setInterval(async () => {
         try {
@@ -409,7 +426,6 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
 
     if (playerContainer) {
         if (currentUserIsHost && localStream) {
-            // Das Badge oben auf dem Video erhalten
             const existingBadgeHtml = playerContainer.querySelector('#guaranteed-live-viewer-badge')?.outerHTML || '';
             playerContainer.innerHTML = `
                 <video id="local-host-video" autoplay muted playsinline style="width: 100%; height: 100%; object-fit: cover; background: #000; position: absolute; top:0; left:0;"></video>
@@ -446,11 +462,11 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
                 </div>
             `;
         } else {
+            // Button zum Öffnen der Geschenke-Galerie + Chat-Eingabe
             chatInputContainer.innerHTML = `
-                <div style="display: flex; gap: 4px; margin-bottom: 4px; overflow-x: auto; padding-bottom: 2px; flex-shrink: 0;">
-                    <button type="button" onclick="sendLiveGift('☕ Kaffee', 10, '${hostEmail}')" style="background: rgba(245,158,11,0.2); border: 1px solid #f59e0b; color: #f59e0b; padding: 3px 6px; border-radius: 10px; font-size: 10px; font-weight: 800; cursor: pointer; white-space: nowrap;">☕ Kaffee (10P)</button>
-                    <button type="button" onclick="sendLiveGift('🍕 Pizza', 25, '${hostEmail}')" style="background: rgba(236,72,153,0.2); border: 1px solid var(--accent); color: var(--accent); padding: 3px 6px; border-radius: 10px; font-size: 10px; font-weight: 800; cursor: pointer; white-space: nowrap;">🍕 Pizza (25P)</button>
-                    <button type="button" onclick="sendLiveGift('🚀 Hype Rakete', 50, '${hostEmail}')" style="background: rgba(99,102,241,0.2); border: 1px solid #818cf8; color: #818cf8; padding: 3px 6px; border-radius: 10px; font-size: 10px; font-weight: 800; cursor: pointer; white-space: nowrap;">🚀 Rakete (50P)</button>
+                <div style="display: flex; gap: 6px; margin-bottom: 6px; align-items: center;">
+                    <button type="button" onclick="openGiftsGalleryModal('${hostEmail}')" class="btn" style="background: linear-gradient(135deg, #f59e0b, #ec4899); color: #fff; font-size: 11px; font-weight: 900; padding: 6px 12px; border-radius: 20px; border: none; cursor: pointer; flex-shrink: 0; box-shadow: 0 4px 12px rgba(245,158,11,0.3);">🎁 Geschenke 🛍️</button>
+                    <span style="font-size: 10px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Unterstütze den Creator mit Campus-Punkten!</span>
                 </div>
                 <div style="display: flex; gap: 4px; width: 100%;">
                     <input type="text" id="live-chat-input" placeholder="Nachricht in den Chat schreiben..." style="margin: 0; font-size: 11px; padding: 8px 10px; flex: 1;" onkeydown="if(event.key==='Enter') sendLiveChatMessage()">
@@ -467,7 +483,71 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
 }
 
 /**
- * Sendet ein Live-Geschenk (Punkte-Spende an den Creator)
+ * Öffnet das Modal mit der 15er-Geschenke-Galerie
+ */
+window.openGiftsGalleryModal = function(hostEmail) {
+    let modal = document.getElementById('gifts-gallery-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'gifts-gallery-modal';
+        modal.className = 'hidden';
+        modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.85); z-index: 20000; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(6px);';
+        
+        modal.innerHTML = `
+            <div style="background: var(--card); border: 1px solid var(--border); width: 92%; max-width: 420px; height: 82vh; border-radius: 20px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.8);">
+                <div style="padding: 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02);">
+                    <div>
+                        <h3 style="font-size: 16px; font-weight: 900; color: #fff; margin: 0;">🎁 Campus Geschenke-Galerie</h3>
+                        <p style="font-size: 10px; color: var(--text-muted); margin: 2px 0 0 0;">Zahle mit Campus-Punkten (Coins kommen bald! 🪙)</p>
+                    </div>
+                    <button type="button" onclick="closeGiftsGalleryModal()" style="background: none; border: none; color: var(--text-muted); font-size: 20px; cursor: pointer;">&times;</button>
+                </div>
+                
+                <div id="gifts-grid-container" style="flex: 1; overflow-y: auto; padding: 14px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
+                    <!-- Wird dynamisch gefüllt -->
+                </div>
+
+                <div style="padding: 12px 16px; border-top: 1px solid var(--border); background: rgba(0,0,0,0.3); text-align: center;">
+                    <span style="font-size: 10px; color: var(--text-muted);">Geschenke lösen spektakuläre Animationen im Stream aus! ✨</span>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+
+    modal.classList.remove('hidden');
+    renderGiftsGrid(hostEmail);
+};
+
+window.closeGiftsGalleryModal = function() {
+    const modal = document.getElementById('gifts-gallery-modal');
+    if (modal) modal.classList.add('hidden');
+};
+
+function renderGiftsGrid(hostEmail) {
+    const grid = document.getElementById('gifts-grid-container');
+    if (!grid) return;
+
+    grid.innerHTML = '';
+    campusGifts.forEach(gift => {
+        const card = document.createElement('div');
+        card.style.cssText = 'background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 6px; cursor: pointer; transition: all 0.2s ease;';
+        card.onmouseover = () => { card.style.borderColor = 'var(--primary)'; card.style.background = 'rgba(99,102,241,0.08)'; };
+        card.onmouseout = () => { card.style.borderColor = 'var(--border)'; card.style.background = 'rgba(255,255,255,0.03)'; };
+        
+        card.onclick = () => sendLiveGift(gift.name, gift.cost, hostEmail);
+
+        card.innerHTML = `
+            <div style="font-size: 28px;">${gift.name.split(' ').pop()}</div>
+            <div style="font-size: 12px; font-weight: 800; color: #fff;">${gift.name}</div>
+            <div style="font-size: 11px; font-weight: 900; color: #f59e0b; background: rgba(245,158,11,0.15); padding: 2px 8px; border-radius: 10px; border: 1px solid rgba(245,158,11,0.3);">⚡ ${gift.cost} P</div>
+        `;
+        grid.appendChild(card);
+    });
+}
+
+/**
+ * Sendet ein gewähltes Geschenk aus der Galerie (Punkte-Abzug & Chat-Benachrichtigung)
  */
 export async function sendLiveGift(giftName, cost, hostEmail) {
     if (!state.currentUserEmail) {
@@ -488,7 +568,7 @@ export async function sendLiveGift(giftName, cost, hostEmail) {
             .single();
 
         if (myErr || !myData || (myData.logic_score || 0) < cost) {
-            alert(`Du hast nicht genügend Punkte! Dieses Geschenk kostet ${cost} P.`);
+            alert(`Du hast nicht genügend Campus-Punkte! Dieses Geschenk kostet ${cost} P.`);
             return;
         }
 
@@ -516,11 +596,14 @@ export async function sendLiveGift(giftName, cost, hostEmail) {
                 .eq('email', hostEmail);
         }
 
+        closeGiftsGalleryModal();
+
+        // Geschenk im Chat als Highlight-Nachricht anzeigen
         const chatList = document.getElementById('live-chat-messages');
         if (chatList) {
             const giftDiv = document.createElement('div');
-            giftDiv.style.cssText = 'background: linear-gradient(135deg, rgba(245,158,11,0.2), rgba(236,72,153,0.2)); border: 1px solid #f59e0b; padding: 6px 8px; border-radius: 8px; font-size: 11px; margin-bottom: 4px; text-align: center;';
-            giftDiv.innerHTML = `<strong style="color: #f59e0b;">🎁 ${state.currentUserEmail.split('@')[0]} hat ${giftName} (${cost} P) gesendet! 🎉</strong>`;
+            giftDiv.style.cssText = 'background: linear-gradient(135deg, rgba(245,158,11,0.25), rgba(236,72,153,0.25)); border: 1px solid #f59e0b; padding: 8px 10px; border-radius: 10px; font-size: 11px; margin-bottom: 6px; text-align: center; box-shadow: 0 4px 15px rgba(245,158,11,0.2);';
+            giftDiv.innerHTML = `<strong style="color: #f59e0b; font-size: 12px;">🎁 ${state.currentUserEmail.split('@')[0]} hat ${giftName} (${cost} P) gesendet! 🎉</strong>`;
             chatList.appendChild(giftDiv);
             chatList.scrollTop = chatList.scrollHeight;
         }
