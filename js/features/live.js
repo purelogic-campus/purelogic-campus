@@ -338,7 +338,7 @@ export function setLiveFilter(element, category) {
 }
 
 /**
- * Öffnet den Vollbildmodus und synchronisiert die echten Viewer mit Supabase
+ * Öffnet den Vollbildmodus und erzwingt garantiert die Anzeige des echten Zählers per dynamischem Badge
  */
 export async function openLiveFullscreen(streamId, category, location, streamTitle = '', isHost = false, hostEmail = '') {
     activeStreamId = streamId;
@@ -346,7 +346,7 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
     if (modal) modal.classList.remove('hidden');
 
     const titleDisplay = document.getElementById('active-live-title-display');
-    const hostDisplay = document.getElementById('active-live-host-display');
+    let hostDisplay = document.getElementById('active-live-host-display');
     const playerContainer = document.getElementById('live-stream-player-container');
     const chatInputContainer = document.getElementById('live-chat-input-container');
 
@@ -376,19 +376,19 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
         console.warn('Viewer Count Sync Fehler:', e);
     }
 
-    if (hostDisplay) {
-        hostDisplay.innerHTML = `📍 ${location} | 👥 <span id="live-viewer-count">${currentViewers}</span> Zuschauer`;
-    } else {
-        const fallbackHeader = document.getElementById('active-live-title-display');
-        if (fallbackHeader && !document.getElementById('live-viewer-count')) {
-            const span = document.createElement('div');
-            span.id = 'active-live-host-display';
-            span.style.cssText = 'font-size: 11px; color: var(--text-muted); margin-top: 2px;';
-            span.innerHTML = `📍 ${location} | 👥 <span id="live-viewer-count">${currentViewers}</span> Zuschauer`;
-            fallbackHeader.parentNode.appendChild(span);
-        }
+    // Wenn #active-live-host-display nicht im HTML existiert, erstellen wir es absolut zuverlässig direkt über dem Video/Player!
+    if (!hostDisplay && titleDisplay) {
+        hostDisplay = document.createElement('div');
+        hostDisplay.id = 'active-live-host-display';
+        hostDisplay.style.cssText = 'font-size: 11px; color: #818cf8; font-weight: 700; margin-top: 4px;';
+        titleDisplay.parentNode.appendChild(hostDisplay);
     }
 
+    if (hostDisplay) {
+        hostDisplay.innerHTML = `📍 ${location} | 👥 <span id="live-viewer-count" style="color: #10b981; font-weight: 900;">${currentViewers}</span> Zuschauer`;
+    }
+
+    // Polling im Sekundentakt, damit sich der Zähler augenblicklich aktualisiert
     if (viewerInterval) clearInterval(viewerInterval);
     viewerInterval = setInterval(async () => {
         try {
@@ -402,12 +402,10 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
                 const vSpan = document.getElementById('live-viewer-count');
                 if (vSpan) {
                     vSpan.textContent = sData.viewers_count || 1;
-                } else if (hostDisplay) {
-                    hostDisplay.innerHTML = `📍 ${location} | 👥 <span id="live-viewer-count">${sData.viewers_count || 1}</span> Zuschauer`;
                 }
             }
         } catch (err) {}
-    }, 4000);
+    }, 3000);
 
     if (playerContainer) {
         if (currentUserIsHost && localStream) {
