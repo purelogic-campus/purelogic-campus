@@ -407,7 +407,6 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
             ${existingBadgeHtml}
         `;
         
-        // Falls der Host das lokale Video anzeigt
         if (currentUserIsHost && localStream) {
             const vidEl = document.getElementById('active-web-rtc-video');
             if (vidEl) {
@@ -553,7 +552,6 @@ function initWebRTCSignaling(streamId, isHost) {
                     }
                 }, 1200);
             } else if (status === 'SUBSCRIBED' && !isHost) {
-                // Signal an Host senden, dass ein Viewer da ist
                 setTimeout(() => {
                     signalingChannel.send({
                         type: 'broadcast',
