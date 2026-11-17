@@ -1,4 +1,4 @@
-// js/features/live.js • PURE LOGIC Live-Stream, WebRTC, Viewer, Geschenke-Galerie & Abo-Modul
+// js/features/live.js • PURE LOGIC Live-Stream, WebRTC, Viewer, Echtzeit-Chat, Geschenke & Abos
 import { _supabase } from '../config.js';
 import { state } from '../state.js';
 import { validateInputOrAlert } from './moderation.js';
@@ -11,8 +11,8 @@ let selectedMainCategory = '💬 Plaudern';
 let selectedSubCategory = 'Allgemein';
 let currentActiveFilter = 'Alle';
 let viewerInterval = null;
+let chatChannel = null;
 
-// Die 15 verschiedenen Campus-Geschenke
 const campusGifts = [
     { id: 1, name: 'Kaffee ☕', cost: 10 },
     { id: 2, name: 'Brezel 🥨', cost: 20 },
@@ -315,7 +315,7 @@ export async function loadLiveStreams() {
                     <div style="font-size: 42px; margin-bottom: 8px;">🔴</div>
                     <span style="background: rgba(99,102,241,0.3); color: #818cf8; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 800; margin-bottom: 8px;">${category}</span>
                     <h3 style="font-size: 18px; font-weight: 900; color: #fff; margin-bottom: 4px;">${streamTitle}</h3>
-                    <p style="font-size: 11px; color: var(--text-muted);">📍 ${location} | 👥 ${viewers} Zuschauer</p>
+                    <p style="font-size: 11px; color: var(--text-muted);">👥 ${viewers} Zuschauer</p>
                 </div>
             `;
         }
@@ -330,7 +330,7 @@ export async function loadLiveStreams() {
                 </div>
             </div>
             <div class="reel-overlay" style="justify-content: flex-end; align-items: flex-start; text-align: left; background: linear-gradient(0deg, rgba(9,13,22,0.95) 0%, transparent 60%); padding: 16px;">
-                <div style="font-size: 12px; font-weight: 800; color: #818cf8; margin-bottom: 2px;">🔴 ${category} • ${location}</div>
+                <div style="font-size: 12px; font-weight: 800; color: #818cf8; margin-bottom: 2px;">🔴 ${category}</div>
                 <div style="font-size: 13px; color: #fff; font-weight: 600; margin-bottom: 4px;">${streamTitle}</div>
                 <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">👥 ${viewers} Zuschauer aktiv</div>
                 <button class="btn" style="width: auto; padding: 8px 18px; font-size: 11px; font-weight: 800; background: var(--gradient-main);" onclick="event.stopPropagation(); openLiveFullscreen('${streamId}', '${category}', '${location}', '${streamTitle}', ${isMyStream}, '${hostEmail}')">Vollbild beitreten 🚀</button>
@@ -436,7 +436,6 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
                     <span style="background: rgba(239,68,68,0.2); border: 1px solid rgba(239,68,68,0.5); color: #ef4444; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 800; margin-bottom: 8px;">${category}</span>
                     <h3 style="font-size: 18px; font-weight: 900; color: #fff; margin-bottom: 6px;">${streamTitle}</h3>
                     <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Streamer: ${hostEmail ? hostEmail.split('@')[0] : 'Campus Creator'}</p>
-                    <p style="font-size: 11px; color: #818cf8;">📍 ${location}</p>
                 </div>
                 ${existingBadgeHtml}
             `;
@@ -453,7 +452,6 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
                 </div>
             `;
         } else {
-            // Aktionsleiste mit Geschenke-Galerie & Abo-Button
             chatInputContainer.innerHTML = `
                 <div style="display: flex; gap: 6px; margin-bottom: 6px; align-items: center; overflow-x: auto; padding-bottom: 2px;">
                     <button type="button" onclick="openGiftsGalleryModal('${hostEmail}')" class="btn" style="background: linear-gradient(135deg, #f59e0b, #ec4899); color: #fff; font-size: 10px; font-weight: 900; padding: 6px 10px; border-radius: 16px; border: none; cursor: pointer; flex-shrink: 0; box-shadow: 0 4px 12px rgba(245,158,11,0.3);">🎁 Geschenke</button>
@@ -471,11 +469,94 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
     if (chatMessagesEl) {
         chatMessagesEl.innerHTML = `<div style="color: var(--text-muted); text-align: center;">Willkommen im Live-Chat! 💬</div>`;
     }
+
+    // Vorherige Chat-Nachrichten für diesen Stream laden
+    await loadExistingChatMessages(streamId);
+
+    // Supabase Realtime Channel für den Live-Chat aktivieren
+    if (chatChannel) {
+        _supabase.removeChannel(chatChannel);
+    }
+
+    chatChannel = _supabase
+        .channel(`public:live_chat_messages:stream_id=eq.${streamId}`)
+        .on('postgres_changes', { 
+            event: 'INSERT', 
+            schema: 'public', 
+            table: 'live_chat_messages',
+            filter: `stream_id=eq.${streamId}`
+        }, payload => {
+            appendMessageToChatUI(payload.new);
+        })
+        .subscribe();
 }
 
-/**
- * Öffnet das Modal mit der 15er-Geschenke-Galerie
- */
+async function loadExistingChatMessages(streamId) {
+    try {
+        const { data: messages, error } = await _supabase
+            .from('live_chat_messages')
+            .select('*')
+            .eq('stream_id', streamId)
+            .order('created_at', { ascending: true })
+            .limit(50);
+
+        if (!error && messages) {
+            messages.forEach(msg => appendMessageToChatUI(msg));
+        }
+    } catch (e) {
+        console.warn('Fehler beim Laden alter Chat-Nachrichten:', e);
+    }
+}
+
+function appendMessageToChatUI(msg) {
+    const chatList = document.getElementById('live-chat-messages');
+    if (!chatList) return;
+
+    const sender = msg.sender_email ? msg.sender_email.split('@')[0] : 'User';
+    const isMe = state.currentUserEmail && msg.sender_email && msg.sender_email.toLowerCase() === state.currentUserEmail.toLowerCase();
+    const color = isMe ? '#10b981' : '#818cf8';
+
+    const msgDiv = document.createElement('div');
+    msgDiv.style.cssText = 'background: rgba(255,255,255,0.06); padding: 5px 8px; border-radius: 6px; font-size: 11px; margin-bottom: 3px; word-break: break-word;';
+    msgDiv.innerHTML = `<strong style="color: ${color};">${sender}:</strong> ${msg.message_text}`;
+    
+    chatList.appendChild(msgDiv);
+    chatList.scrollTop = chatList.scrollHeight;
+}
+
+export async function sendLiveChatMessage() {
+    const input = document.getElementById('live-chat-input');
+    if (!input || !input.value.trim() || !activeStreamId) return;
+
+    const msgText = input.value.trim();
+    if (!validateInputOrAlert(msgText)) return;
+
+    if (!state.currentUserEmail) {
+        alert('Bitte logge dich ein, um im Chat zu schreiben.');
+        return;
+    }
+
+    try {
+        // Nachricht direkt in Supabase speichern (Realtime verteilt sie an alle!)
+        const { error } = await _supabase
+            .from('live_chat_messages')
+            .insert([
+                {
+                    id: crypto.randomUUID(),
+                    stream_id: activeStreamId,
+                    sender_email: state.currentUserEmail,
+                    message_text: msgText,
+                    created_at: new Date().toISOString()
+                }
+            ]);
+
+        if (error) throw error;
+        input.value = '';
+    } catch (err) {
+        console.error('Fehler beim Senden der Chat-Nachricht:', err);
+    }
+}
+
 window.openGiftsGalleryModal = function(hostEmail) {
     let modal = document.getElementById('gifts-gallery-modal');
     if (!modal) {
@@ -494,9 +575,7 @@ window.openGiftsGalleryModal = function(hostEmail) {
                     <button type="button" onclick="closeGiftsGalleryModal()" style="background: none; border: none; color: var(--text-muted); font-size: 20px; cursor: pointer;">&times;</button>
                 </div>
                 
-                <div id="gifts-grid-container" style="flex: 1; overflow-y: auto; padding: 14px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
-                    <!-- Dynamisch -->
-                </div>
+                <div id="gifts-grid-container" style="flex: 1; overflow-y: auto; padding: 14px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;"></div>
 
                 <div style="padding: 12px 16px; border-top: 1px solid var(--border); background: rgba(0,0,0,0.3); text-align: center;">
                     <span style="font-size: 10px; color: var(--text-muted);">Geschenke lösen Animationen im Stream aus! ✨</span>
@@ -537,9 +616,6 @@ function renderGiftsGrid(hostEmail) {
     });
 }
 
-/**
- * Monats-Abo für einen Creator abschließen (Standardkosten: 150 Punkte / Monat)
- */
 export async function subscribeToCreator(creatorEmail) {
     if (!state.currentUserEmail) {
         alert('Bitte logge dich ein, um einen Creator zu abonnieren.');
@@ -558,7 +634,6 @@ export async function subscribeToCreator(creatorEmail) {
     }
 
     try {
-        // 1. Prüfen ob User genug Punkte hat
         const { data: myData, error: myErr } = await _supabase
             .from('users')
             .select('logic_score')
@@ -572,7 +647,6 @@ export async function subscribeToCreator(creatorEmail) {
 
         const newMyScore = myData.logic_score - subCost;
 
-        // 2. Punkte beim User abziehen
         await _supabase
             .from('users')
             .update({ logic_score: newMyScore })
@@ -581,7 +655,6 @@ export async function subscribeToCreator(creatorEmail) {
         const scoreBadge = document.getElementById('score');
         if (scoreBadge) scoreBadge.textContent = `${newMyScore} P`;
 
-        // 3. Punkte dem Creator gutschreiben
         if (creatorEmail) {
             const { data: hostData } = await _supabase
                 .from('users')
@@ -596,7 +669,6 @@ export async function subscribeToCreator(creatorEmail) {
                 .eq('email', creatorEmail);
         }
 
-        // 4. Abo in der Tabelle eintragen (oder verlängern)
         const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
         await _supabase
             .from('channel_subscriptions')
@@ -609,16 +681,6 @@ export async function subscribeToCreator(creatorEmail) {
                 }
             ], { onConflict: 'subscriber_email, creator_email' });
 
-        // Im Chat als Highlight ankündigen
-        const chatList = document.getElementById('live-chat-messages');
-        if (chatList) {
-            const subDiv = document.createElement('div');
-            subDiv.style.cssText = 'background: linear-gradient(135deg, rgba(139,92,246,0.3), rgba(59,130,246,0.3)); border: 1px solid #8b5cf6; padding: 8px 10px; border-radius: 10px; font-size: 11px; margin-bottom: 6px; text-align: center; box-shadow: 0 4px 15px rgba(139,92,246,0.2);';
-            subDiv.innerHTML = `<strong style="color: #a78bfa; font-size: 12px;">⭐ ${state.currentUserEmail.split('@')[0]} hat den Kanal abonniert! (1 Monat VIP) 🚀</strong>`;
-            chatList.appendChild(subDiv);
-            chatList.scrollTop = chatList.scrollHeight;
-        }
-
         alert('Abo erfolgreich abgeschlossen! Du hast nun exklusive VIP-Vorteile in diesem Stream. 🎉');
 
     } catch (err) {
@@ -627,9 +689,6 @@ export async function subscribeToCreator(creatorEmail) {
     }
 }
 
-/**
- * Sendet ein gewähltes Geschenk aus der Galerie
- */
 export async function sendLiveGift(giftName, cost, hostEmail) {
     if (!state.currentUserEmail) {
         alert('Bitte logge dich ein, um Geschenke zu senden.');
@@ -679,13 +738,19 @@ export async function sendLiveGift(giftName, cost, hostEmail) {
 
         closeGiftsGalleryModal();
 
-        const chatList = document.getElementById('live-chat-messages');
-        if (chatList) {
-            const giftDiv = document.createElement('div');
-            giftDiv.style.cssText = 'background: linear-gradient(135deg, rgba(245,158,11,0.25), rgba(236,72,153,0.25)); border: 1px solid #f59e0b; padding: 8px 10px; border-radius: 10px; font-size: 11px; margin-bottom: 6px; text-align: center; box-shadow: 0 4px 15px rgba(245,158,11,0.2);';
-            giftDiv.innerHTML = `<strong style="color: #f59e0b; font-size: 12px;">🎁 ${state.currentUserEmail.split('@')[0]} hat ${giftName} (${cost} P) gesendet! 🎉</strong>`;
-            chatList.appendChild(giftDiv);
-            chatList.scrollTop = chatList.scrollHeight;
+        // Nachricht über den Realtime-Chat als Geschenk senden
+        if (activeStreamId) {
+            await _supabase
+                .from('live_chat_messages')
+                .insert([
+                    {
+                        id: crypto.randomUUID(),
+                        stream_id: activeStreamId,
+                        sender_email: state.currentUserEmail,
+                        message_text: `🎁 HAT ${giftName.toUpperCase()} (${cost} P) GESENDET! 🎉`,
+                        created_at: new Date().toISOString()
+                    }
+                ]);
         }
 
     } catch (err) {
@@ -714,6 +779,10 @@ export async function terminateActiveStream() {
 
 export async function closeLiveFullscreen() {
     if (viewerInterval) clearInterval(viewerInterval);
+    if (chatChannel) {
+        _supabase.removeChannel(chatChannel);
+        chatChannel = null;
+    }
     
     if (activeStreamId) {
         try {
@@ -740,7 +809,7 @@ export async function closeLiveFullscreen() {
     if (modal) modal.classList.add('hidden');
 
     if (localStream) {
-        localStream.getTracks().forget ? localStream.getTracks().forEach(track => track.stop()) : localStream.getTracks().forEach(track => track.stop());
+        localStream.getTracks().forEach(track => track.stop());
         localStream = null;
     }
     if (activePeerConnection) {
@@ -749,27 +818,6 @@ export async function closeLiveFullscreen() {
     }
     activeStreamId = null;
     loadLiveStreams();
-}
-
-export function sendLiveChatMessage() {
-    const input = document.getElementById('live-chat-input');
-    const chatList = document.getElementById('live-chat-messages');
-    if (!input || !input.value.trim() || !chatList) return;
-
-    const msgText = input.value.trim();
-    if (!validateInputOrAlert(msgText)) return;
-
-    const isHost = localStream !== null;
-    const prefix = isHost ? '👑 Host (Du)' : (state.currentUserEmail ? state.currentUserEmail.split('@')[0] : 'Du');
-    const color = isHost ? '#10b981' : '#818cf8';
-
-    const msgDiv = document.createElement('div');
-    msgDiv.style.cssText = 'background: rgba(255,255,255,0.08); padding: 5px 8px; border-radius: 6px; font-size: 11px; margin-bottom: 3px;';
-    msgDiv.innerHTML = `<strong style="color: ${color};">${prefix}:</strong> ${msgText}`;
-    
-    chatList.appendChild(msgDiv);
-    chatList.scrollTop = chatList.scrollHeight;
-    input.value = '';
 }
 
 // Globale Bindings
@@ -785,3 +833,4 @@ window.terminateActiveStream = terminateActiveStream;
 window.sendLiveChatMessage = sendLiveChatMessage;
 window.sendLiveGift = sendLiveGift;
 window.subscribeToCreator = subscribeToCreator;
+```[cite: 15]
