@@ -613,7 +613,6 @@ function initWebRTCSignaling(streamId, isHost) {
         if (vidEl && remoteStream) {
             vidEl.srcObject = remoteStream;
             vidEl.onloadedmetadata = () => vidEl.play().catch(e => console.warn('Remote Video Autoplay:', e));
-            // Sofortiges Auslösen des Play-Befehls zur Fehlerbehebung auf Zweitgeräten
             vidEl.play().catch(() => {});
         }
 
