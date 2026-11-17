@@ -338,7 +338,7 @@ export function setLiveFilter(element, category) {
 }
 
 /**
- * Öffnet den Vollbildmodus und erzwingt garantiert die Anzeige des echten Zählers per dynamischem Badge
+ * Öffnet den Vollbildmodus und platziert ein garantiertes, unübersehbares Viewer-Badge direkt über dem Videoplayer
  */
 export async function openLiveFullscreen(streamId, category, location, streamTitle = '', isHost = false, hostEmail = '') {
     activeStreamId = streamId;
@@ -346,7 +346,6 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
     if (modal) modal.classList.remove('hidden');
 
     const titleDisplay = document.getElementById('active-live-title-display');
-    let hostDisplay = document.getElementById('active-live-host-display');
     const playerContainer = document.getElementById('live-stream-player-container');
     const chatInputContainer = document.getElementById('live-chat-input-container');
 
@@ -376,19 +375,20 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
         console.warn('Viewer Count Sync Fehler:', e);
     }
 
-    // Wenn #active-live-host-display nicht im HTML existiert, erstellen wir es absolut zuverlässig direkt über dem Video/Player!
-    if (!hostDisplay && titleDisplay) {
-        hostDisplay = document.createElement('div');
-        hostDisplay.id = 'active-live-host-display';
-        hostDisplay.style.cssText = 'font-size: 11px; color: #818cf8; font-weight: 700; margin-top: 4px;';
-        titleDisplay.parentNode.appendChild(hostDisplay);
+    // --- ABSOLUTE GARANTIE: Wir erzeugen ein unübersehbares Viewer-Badge direkt im Player-Bereich ---
+    let badge = document.getElementById('guaranteed-live-viewer-badge');
+    if (!badge && playerContainer) {
+        badge = document.createElement('div');
+        badge.id = 'guaranteed-live-viewer-badge';
+        badge.style.cssText = 'position: absolute; top: 16px; right: 16px; background: rgba(15, 23, 42, 0.85); border: 2px solid #10b981; color: #fff; padding: 6px 14px; border-radius: 30px; font-size: 12px; font-weight: 900; z-index: 99999; backdrop-filter: blur(8px); box-shadow: 0 4px 20px rgba(0,0,0,0.6); display: flex; align-items: center; gap: 6px;';
+        playerContainer.style.position = 'relative'; // Wichtig für absolute Platzierung
+        playerContainer.appendChild(badge);
+    }
+    if (badge) {
+        badge.innerHTML = `👥 <span id="live-viewer-count" style="color: #10b981;">${currentViewers}</span> Zuschauer`;
     }
 
-    if (hostDisplay) {
-        hostDisplay.innerHTML = `📍 ${location} | 👥 <span id="live-viewer-count" style="color: #10b981; font-weight: 900;">${currentViewers}</span> Zuschauer`;
-    }
-
-    // Polling im Sekundentakt, damit sich der Zähler augenblicklich aktualisiert
+    // Polling im Sekundentakt für den Live-Zähler
     if (viewerInterval) clearInterval(viewerInterval);
     viewerInterval = setInterval(async () => {
         try {
@@ -405,13 +405,16 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
                 }
             }
         } catch (err) {}
-    }, 3000);
+    }, 2500);
 
     if (playerContainer) {
         if (currentUserIsHost && localStream) {
+            // Das Badge oben auf dem Video erhalten
+            const existingBadgeHtml = playerContainer.querySelector('#guaranteed-live-viewer-badge')?.outerHTML || '';
             playerContainer.innerHTML = `
                 <video id="local-host-video" autoplay muted playsinline style="width: 100%; height: 100%; object-fit: cover; background: #000; position: absolute; top:0; left:0;"></video>
-                <div style="position: absolute; top: 12px; left: 12px; background: rgba(16,185,129,0.2); border: 1px solid #10b981; color: #10b981; padding: 3px 8px; border-radius: 20px; font-size: 10px; font-weight: 800; z-index: 5;">🎥 Du sendest Live</div>
+                <div style="position: absolute; top: 16px; left: 16px; background: rgba(16,185,129,0.2); border: 1px solid #10b981; color: #10b981; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 800; z-index: 5;">🎥 Du sendest Live</div>
+                ${existingBadgeHtml}
             `;
             const vidEl = document.getElementById('local-host-video');
             if (vidEl) {
@@ -419,6 +422,7 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
                 vidEl.play().catch(e => console.warn('Autoplay blockiert:', e));
             }
         } else {
+            const existingBadgeHtml = playerContainer.querySelector('#guaranteed-live-viewer-badge')?.outerHTML || '';
             playerContainer.innerHTML = `
                 <div style="width: 100%; height: 100%; background: linear-gradient(135deg, #090d16, #1e1b4b); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 16px; position: relative;">
                     <div style="font-size: 54px; margin-bottom: 12px;">🔴</div>
@@ -427,6 +431,7 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
                     <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Streamer: ${hostEmail ? hostEmail.split('@')[0] : 'Campus Creator'}</p>
                     <p style="font-size: 11px; color: #818cf8;">📍 ${location}</p>
                 </div>
+                ${existingBadgeHtml}
             `;
         }
     }
