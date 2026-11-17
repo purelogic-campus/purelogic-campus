@@ -284,7 +284,7 @@ export async function loadLiveStreams() {
     streams.forEach(stream => {
         const item = document.createElement('div');
         item.className = 'reel-item';
-        item.style.position = 'relative';
+        item.style.cssText = 'position: relative; width: 100%; height: 100%; overflow: hidden; background: #000; border-radius: 16px; cursor: pointer;';
 
         const category = stream.category || 'Live Stream';
         const location = stream.location || 'Wien / Campus';
@@ -295,37 +295,40 @@ export async function loadLiveStreams() {
 
         const isMyStream = state.currentUserEmail && hostEmail.toLowerCase() === state.currentUserEmail.toLowerCase();
 
-        // Wenn der User der Host ist und ein lokaler Stream existiert, betten wir das <video>-Element direkt ein
-        const previewContent = (isMyStream && localStream)
+        // Hintergrund: Entweder das Live-Video des Hosts oder ein sauberer Grafik-Placeholder
+        const backgroundMedia = (isMyStream && localStream)
             ? `<video autoplay muted playsinline style="width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; z-index: 1;" id="preview-thumb-${streamId}"></video>`
             : `<div style="width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; text-align: center; background: linear-gradient(135deg, #090d16, #1e1b4b); position: absolute; top: 0; left: 0; z-index: 1;">
-                   <div style="font-size: 42px; margin-bottom: 6px;">🔴</div>
-                   <span style="background: rgba(239,68,68,0.2); border: 1px solid rgba(239,68,68,0.5); color: #ef4444; padding: 3px 10px; border-radius: 20px; font-size: 10px; font-weight: 800; margin-bottom: 6px;">${category}</span>
-                   <h3 style="font-size: 16px; font-weight: 900; color: #fff; margin-bottom: 2px;">${streamTitle}</h3>
-                   <p style="font-size: 10px; color: var(--text-muted);">Streamer: ${hostEmail.split('@')[0]} • 👥 ${viewers} Zuschauer</p>
+                   <div style="font-size: 48px; margin-bottom: 8px;">🔴</div>
+                   <span style="background: rgba(239,68,68,0.2); border: 1px solid rgba(239,68,68,0.5); color: #ef4444; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 800; margin-bottom: 8px;">${category}</span>
+                   <h3 style="font-size: 18px; font-weight: 900; color: #fff; margin-bottom: 4px;">${streamTitle}</h3>
+                   <p style="font-size: 11px; color: var(--text-muted);">Streamer: ${hostEmail.split('@')[0]} • 👥 ${viewers} Zuschauer</p>
                </div>`;
 
         item.innerHTML = `
-            <div style="width: 100%; height: 100%; position: absolute; top:0; left:0; cursor: pointer;" onclick="openLiveFullscreen('${streamId}', '${category}', '${location}', '${streamTitle}', ${isMyStream}, '${hostEmail}')">
-                ${previewContent}
-                <div style="position: absolute; top: 16px; left: 16px; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.5); color: #ef4444; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 800; display: flex; align-items: center; gap: 4px; z-index: 3;">
-                    <span style="width: 8px; height: 8px; background: #ef4444; border-radius: 50%; display: inline-block;"></span> LIVE
-                </div>
+            ${backgroundMedia}
+            <div style="position: absolute; top: 16px; left: 16px; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.5); color: #ef4444; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 800; display: flex; align-items: center; gap: 4px; z-index: 10;">
+                <span style="width: 8px; height: 8px; background: #ef4444; border-radius: 50%; display: inline-block;"></span> LIVE
             </div>
-            <div class="reel-overlay" style="justify-content: flex-end; align-items: flex-start; text-align: left; background: linear-gradient(0deg, rgba(9,13,22,0.95) 0%, transparent 60%); padding: 16px; z-index: 4; position: relative; pointer-events: none;">
+            <div style="position: absolute; bottom: 0; left: 0; width: 100%; background: linear-gradient(0deg, rgba(9,13,22,0.95) 0%, rgba(9,13,22,0.6) 70%, transparent 100%); padding: 24px 16px 16px 16px; display: flex; flex-direction: column; align-items: flex-start; z-index: 10; box-sizing: border-box;">
                 <div style="font-size: 12px; font-weight: 800; color: #818cf8; margin-bottom: 2px;">🔴 ${category}</div>
-                <div style="font-size: 13px; color: #fff; font-weight: 600; margin-bottom: 4px;">${streamTitle}</div>
-                <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">👥 ${viewers} Zuschauer aktiv</div>
-                <button class="btn" style="width: auto; padding: 8px 18px; font-size: 11px; font-weight: 800; background: var(--gradient-main); pointer-events: auto;" onclick="event.stopPropagation(); openLiveFullscreen('${streamId}', '${category}', '${location}', '${streamTitle}', ${isMyStream}, '${hostEmail}')">Vollbild beitreten 🚀</button>
+                <div style="font-size: 14px; color: #fff; font-weight: 900; margin-bottom: 4px;">${streamTitle}</div>
+                <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 10px;">👥 ${viewers} Zuschauer aktiv</div>
+                <button type="button" class="btn" style="width: auto; padding: 8px 18px; font-size: 11px; font-weight: 800; background: var(--gradient-main); cursor: pointer;" onclick="event.stopPropagation(); openLiveFullscreen('${streamId}', '${category}', '${location}', '${streamTitle}', ${isMyStream}, '${hostEmail}')">Vollbild beitreten 🚀</button>
             </div>
         `;
         
+        item.onclick = () => openLiveFullscreen(streamId, category, location, streamTitle, isMyStream, hostEmail);
+
         liveList.appendChild(item);
 
         if (isMyStream && localStream) {
             setTimeout(() => {
                 const thumbVid = document.getElementById(`preview-thumb-${streamId}`);
-                if (thumbVid) thumbVid.srcObject = localStream;
+                if (thumbVid) {
+                    thumbVid.srcObject = localStream;
+                    thumbVid.play().catch(() => {});
+                }
             }, 100);
         }
     });
