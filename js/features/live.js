@@ -406,6 +406,15 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
             <div style="position: absolute; top: 16px; left: 16px; background: rgba(16,185,129,0.2); border: 1px solid #10b981; color: #10b981; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 800; z-index: 5;">${currentUserIsHost ? '🎥 Du sendest Live (WebRTC)' : '🔴 Live WebRTC Stream'}</div>
             ${existingBadgeHtml}
         `;
+        
+        // Falls der Host das lokale Video anzeigt
+        if (currentUserIsHost && localStream) {
+            const vidEl = document.getElementById('active-web-rtc-video');
+            if (vidEl) {
+                vidEl.srcObject = localStream;
+                vidEl.play().catch(e => console.warn('Autoplay blockiert:', e));
+            }
+        }
     }
 
     if (chatInputContainer) {
@@ -473,8 +482,6 @@ function initWebRTCSignaling(streamId, isHost) {
 
     if (isHost && localStream) {
         localStream.getTracks().forEach(track => activePeerConnection.addTrack(track, localStream));
-        const vidEl = document.getElementById('active-web-rtc-video');
-        if (vidEl) vidEl.srcObject = localStream;
     }
 
     activePeerConnection.ontrack = (event) => {
@@ -544,9 +551,34 @@ function initWebRTCSignaling(streamId, isHost) {
                     } catch (err) {
                         console.error('Host Offer Fehler:', err);
                     }
+                }, 1200);
+            } else if (status === 'SUBSCRIBED' && !isHost) {
+                // Signal an Host senden, dass ein Viewer da ist
+                setTimeout(() => {
+                    signalingChannel.send({
+                        type: 'broadcast',
+                        event: 'viewer-ready',
+                        payload: { viewer: state.currentUserEmail }
+                    });
                 }, 1000);
             }
         });
+
+    signalingChannel.on('broadcast', { event: 'viewer-ready' }, async () => {
+        if (isHost && activePeerConnection) {
+            try {
+                const offer = await activePeerConnection.createOffer();
+                await activePeerConnection.setLocalDescription(offer);
+                signalingChannel.send({
+                    type: 'broadcast',
+                    event: 'offer',
+                    payload: { offer: offer, sender: state.currentUserEmail }
+                });
+            } catch (e) {
+                console.error('Re-offer Fehler:', e);
+            }
+        }
+    });
 }
 
 async function loadExistingChatMessages(streamId) {
