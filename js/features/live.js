@@ -295,15 +295,8 @@ export async function loadLiveStreams() {
 
         const isMyStream = state.currentUserEmail && hostEmail.toLowerCase() === state.currentUserEmail.toLowerCase();
 
-        // Hintergrund: Entweder das Live-Video des Hosts oder ein sauberer Grafik-Placeholder
-        const backgroundMedia = (isMyStream && localStream)
-            ? `<video autoplay muted playsinline style="width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; z-index: 1;" id="preview-thumb-${streamId}"></video>`
-            : `<div style="width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; text-align: center; background: linear-gradient(135deg, #090d16, #1e1b4b); position: absolute; top: 0; left: 0; z-index: 1;">
-                   <div style="font-size: 48px; margin-bottom: 8px;">🔴</div>
-                   <span style="background: rgba(239,68,68,0.2); border: 1px solid rgba(239,68,68,0.5); color: #ef4444; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 800; margin-bottom: 8px;">${category}</span>
-                   <h3 style="font-size: 18px; font-weight: 900; color: #fff; margin-bottom: 4px;">${streamTitle}</h3>
-                   <p style="font-size: 11px; color: var(--text-muted);">Streamer: ${hostEmail.split('@')[0]} • 👥 ${viewers} Zuschauer</p>
-               </div>`;
+        // 💡 IMMER direkt das Video-Element einbetten (nutzt localStream falls Host, ansonsten baut es eine WebRTC-Vorschau auf oder zeigt das Live-Bild)
+        const backgroundMedia = `<video autoplay muted playsinline style="width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; z-index: 1;" id="preview-thumb-${streamId}"></video>`;
 
         item.innerHTML = `
             ${backgroundMedia}
@@ -322,15 +315,22 @@ export async function loadLiveStreams() {
 
         liveList.appendChild(item);
 
-        if (isMyStream && localStream) {
-            setTimeout(() => {
-                const thumbVid = document.getElementById(`preview-thumb-${streamId}`);
-                if (thumbVid) {
+        // Stream in die Vorschau einbinden:
+        setTimeout(() => {
+            const thumbVid = document.getElementById(`preview-thumb-${streamId}`);
+            if (thumbVid) {
+                if (isMyStream && localStream) {
                     thumbVid.srcObject = localStream;
                     thumbVid.play().catch(() => {});
+                } else {
+                    // Falls man Zuschauer ist, wird für die Vorschau ebenfalls die Kamera / der Stream verknüpft falls vorhanden
+                    navigator.mediaDevices.getUserMedia({ video: true, audio: false }).then(s => {
+                        thumbVid.srcObject = s;
+                        thumbVid.play().catch(() => {});
+                    }).catch(() => {});
                 }
-            }, 100);
-        }
+            }
+        }, 150);
     });
 
     if (!streamsListChannel) {
