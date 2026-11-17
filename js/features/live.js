@@ -292,7 +292,7 @@ export async function loadLiveStreams() {
     liveList.innerHTML = '';
     liveList.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; padding: 16px; box-sizing: border-box;';
 
-    // Erkennung, ob es ein Smartphone ist (Touch-Device oder schmales Display)
+    // Erkennung, ob es ein Smartphone ist
     const isMobileDevice = (window.innerWidth <= 768) || (navigator.maxTouchPoints > 0);
 
     streams.forEach(async stream => {
@@ -330,7 +330,7 @@ export async function loadLiveStreams() {
         let backgroundMediaHtml = '';
 
         if (isMobileDevice) {
-            // 📱 Smartphone: Statisches Profilbild des Streamers mit schönem Blur/Dark-Hintergrund
+            // 📱 Smartphone: Statisches Profilbild des Streamers
             backgroundMediaHtml = `
                 <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at center, #1e293b 0%, #090d16 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1;">
                     <div style="width: 88px; height: 88px; border-radius: 50%; border: 3px solid var(--primary); overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.6); background: #0f172a; margin-bottom: 10px;">
@@ -360,7 +360,7 @@ export async function loadLiveStreams() {
         item.onclick = () => openLiveFullscreen(streamId, category, location, streamTitle, isMyStream, hostEmail);
         liveList.appendChild(item);
 
-        // WebRTC-Vorschau nur am PC initialisieren, da Smartphone das Profilbild nutzt
+        // WebRTC-Vorschau nur am PC initialisieren
         if (!isMobileDevice) {
             setTimeout(() => {
                 const thumbVid = document.getElementById(`preview-thumb-${streamId}`);
