@@ -224,6 +224,7 @@ async function startLiveStreamBroadcast(category, location, title, streamUrl = '
                     location: location,
                     stream_url: streamUrl,
                     viewers_count: 1,
+                    likes_count: 0,
                     expires_at: expiresAt,
                     created_at: new Date().toISOString()
                 }
@@ -260,11 +261,8 @@ export async function loadLiveStreams() {
 
     liveList.innerHTML = '<p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;">Lade aktive & beendete Streams...</p>';
 
-    const nowIso = new Date().toISOString();
-    // Zeitpunkt vor genau 1 Stunde für den "Vergangenheits-Filter"
     const oneHourAgoIso = new Date(Date.now() - 60 * 60 * 1000).toISOString();
 
-    // Wir laden alle Streams, deren Ablaufzeit in der Zukunft liegt ODER die in der letzten Stunde abgelaufen sind
     let query = _supabase
         .from('live_streams')
         .select('*')
@@ -333,7 +331,6 @@ export async function loadLiveStreams() {
         let backgroundMediaHtml = '';
 
         if (isEnded) {
-            // 🛑 Beendeter Stream: Zeigt Avatar + den Gaming-Stempel "BEENDET" quer über die Vorschau
             backgroundMediaHtml = `
                 <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #090d16; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1; filter: grayscale(40%);">
                     <div style="width: 80px; height: 80px; border-radius: 50%; border: 2px solid var(--text-muted); overflow: hidden; opacity: 0.6; margin-bottom: 10px;">
@@ -345,7 +342,6 @@ export async function loadLiveStreams() {
                 </div>
             `;
         } else if (isMobileDevice) {
-            // 📱 Aktiver Stream (Smartphone): Profilbild
             backgroundMediaHtml = `
                 <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at center, #1e293b 0%, #090d16 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1;">
                     <div style="width: 88px; height: 88px; border-radius: 50%; border: 3px solid var(--primary); overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.6); background: #0f172a; margin-bottom: 10px;">
@@ -355,7 +351,6 @@ export async function loadLiveStreams() {
                 </div>
             `;
         } else {
-            // 💻 Aktiver Stream (PC): WebRTC Vorschau
             backgroundMediaHtml = `<video autoplay muted playsinline style="width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; z-index: 1;" id="preview-thumb-${streamId}"></video>`;
         }
 
@@ -453,15 +448,17 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
     const currentUserIsHost = isHost || (state.currentUserEmail && hostEmail && state.currentUserEmail.toLowerCase() === hostEmail.toLowerCase()) || (localStream !== null);
 
     let currentViewers = 1;
+    let currentLikes = 0;
     try {
         const { data: streamData } = await _supabase
             .from('live_streams')
-            .select('viewers_count')
+            .select('viewers_count, likes_count')
             .eq('id', streamId)
             .single();
 
         if (streamData) {
             currentViewers = streamData.viewers_count || 1;
+            currentLikes = streamData.likes_count || 0;
             if (!currentUserIsHost) {
                 currentViewers += 1;
                 await _supabase
@@ -474,7 +471,6 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
         console.warn('Viewer Count Sync Fehler:', e);
     }
 
-    // 💡 1. Abo-Button oben in der Bildmitte platziert + 2. TikTok-artiger Like-Zähler & Tippen auf den Bildschirm
     let topControls = document.getElementById('live-top-center-controls');
     if (!topControls && playerContainer) {
         topControls = document.createElement('div');
@@ -487,7 +483,7 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
     if (topControls) {
         topControls.innerHTML = `
             <button type="button" onclick="subscribeToCreator('${hostEmail}')" class="btn" style="background: linear-gradient(135deg, #8b5cf6, #3b82f6); color: #fff; font-size: 11px; font-weight: 900; padding: 6px 16px; border-radius: 20px; border: none; cursor: pointer; box-shadow: 0 4px 15px rgba(139,92,246,0.4);">⭐ Abo (150P/Mo)</button>
-            <div id="live-likes-counter-badge" style="background: rgba(15, 23, 42, 0.85); border: 2px solid #ec4899; color: #fff; padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: 900; backdrop-filter: blur(8px); display: flex; align-items: center; gap: 5px; cursor: pointer;" onclick="sendScreenTapLike()">❤️ <span id="live-likes-count-num">0</span></div>
+            <div id="live-likes-counter-badge" style="background: rgba(15, 23, 42, 0.85); border: 2px solid #ec4899; color: #fff; padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: 900; backdrop-filter: blur(8px); display: flex; align-items: center; gap: 5px; cursor: pointer;" onclick="sendScreenTapLike()">❤️ <span id="live-likes-count-num">${currentLikes}</span></div>
         `;
     }
 
@@ -522,9 +518,7 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
     }, 2000);
 
     if (playerContainer) {
-        // 💡 Tippen auf den Videobildschirm sendet Likes wie bei TikTok
         playerContainer.onclick = (e) => {
-            // Ignorieren, wenn auf Buttons geklickt wurde
             if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
             sendScreenTapLikeAnim(e.clientX, e.clientY);
         };
@@ -534,7 +528,6 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
             <div style="position: absolute; top: 16px; left: 16px; background: rgba(16,185,129,0.2); border: 1px solid #10b981; color: #10b981; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 800; z-index: 5;">${currentUserIsHost ? '🎥 Du sendest Live (WebRTC)' : '🔴 Live WebRTC Stream'}</div>
         `;
         
-        // Obere Controls und Badge nach DOM-Neubau wieder einhängen falls nötig
         if (topControls) playerContainer.appendChild(topControls);
         if (badge) playerContainer.appendChild(badge);
 
@@ -601,59 +594,6 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
     initWebRTCSignaling(streamId, currentUserIsHost);
 }
 
-// 💡 3. TikTok-artiges Tippen auf den Bildschirm für Likes mit schwebendem ❤️-Effekt
-window.sendScreenTapLike = async function() {
-    if (!activeStreamId) return;
-    try {
-        const { data } = await _supabase.from('live_streams').select('likes_count').eq('id', activeStreamId).single();
-        const newLikes = (data?.likes_count || 0) + 1;
-        await _supabase.from('live_streams').update({ likes_count: newLikes }).eq('id', activeStreamId);
-        
-        const lSpan = document.getElementById('live-likes-count-num');
-        if (lSpan) lSpan.textContent = newLikes;
-    } catch (e) {}
-};
-
-function sendScreenTapLikeAnim(clientX, clientY) {
-    sendScreenTapLike();
-    
-    const playerContainer = document.getElementById('live-stream-player-container');
-    if (!playerContainer) return;
-
-    const heart = document.createElement('div');
-    heart.innerHTML = '❤️';
-    heart.style.cssText = `position: fixed; left: ${clientX - 15}px; top: ${clientY - 15}px; font-size: 28px; z-index: 999999; pointer-events: none; transition: transform 0.8s ease-out, opacity 0.8s ease-out; transform: scale(0.5) translateY(0); opacity: 1;`;
-    document.body.appendChild(heart);
-
-    setTimeout(() => {
-        heart.style.transform = `scale(1.4) translateY(-120px) rotate(${Math.random() * 40 - 20}deg)`;
-        heart.style.opacity = '0';
-    }, 30);
-
-    setTimeout(() => heart.remove(), 850);
-}
-
-// 💡 4. Automatisches Beenden/Verlassen des Streams beim Klick auf das Pure Logic Logo
-window.handlePureLogicLogoClick = async function() {
-    if (activeStreamId) {
-        await closeLiveFullscreen();
-    }
-};
-
-// Logo-Klick-Hook im globalen Scope sicherstellen (Falls im Hauptlayout vorhanden)
-document.addEventListener('DOMContentLoaded', () => {
-    const logoEls = document.querySelectorAll('.logo, #logo, [onclick*="Home"], [onclick*="feed"]');
-    logoEls.forEach(el => {
-        const origOnClick = el.onclick;
-        el.onclick = async (e) => {
-            if (activeStreamId) {
-                await closeLiveFullscreen();
-            }
-            if (origOnClick) origOnClick(e);
-        };
-    });
-});
-
 function initWebRTCSignaling(streamId, isHost) {
     if (signalingChannel) _supabase.removeChannel(signalingChannel);
 
@@ -673,6 +613,8 @@ function initWebRTCSignaling(streamId, isHost) {
         if (vidEl && remoteStream) {
             vidEl.srcObject = remoteStream;
             vidEl.onloadedmetadata = () => vidEl.play().catch(e => console.warn('Remote Video Autoplay:', e));
+            // Sofortiges Auslösen des Play-Befehls zur Fehlerbehebung auf Zweitgeräten
+            vidEl.play().catch(() => {});
         }
 
         const statusMsg = document.getElementById('webrtc-status-msg');
@@ -767,6 +709,53 @@ function initWebRTCSignaling(streamId, isHost) {
         }
     });
 }
+
+window.sendScreenTapLike = async function() {
+    if (!activeStreamId) return;
+    try {
+        const { data } = await _supabase.from('live_streams').select('likes_count').eq('id', activeStreamId).single();
+        const newLikes = (data?.likes_count || 0) + 1;
+        await _supabase.from('live_streams').update({ likes_count: newLikes }).eq('id', activeStreamId);
+        
+        const lSpan = document.getElementById('live-likes-count-num');
+        if (lSpan) lSpan.textContent = newLikes;
+    } catch (e) {}
+};
+
+function sendScreenTapLikeAnim(clientX, clientY) {
+    sendScreenTapLike();
+    
+    const heart = document.createElement('div');
+    heart.innerHTML = '❤️';
+    heart.style.cssText = `position: fixed; left: ${clientX - 15}px; top: ${clientY - 15}px; font-size: 28px; z-index: 999999; pointer-events: none; transition: transform 0.8s ease-out, opacity 0.8s ease-out; transform: scale(0.5) translateY(0); opacity: 1;`;
+    document.body.appendChild(heart);
+
+    setTimeout(() => {
+        heart.style.transform = `scale(1.4) translateY(-120px) rotate(${Math.random() * 40 - 20}deg)`;
+        heart.style.opacity = '0';
+    }, 30);
+
+    setTimeout(() => heart.remove(), 850);
+}
+
+window.handlePureLogicLogoClick = async function() {
+    if (activeStreamId) {
+        await closeLiveFullscreen();
+    }
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    const logoEls = document.querySelectorAll('.logo, #logo, [onclick*="Home"], [onclick*="feed"]');
+    logoEls.forEach(el => {
+        const origOnClick = el.onclick;
+        el.onclick = async (e) => {
+            if (activeStreamId) {
+                await closeLiveFullscreen();
+            }
+            if (origOnClick) origOnClick(e);
+        };
+    });
+});
 
 async function loadExistingChatMessages(streamId) {
     try {
