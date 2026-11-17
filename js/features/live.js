@@ -292,24 +292,10 @@ export async function loadLiveStreams() {
     liveList.innerHTML = '';
     liveList.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; padding: 16px; box-sizing: border-box;';
 
-    // IntersectionObserver, damit mobile Browser im Viewport das Video direkt vollautomatisch abspielen
-    if (liveObserver) {
-        liveObserver.disconnect();
-    }
+    // Erkennung, ob es ein Smartphone ist (Touch-Device oder schmales Display)
+    const isMobileDevice = (window.innerWidth <= 768) || (navigator.maxTouchPoints > 0);
 
-    liveObserver = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            const thumbVid = entry.target;
-            if (entry.isIntersecting) {
-                thumbVid.muted = true;
-                thumbVid.play().catch(() => {});
-            } else {
-                thumbVid.pause();
-            }
-        });
-    }, { threshold: 0.1 });
-
-    streams.forEach(stream => {
+    streams.forEach(async stream => {
         const item = document.createElement('div');
         item.className = 'reel-item';
         item.style.cssText = 'position: relative; width: 100%; height: 380px; overflow: hidden; background: #0b0f19; border: 1px solid var(--border); border-radius: 16px; cursor: pointer; box-shadow: 0 10px 25px rgba(0,0,0,0.5); transition: transform 0.2s ease, border-color 0.2s ease;';
@@ -326,9 +312,40 @@ export async function loadLiveStreams() {
 
         const isMyStream = state.currentUserEmail && hostEmail.toLowerCase() === state.currentUserEmail.toLowerCase();
 
-        // 💡 IMMER automatisch stumm & playsinline, startet ohne Klick im Feed
+        // Avatar / Profilbild des Streamers aus der users-Tabelle holen
+        let streamerAvatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(hostEmail || 'campus')}`;
+        try {
+            if (hostEmail) {
+                const { data: userData } = await _supabase
+                    .from('users')
+                    .select('avatar_url')
+                    .eq('email', hostEmail)
+                    .single();
+                if (userData && userData.avatar_url) {
+                    streamerAvatarUrl = userData.avatar_url;
+                }
+            }
+        } catch (e) {}
+
+        let backgroundMediaHtml = '';
+
+        if (isMobileDevice) {
+            // 📱 Smartphone: Statisches Profilbild des Streamers mit schönem Blur/Dark-Hintergrund
+            backgroundMediaHtml = `
+                <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at center, #1e293b 0%, #090d16 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1;">
+                    <div style="width: 88px; height: 88px; border-radius: 50%; border: 3px solid var(--primary); overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.6); background: #0f172a; margin-bottom: 10px;">
+                        <img src="${streamerAvatarUrl}" alt="Streamer" style="width: 100%; height: 100%; object-fit: cover;">
+                    </div>
+                    <span style="font-size: 11px; font-weight: 800; color: var(--text-muted); background: rgba(255,255,255,0.05); padding: 4px 10px; border-radius: 20px; border: 1px solid var(--border);">Live-Profil 🔴</span>
+                </div>
+            `;
+        } else {
+            // 💻 PC: Echte Live-WebRTC Vorschau
+            backgroundMediaHtml = `<video autoplay muted playsinline style="width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; z-index: 1;" id="preview-thumb-${streamId}"></video>`;
+        }
+
         item.innerHTML = `
-            <video autoplay muted playsinline style="width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; z-index: 1;" id="preview-thumb-${streamId}"></video>
+            ${backgroundMediaHtml}
             <div style="position: absolute; top: 12px; left: 12px; background: rgba(239, 68, 68, 0.25); border: 1px solid rgba(239, 68, 68, 0.6); color: #ef4444; padding: 3px 8px; border-radius: 20px; font-size: 10px; font-weight: 900; display: flex; align-items: center; gap: 4px; z-index: 10; backdrop-filter: blur(4px);">
                 <span style="width: 6px; height: 6px; background: #ef4444; border-radius: 50%; display: inline-block;"></span> LIVE
             </div>
@@ -343,49 +360,51 @@ export async function loadLiveStreams() {
         item.onclick = () => openLiveFullscreen(streamId, category, location, streamTitle, isMyStream, hostEmail);
         liveList.appendChild(item);
 
-        setTimeout(() => {
-            const thumbVid = document.getElementById(`preview-thumb-${streamId}`);
-            if (!thumbVid) return;
+        // WebRTC-Vorschau nur am PC initialisieren, da Smartphone das Profilbild nutzt
+        if (!isMobileDevice) {
+            setTimeout(() => {
+                const thumbVid = document.getElementById(`preview-thumb-${streamId}`);
+                if (!thumbVid) return;
 
-            thumbVid.muted = true;
-            liveObserver.observe(thumbVid);
+                thumbVid.muted = true;
 
-            if (isMyStream && localStream) {
-                thumbVid.srcObject = localStream;
-                thumbVid.play().catch(() => {});
-            } else {
-                const pc = new RTCPeerConnection(rtcConfig);
-                previewPeerConnections[streamId] = pc;
+                if (isMyStream && localStream) {
+                    thumbVid.srcObject = localStream;
+                    thumbVid.play().catch(() => {});
+                } else {
+                    const pc = new RTCPeerConnection(rtcConfig);
+                    previewPeerConnections[streamId] = pc;
 
-                pc.ontrack = (event) => {
-                    if (event.streams[0]) {
-                        thumbVid.srcObject = event.streams[0];
-                        thumbVid.muted = true;
-                        thumbVid.play().catch(() => {});
-                    }
-                };
+                    pc.ontrack = (event) => {
+                        if (event.streams[0]) {
+                            thumbVid.srcObject = event.streams[0];
+                            thumbVid.muted = true;
+                            thumbVid.play().catch(() => {});
+                        }
+                    };
 
-                const sChan = _supabase.channel(`webrtc:${streamId}`, { config: { broadcast: { self: false } } });
-                previewChannels[streamId] = sChan;
+                    const sChan = _supabase.channel(`webrtc:${streamId}`, { config: { broadcast: { self: false } } });
+                    previewChannels[streamId] = sChan;
 
-                sChan.on('broadcast', { event: 'offer' }, async ({ payload }) => {
-                    try {
-                        await pc.setRemoteDescription(new RTCSessionDescription(payload.offer));
-                        const answer = await pc.createAnswer();
-                        await pc.setLocalDescription(answer);
-                        sChan.send({ type: 'broadcast', event: 'answer', payload: { answer, sender: 'preview' } });
-                    } catch (e) {}
-                }).on('broadcast', { event: 'ice-candidate' }, async ({ payload }) => {
-                    try {
-                        if (payload.candidate) await pc.addIceCandidate(new RTCIceCandidate(payload.candidate));
-                    } catch (e) {}
-                }).subscribe((status) => {
-                    if (status === 'SUBSCRIBED') {
-                        sChan.send({ type: 'broadcast', event: 'viewer-ready', payload: { viewer: 'preview' } });
-                    }
-                });
-            }
-        }, 150);
+                    sChan.on('broadcast', { event: 'offer' }, async ({ payload }) => {
+                        try {
+                            await pc.setRemoteDescription(new RTCSessionDescription(payload.offer));
+                            const answer = await pc.createAnswer();
+                            await pc.setLocalDescription(answer);
+                            sChan.send({ type: 'broadcast', event: 'answer', payload: { answer, sender: 'preview' } });
+                        } catch (e) {}
+                    }).on('broadcast', { event: 'ice-candidate' }, async ({ payload }) => {
+                        try {
+                            if (payload.candidate) await pc.addIceCandidate(new RTCIceCandidate(payload.candidate));
+                        } catch (e) {}
+                    }).subscribe((status) => {
+                        if (status === 'SUBSCRIBED') {
+                            sChan.send({ type: 'broadcast', event: 'viewer-ready', payload: { viewer: 'preview' } });
+                        }
+                    });
+                }
+            }, 150);
+        }
     });
 
     if (!streamsListChannel) {
