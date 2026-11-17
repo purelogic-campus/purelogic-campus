@@ -288,11 +288,17 @@ export async function loadLiveStreams() {
     }
 
     liveList.innerHTML = '';
+    // Grid-Layout für eine kompakte Vorschau-Übersicht
+    liveList.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; padding: 16px; box-sizing: border-box;';
 
     streams.forEach(stream => {
         const item = document.createElement('div');
         item.className = 'reel-item';
-        item.style.cssText = 'position: relative; width: 100%; height: 100%; overflow: hidden; background: #000; border-radius: 16px; cursor: pointer;';
+        // Kompakte feste Höhe für die Vorschau-Karte
+        item.style.cssText = 'position: relative; width: 100%; height: 380px; overflow: hidden; background: #0b0f19; border: 1px solid var(--border); border-radius: 16px; cursor: pointer; box-shadow: 0 10px 25px rgba(0,0,0,0.5); transition: transform 0.2s ease, border-color 0.2s ease;';
+        
+        item.onmouseover = () => { item.style.transform = 'translateY(-3px)'; item.style.borderColor = 'var(--primary)'; };
+        item.onmouseout = () => { item.style.transform = 'translateY(0)'; item.style.borderColor = 'var(--border)'; };
 
         const category = stream.category || 'Live Stream';
         const location = stream.location || 'Wien / Campus';
@@ -307,14 +313,14 @@ export async function loadLiveStreams() {
 
         item.innerHTML = `
             ${backgroundMedia}
-            <div style="position: absolute; top: 16px; left: 16px; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.5); color: #ef4444; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 800; display: flex; align-items: center; gap: 4px; z-index: 10;">
-                <span style="width: 8px; height: 8px; background: #ef4444; border-radius: 50%; display: inline-block;"></span> LIVE
+            <div style="position: absolute; top: 12px; left: 12px; background: rgba(239, 68, 68, 0.25); border: 1px solid rgba(239, 68, 68, 0.6); color: #ef4444; padding: 3px 8px; border-radius: 20px; font-size: 10px; font-weight: 900; display: flex; align-items: center; gap: 4px; z-index: 10; backdrop-filter: blur(4px);">
+                <span style="width: 6px; height: 6px; background: #ef4444; border-radius: 50%; display: inline-block;"></span> LIVE
             </div>
-            <div style="position: absolute; bottom: 0; left: 0; width: 100%; background: linear-gradient(0deg, rgba(9,13,22,0.95) 0%, rgba(9,13,22,0.6) 70%, transparent 100%); padding: 24px 16px 16px 16px; display: flex; flex-direction: column; align-items: flex-start; z-index: 10; box-sizing: border-box;">
-                <div style="font-size: 12px; font-weight: 800; color: #818cf8; margin-bottom: 2px;">🔴 ${category}</div>
-                <div style="font-size: 14px; color: #fff; font-weight: 900; margin-bottom: 4px;">${streamTitle}</div>
-                <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 10px;">👥 ${viewers} Zuschauer aktiv</div>
-                <button type="button" class="btn" style="width: auto; padding: 8px 18px; font-size: 11px; font-weight: 800; background: var(--gradient-main); cursor: pointer;" onclick="event.stopPropagation(); openLiveFullscreen('${streamId}', '${category}', '${location}', '${streamTitle}', ${isMyStream}, '${hostEmail}')">Vollbild beitreten 🚀</button>
+            <div style="position: absolute; bottom: 0; left: 0; width: 100%; background: linear-gradient(0deg, rgba(9,13,22,0.98) 20%, rgba(9,13,22,0.7) 75%, transparent 100%); padding: 20px 14px 14px 14px; display: flex; flex-direction: column; align-items: flex-start; z-index: 10; box-sizing: border-box;">
+                <div style="font-size: 11px; font-weight: 800; color: #818cf8; margin-bottom: 2px;">🔴 ${category}</div>
+                <div style="font-size: 13px; color: #fff; font-weight: 900; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;">${streamTitle}</div>
+                <div style="font-size: 10px; color: var(--text-muted); margin-bottom: 8px;">👥 ${viewers} Zuschauer aktiv</div>
+                <button type="button" class="btn" style="width: 100%; padding: 7px; font-size: 11px; font-weight: 900; background: var(--gradient-main); cursor: pointer; border-radius: 8px;" onclick="event.stopPropagation(); openLiveFullscreen('${streamId}', '${category}', '${location}', '${streamTitle}', ${isMyStream}, '${hostEmail}')">Vollbild beitreten 🚀</button>
             </div>
         `;
         
@@ -536,7 +542,6 @@ function initWebRTCSignaling(streamId, isHost) {
             vidEl.play().catch(e => console.warn('Remote Video Autoplay:', e));
         }
 
-        // 💡 Sobald das erste Videobild ankommt, entfernen wir die "WebRTC Verbindung wird aufgebaut..." Meldung aus dem Chat!
         const chatMessagesEl = document.getElementById('live-chat-messages');
         if (chatMessagesEl && chatMessagesEl.innerHTML.includes('WebRTC Verbindung wird aufgebaut')) {
             chatMessagesEl.innerHTML = `<div style="color: #10b981; text-align: center; font-size: 11px; font-weight: 700;">🟢 Live-Verbindung erfolgreich hergestellt!</div>`;
