@@ -294,14 +294,19 @@ export async function loadLiveStreams() {
 
         const isMyStream = state.currentUserEmail && hostEmail.toLowerCase() === state.currentUserEmail.toLowerCase();
 
+        // Wenn der angemeldete User der Host ist, direkt die lokale Vorschau einbinden
+        const previewVideoHtml = (isMyStream && localStream) 
+            ? `<video autoplay muted playsinline style="width: 100%; height: 100%; object-fit: cover;" id="preview-thumb-${streamId}"></video>`
+            : `<div style="width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; text-align: center; background: linear-gradient(135deg, #090d16, #1e1b4b);">
+                   <div style="font-size: 42px; margin-bottom: 6px;">🔴</div>
+                   <span style="background: rgba(239,68,68,0.2); border: 1px solid rgba(239,68,68,0.5); color: #ef4444; padding: 3px 10px; border-radius: 20px; font-size: 10px; font-weight: 800; margin-bottom: 6px;">${category}</span>
+                   <h3 style="font-size: 16px; font-weight: 900; color: #fff; margin-bottom: 2px;">${streamTitle}</h3>
+                   <p style="font-size: 10px; color: var(--text-muted);">Streamer: ${hostEmail.split('@')[0]} • 👥 ${viewers} Zuschauer</p>
+               </div>`;
+
         item.innerHTML = `
-            <div style="width: 100%; height: 100%; position: relative; cursor: pointer; background: linear-gradient(135deg, #090d16, #1e1b4b);" onclick="openLiveFullscreen('${streamId}', '${category}', '${location}', '${streamTitle}', ${isMyStream}, '${hostEmail}')">
-                <div style="width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; text-align: center; position: relative;">
-                    <div style="font-size: 48px; margin-bottom: 8px;">🔴</div>
-                    <span style="background: rgba(239,68,68,0.2); border: 1px solid rgba(239,68,68,0.5); color: #ef4444; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 800; margin-bottom: 8px;">${category}</span>
-                    <h3 style="font-size: 18px; font-weight: 900; color: #fff; margin-bottom: 4px;">${streamTitle}</h3>
-                    <p style="font-size: 11px; color: var(--text-muted);">Streamer: ${hostEmail.split('@')[0]} • 👥 ${viewers} Zuschauer</p>
-                </div>
+            <div style="width: 100%; height: 100%; position: relative; cursor: pointer;" onclick="openLiveFullscreen('${streamId}', '${category}', '${location}', '${streamTitle}', ${isMyStream}, '${hostEmail}')">
+                ${previewVideoHtml}
                 <div style="position: absolute; top: 16px; left: 16px; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.5); color: #ef4444; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 800; display: flex; align-items: center; gap: 4px; z-index: 2;">
                     <span style="width: 8px; height: 8px; background: #ef4444; border-radius: 50%; display: inline-block;"></span> LIVE
                 </div>
@@ -315,6 +320,13 @@ export async function loadLiveStreams() {
         `;
         
         liveList.appendChild(item);
+
+        if (isMyStream && localStream) {
+            setTimeout(() => {
+                const thumbVid = document.getElementById(`preview-thumb-${streamId}`);
+                if (thumbVid) thumbVid.srcObject = localStream;
+            }, 100);
+        }
     });
 
     if (!streamsListChannel) {
