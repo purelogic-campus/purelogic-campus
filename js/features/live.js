@@ -292,26 +292,6 @@ export async function loadLiveStreams() {
     liveList.innerHTML = '';
     liveList.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; padding: 16px; box-sizing: border-box;';
 
-    if (liveObserver) {
-        liveObserver.disconnect();
-    }
-
-    liveObserver = new IntersectionObserver((entries, observer) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                const thumbVid = entry.target;
-                if (thumbVid.paused) {
-                    thumbVid.play().catch(() => {});
-                }
-            } else {
-                const thumbVid = entry.target;
-                if (!thumbVid.paused) {
-                    thumbVid.pause();
-                }
-            }
-        });
-    }, { threshold: 0.1 });
-
     streams.forEach(stream => {
         const item = document.createElement('div');
         item.className = 'reel-item';
@@ -329,10 +309,14 @@ export async function loadLiveStreams() {
 
         const isMyStream = state.currentUserEmail && hostEmail.toLowerCase() === state.currentUserEmail.toLowerCase();
 
-        const backgroundMedia = `<video autoplay muted playsinline style="width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; z-index: 1;" id="preview-thumb-${streamId}"></video>`;
-
+        // 💡 Mobile-freundlicher Ansatz: Ein initiales Cover/Thumbnail mit direktem Tippen-zum-Starten-Button für Smartphones
         item.innerHTML = `
-            ${backgroundMedia}
+            <video autoplay muted playsinline style="width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; z-index: 1;" id="preview-thumb-${streamId}"></video>
+            <div id="preview-overlay-${streamId}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(11,15,25,0.75); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 5; gap: 8px; backdrop-filter: blur(2px);">
+                <div style="font-size: 26px;">📺</div>
+                <div style="font-size: 12px; font-weight: 900; color: #fff;">${streamTitle}</div>
+                <button type="button" class="btn" style="padding: 6px 14px; font-size: 11px; font-weight: 900; background: var(--gradient-main); border-radius: 20px; border: none; cursor: pointer;" onclick="event.stopPropagation(); activateMobilePreviewStream('${streamId}', '${hostEmail}', ${isMyStream})">Vorschau starten ▶️</button>
+            </div>
             <div style="position: absolute; top: 12px; left: 12px; background: rgba(239, 68, 68, 0.25); border: 1px solid rgba(239, 68, 68, 0.6); color: #ef4444; padding: 3px 8px; border-radius: 20px; font-size: 10px; font-weight: 900; display: flex; align-items: center; gap: 4px; z-index: 10; backdrop-filter: blur(4px);">
                 <span style="width: 6px; height: 6px; background: #ef4444; border-radius: 50%; display: inline-block;"></span> LIVE
             </div>
@@ -346,50 +330,6 @@ export async function loadLiveStreams() {
         
         item.onclick = () => openLiveFullscreen(streamId, category, location, streamTitle, isMyStream, hostEmail);
         liveList.appendChild(item);
-
-        setTimeout(() => {
-            const thumbVid = document.getElementById(`preview-thumb-${streamId}`);
-            if (!thumbVid) return;
-
-            thumbVid.muted = true;
-            liveObserver.observe(thumbVid);
-
-            if (isMyStream && localStream) {
-                thumbVid.srcObject = localStream;
-                thumbVid.onloadedmetadata = () => thumbVid.play().catch(() => {});
-            } else {
-                const pc = new RTCPeerConnection(rtcConfig);
-                previewPeerConnections[streamId] = pc;
-
-                pc.ontrack = (event) => {
-                    if (event.streams[0]) {
-                        thumbVid.srcObject = event.streams[0];
-                        thumbVid.muted = true;
-                        thumbVid.onloadedmetadata = () => thumbVid.play().catch(() => {});
-                    }
-                };
-
-                const sChan = _supabase.channel(`webrtc:${streamId}`, { config: { broadcast: { self: false } } });
-                previewChannels[streamId] = sChan;
-
-                sChan.on('broadcast', { event: 'offer' }, async ({ payload }) => {
-                    try {
-                        await pc.setRemoteDescription(new RTCSessionDescription(payload.offer));
-                        const answer = await pc.createAnswer();
-                        await pc.setLocalDescription(answer);
-                        sChan.send({ type: 'broadcast', event: 'answer', payload: { answer, sender: 'preview' } });
-                    } catch (e) {}
-                }).on('broadcast', { event: 'ice-candidate' }, async ({ payload }) => {
-                    try {
-                        if (payload.candidate) await pc.addIceCandidate(new RTCIceCandidate(payload.candidate));
-                    } catch (e) {}
-                }).subscribe((status) => {
-                    if (status === 'SUBSCRIBED') {
-                        sChan.send({ type: 'broadcast', event: 'viewer-ready', payload: { viewer: 'preview' } });
-                    }
-                });
-            }
-        }, 200);
     });
 
     if (!streamsListChannel) {
@@ -401,6 +341,55 @@ export async function loadLiveStreams() {
             .subscribe();
     }
 }
+
+// 💡 Neue Funktion: Aktiviert die WebRTC-Vorschau auf Touch-Garantie für Smartphones
+window.activateMobilePreviewStream = function(streamId, hostEmail, isMyStream) {
+    const thumbVid = document.getElementById(`preview-thumb-${streamId}`);
+    const overlay = document.getElementById(`preview-overlay-${streamId}`);
+    if (!thumbVid) return;
+
+    thumbVid.muted = true;
+
+    if (isMyStream && localStream) {
+        thumbVid.srcObject = localStream;
+        thumbVid.play().then(() => {
+            if (overlay) overlay.style.display = 'none';
+        }).catch(e => console.warn('Play blockiert:', e));
+    } else {
+        const pc = new RTCPeerConnection(rtcConfig);
+        previewPeerConnections[streamId] = pc;
+
+        pc.ontrack = (event) => {
+            if (event.streams[0]) {
+                thumbVid.srcObject = event.streams[0];
+                thumbVid.muted = true;
+                thumbVid.play().then(() => {
+                    if (overlay) overlay.style.display = 'none';
+                }).catch(e => console.warn('WebRTC Play blockiert:', e));
+            }
+        };
+
+        const sChan = _supabase.channel(`webrtc:${streamId}`, { config: { broadcast: { self: false } } });
+        previewChannels[streamId] = sChan;
+
+        sChan.on('broadcast', { event: 'offer' }, async ({ payload }) => {
+            try {
+                await pc.setRemoteDescription(new RTCSessionDescription(payload.offer));
+                const answer = await pc.createAnswer();
+                await pc.setLocalDescription(answer);
+                sChan.send({ type: 'broadcast', event: 'answer', payload: { answer, sender: 'preview' } });
+            } catch (e) {}
+        }).on('broadcast', { event: 'ice-candidate' }, async ({ payload }) => {
+            try {
+                if (payload.candidate) await pc.addIceCandidate(new RTCIceCandidate(payload.candidate));
+            } catch (e) {}
+        }).subscribe((status) => {
+            if (status === 'SUBSCRIBED') {
+                sChan.send({ type: 'broadcast', event: 'viewer-ready', payload: { viewer: 'preview' } });
+            }
+        });
+    }
+};
 
 export function setLiveFilter(element, category) {
     document.querySelectorAll('#live-filter-group .cat-pill').forEach(p => p.classList.remove('active'));
@@ -487,7 +476,7 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
             if (vidEl) {
                 vidEl.muted = true;
                 vidEl.srcObject = localStream;
-                vidEl.onloadedmetadata = () => vidEl.play().catch(e => console.warn('Autoplay blockiert:', e));
+                vidEl.play().catch(e => console.warn('Autoplay blockiert:', e));
             }
         }
     }
@@ -564,7 +553,7 @@ function initWebRTCSignaling(streamId, isHost) {
         const vidEl = document.getElementById('active-web-rtc-video');
         if (vidEl && remoteStream) {
             vidEl.srcObject = remoteStream;
-            vidEl.onloadedmetadata = () => vidEl.play().catch(e => console.warn('Remote Video Autoplay:', e));
+            vidEl.play().catch(e => console.warn('Remote Video Autoplay:', e));
         }
 
         const statusMsg = document.getElementById('webrtc-status-msg');
@@ -1031,3 +1020,4 @@ window.terminateActiveStream = terminateActiveStream;
 window.sendLiveChatMessage = sendLiveChatMessage;
 window.sendLiveGift = sendLiveGift;
 window.subscribeToCreator = subscribeToCreator;
+window.activateMobilePreviewStream = activateMobilePreviewStream;
