@@ -1,4 +1,4 @@
-// js/features/live.js • PURE LOGIC Live-Stream, WebRTC, Viewer & Geschenke-Galerie Modul
+// js/features/live.js • PURE LOGIC Live-Stream, WebRTC, Viewer, Geschenke-Galerie & Abo-Modul
 import { _supabase } from '../config.js';
 import { state } from '../state.js';
 import { validateInputOrAlert } from './moderation.js';
@@ -12,7 +12,7 @@ let selectedSubCategory = 'Allgemein';
 let currentActiveFilter = 'Alle';
 let viewerInterval = null;
 
-// Die 15 verschiedenen Campus-Geschenke (angefangen beim Günstigsten)
+// Die 15 verschiedenen Campus-Geschenke
 const campusGifts = [
     { id: 1, name: 'Kaffee ☕', cost: 10 },
     { id: 2, name: 'Brezel 🥨', cost: 20 },
@@ -38,9 +38,6 @@ const subCategoriesMap = {
     '📚 Lernen': ['Study With Me (Pomodoro)', 'Coding & Programming', 'Mathematik & Statistik', 'Vorbereitung Klausur', 'Fremdsprachen']
 };
 
-/**
- * Öffnet die Kamera-Vorschau vor dem Stream-Start
- */
 export async function handlePreLiveCheck() {
     if (!state.currentUserEmail) {
         alert('Bitte logge dich zuerst ein, um einen Live-Stream zu starten!');
@@ -58,9 +55,6 @@ export async function handlePreLiveCheck() {
     showPreLivePreviewModal();
 }
 
-/**
- * Zeigt das Vorschau-Modal an
- */
 function showPreLivePreviewModal() {
     let previewModal = document.getElementById('live-preview-modal');
     selectedMainCategory = '💬 Plaudern';
@@ -356,9 +350,6 @@ export function setLiveFilter(element, category) {
     loadLiveStreams();
 }
 
-/**
- * Öffnet den Vollbildmodus, synchronisiert Viewer und stellt die Geschenke-Galerie bereit
- */
 export async function openLiveFullscreen(streamId, category, location, streamTitle = '', isHost = false, hostEmail = '') {
     activeStreamId = streamId;
     const modal = document.getElementById('live-fullscreen-modal');
@@ -462,11 +453,11 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
                 </div>
             `;
         } else {
-            // Button zum Öffnen der Geschenke-Galerie + Chat-Eingabe
+            // Aktionsleiste mit Geschenke-Galerie & Abo-Button
             chatInputContainer.innerHTML = `
-                <div style="display: flex; gap: 6px; margin-bottom: 6px; align-items: center;">
-                    <button type="button" onclick="openGiftsGalleryModal('${hostEmail}')" class="btn" style="background: linear-gradient(135deg, #f59e0b, #ec4899); color: #fff; font-size: 11px; font-weight: 900; padding: 6px 12px; border-radius: 20px; border: none; cursor: pointer; flex-shrink: 0; box-shadow: 0 4px 12px rgba(245,158,11,0.3);">🎁 Geschenke 🛍️</button>
-                    <span style="font-size: 10px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Unterstütze den Creator mit Campus-Punkten!</span>
+                <div style="display: flex; gap: 6px; margin-bottom: 6px; align-items: center; overflow-x: auto; padding-bottom: 2px;">
+                    <button type="button" onclick="openGiftsGalleryModal('${hostEmail}')" class="btn" style="background: linear-gradient(135deg, #f59e0b, #ec4899); color: #fff; font-size: 10px; font-weight: 900; padding: 6px 10px; border-radius: 16px; border: none; cursor: pointer; flex-shrink: 0; box-shadow: 0 4px 12px rgba(245,158,11,0.3);">🎁 Geschenke</button>
+                    <button type="button" onclick="subscribeToCreator('${hostEmail}')" class="btn" style="background: linear-gradient(135deg, #8b5cf6, #3b82f6); color: #fff; font-size: 10px; font-weight: 900; padding: 6px 10px; border-radius: 16px; border: none; cursor: pointer; flex-shrink: 0; box-shadow: 0 4px 12px rgba(139,92,246,0.3);">⭐ Abo (150P/Mo)</button>
                 </div>
                 <div style="display: flex; gap: 4px; width: 100%;">
                     <input type="text" id="live-chat-input" placeholder="Nachricht in den Chat schreiben..." style="margin: 0; font-size: 11px; padding: 8px 10px; flex: 1;" onkeydown="if(event.key==='Enter') sendLiveChatMessage()">
@@ -504,11 +495,11 @@ window.openGiftsGalleryModal = function(hostEmail) {
                 </div>
                 
                 <div id="gifts-grid-container" style="flex: 1; overflow-y: auto; padding: 14px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
-                    <!-- Wird dynamisch gefüllt -->
+                    <!-- Dynamisch -->
                 </div>
 
                 <div style="padding: 12px 16px; border-top: 1px solid var(--border); background: rgba(0,0,0,0.3); text-align: center;">
-                    <span style="font-size: 10px; color: var(--text-muted);">Geschenke lösen spektakuläre Animationen im Stream aus! ✨</span>
+                    <span style="font-size: 10px; color: var(--text-muted);">Geschenke lösen Animationen im Stream aus! ✨</span>
                 </div>
             </div>
         `;
@@ -547,7 +538,97 @@ function renderGiftsGrid(hostEmail) {
 }
 
 /**
- * Sendet ein gewähltes Geschenk aus der Galerie (Punkte-Abzug & Chat-Benachrichtigung)
+ * Monats-Abo für einen Creator abschließen (Standardkosten: 150 Punkte / Monat)
+ */
+export async function subscribeToCreator(creatorEmail) {
+    if (!state.currentUserEmail) {
+        alert('Bitte logge dich ein, um einen Creator zu abonnieren.');
+        return;
+    }
+
+    if (creatorEmail && state.currentUserEmail.toLowerCase() === creatorEmail.toLowerCase()) {
+        alert('Du kannst deinen eigenen Kanal nicht abonnieren! 😉');
+        return;
+    }
+
+    const subCost = 150;
+
+    if (!confirm(`Möchtest du diesen Creator für 1 Monat abonnieren? Kosten: ${subCost} Campus-Punkte ⚡`)) {
+        return;
+    }
+
+    try {
+        // 1. Prüfen ob User genug Punkte hat
+        const { data: myData, error: myErr } = await _supabase
+            .from('users')
+            .select('logic_score')
+            .eq('email', state.currentUserEmail)
+            .single();
+
+        if (myErr || !myData || (myData.logic_score || 0) < subCost) {
+            alert(`Du hast nicht genügend Campus-Punkte! Ein Abo kostet ${subCost} P.`);
+            return;
+        }
+
+        const newMyScore = myData.logic_score - subCost;
+
+        // 2. Punkte beim User abziehen
+        await _supabase
+            .from('users')
+            .update({ logic_score: newMyScore })
+            .eq('email', state.currentUserEmail);
+
+        const scoreBadge = document.getElementById('score');
+        if (scoreBadge) scoreBadge.textContent = `${newMyScore} P`;
+
+        // 3. Punkte dem Creator gutschreiben
+        if (creatorEmail) {
+            const { data: hostData } = await _supabase
+                .from('users')
+                .select('logic_score')
+                .eq('email', creatorEmail)
+                .single();
+
+            const hostNewScore = (hostData?.logic_score || 0) + subCost;
+            await _supabase
+                .from('users')
+                .update({ logic_score: hostNewScore })
+                .eq('email', creatorEmail);
+        }
+
+        // 4. Abo in der Tabelle eintragen (oder verlängern)
+        const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+        await _supabase
+            .from('channel_subscriptions')
+            .upsert([
+                {
+                    subscriber_email: state.currentUserEmail,
+                    creator_email: creatorEmail,
+                    monthly_points: subCost,
+                    expires_at: expiresAt
+                }
+            ], { onConflict: 'subscriber_email, creator_email' });
+
+        // Im Chat als Highlight ankündigen
+        const chatList = document.getElementById('live-chat-messages');
+        if (chatList) {
+            const subDiv = document.createElement('div');
+            subDiv.style.cssText = 'background: linear-gradient(135deg, rgba(139,92,246,0.3), rgba(59,130,246,0.3)); border: 1px solid #8b5cf6; padding: 8px 10px; border-radius: 10px; font-size: 11px; margin-bottom: 6px; text-align: center; box-shadow: 0 4px 15px rgba(139,92,246,0.2);';
+            subDiv.innerHTML = `<strong style="color: #a78bfa; font-size: 12px;">⭐ ${state.currentUserEmail.split('@')[0]} hat den Kanal abonniert! (1 Monat VIP) 🚀</strong>`;
+            chatList.appendChild(subDiv);
+            chatList.scrollTop = chatList.scrollHeight;
+        }
+
+        alert('Abo erfolgreich abgeschlossen! Du hast nun exklusive VIP-Vorteile in diesem Stream. 🎉');
+
+    } catch (err) {
+        console.error('Fehler beim Abo-Abschluss:', err);
+        alert('Fehler beim Abschließen des Abos.');
+    }
+}
+
+/**
+ * Sendet ein gewähltes Geschenk aus der Galerie
  */
 export async function sendLiveGift(giftName, cost, hostEmail) {
     if (!state.currentUserEmail) {
@@ -598,7 +679,6 @@ export async function sendLiveGift(giftName, cost, hostEmail) {
 
         closeGiftsGalleryModal();
 
-        // Geschenk im Chat als Highlight-Nachricht anzeigen
         const chatList = document.getElementById('live-chat-messages');
         if (chatList) {
             const giftDiv = document.createElement('div');
@@ -660,7 +740,7 @@ export async function closeLiveFullscreen() {
     if (modal) modal.classList.add('hidden');
 
     if (localStream) {
-        localStream.getTracks().forEach(track => track.stop());
+        localStream.getTracks().forget ? localStream.getTracks().forEach(track => track.stop()) : localStream.getTracks().forEach(track => track.stop());
         localStream = null;
     }
     if (activePeerConnection) {
@@ -704,3 +784,4 @@ window.closeLiveFullscreen = closeLiveFullscreen;
 window.terminateActiveStream = terminateActiveStream;
 window.sendLiveChatMessage = sendLiveChatMessage;
 window.sendLiveGift = sendLiveGift;
+window.subscribeToCreator = subscribeToCreator;
