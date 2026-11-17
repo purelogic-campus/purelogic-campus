@@ -1,4 +1,4 @@
-// js/features/live.js • PURE LOGIC Live-Stream, WebRTC, Viewer, Echtzeit-Chat, Geschenke & Abos
+// js/features/live.js • PURE LOGIC Live-Stream, WebRTC Peer-to-Peer, Realtime-Chat, Geschenke & Abos
 import { _supabase } from '../config.js';
 import { state } from '../state.js';
 import { validateInputOrAlert } from './moderation.js';
@@ -6,13 +6,23 @@ import { validateInputOrAlert } from './moderation.js';
 let liveObserver = null;
 let localStream = null;
 let activePeerConnection = null;
+let remoteStream = null;
 let activeStreamId = null;
 let selectedMainCategory = '💬 Plaudern';
 let selectedSubCategory = 'Allgemein';
 let currentActiveFilter = 'Alle';
 let viewerInterval = null;
+let chatPollInterval = null;
 let chatChannel = null;
 let streamsListChannel = null;
+let signalingChannel = null;
+
+const rtcConfig = {
+    iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' }
+    ]
+};
 
 const campusGifts = [
     { id: 1, name: 'Kaffee ☕', cost: 10 },
@@ -46,7 +56,10 @@ export async function handlePreLiveCheck() {
     }
 
     try {
-        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        localStream = await navigator.mediaDevices.getUserMedia({ 
+            video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } }, 
+            audio: true 
+        });
     } catch (err) {
         console.warn('Kamera-Zugriff verweigert oder nicht verfügbar:', err);
         alert('Kamera-Zugriff wird für den Live-Stream benötigt.');
@@ -69,13 +82,13 @@ function showPreLivePreviewModal() {
         previewModal.innerHTML = `
             <div style="width: 100%; max-width: 440px; background: #0f172a; border: 1px solid var(--border); border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 20px 40px rgba(0,0,0,0.8); max-height: 95vh;">
                 <div style="padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
-                    <h3 style="font-size: 15px; font-weight: 900; color: #fff; margin: 0;">🎥 Stream-Setup & Vorschau</h3>
+                    <h3 style="font-size: 15px; font-weight: 900; color: #fff; margin: 0;">🎥 WebRTC Stream-Setup</h3>
                     <button type="button" onclick="closePreLivePreview()" style="background: none; border: none; color: #fff; font-size: 22px; cursor: pointer;">&times;</button>
                 </div>
                 
                 <div style="position: relative; width: 100%; height: 180px; background: #000; flex-shrink: 0;">
                     <video id="preview-camera-video" autoplay muted playsinline style="width: 100%; height: 100%; object-fit: cover;"></video>
-                    <div style="position: absolute; top: 10px; left: 10px; background: rgba(16,185,129,0.2); border: 1px solid #10b981; color: #10b981; padding: 3px 8px; border-radius: 20px; font-size: 10px; font-weight: 800;">Kamera bereit 🎥</div>
+                    <div style="position: absolute; top: 10px; left: 10px; background: rgba(16,185,129,0.2); border: 1px solid #10b981; color: #10b981; padding: 3px 8px; border-radius: 20px; font-size: 10px; font-weight: 800;">WebRTC bereit 🎥</div>
                 </div>
 
                 <div style="padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; flex: 1;">
@@ -91,7 +104,7 @@ function showPreLivePreviewModal() {
                     <div id="preview-sub-cat-pills" style="display: flex; gap: 5px; flex-wrap: wrap; max-height: 80px; overflow-y: auto;"></div>
 
                     <label style="font-size: 11px; font-weight: 600; color: var(--text-muted); margin-top: 2px;">Stream-Info / Titel:</label>
-                    <input type="text" id="preview-stream-title-input" placeholder="z. B. Raid Abend in WoW oder Mathe lernen..." style="background: rgba(255,255,255,0.06); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; color: #fff; font-size: 11px;">
+                    <input type="text" id="preview-stream-title-input" placeholder="z. B. Live Coding oder Campus Talk..." style="background: rgba(255,255,255,0.06); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; color: #fff; font-size: 11px;">
 
                     <label style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Standort / Hörsaal:</label>
                     <input type="text" id="preview-location-input" value="Uni Wien Hauptgebäude" style="background: rgba(255,255,255,0.06); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; color: #fff; font-size: 11px;">
@@ -236,36 +249,6 @@ async function startLiveStreamBroadcast(category, location, title, streamUrl = '
     }
 }
 
-function initLiveAutoplayObserver() {
-    if (liveObserver) liveObserver.disconnect();
-
-    const options = {
-        root: document.getElementById('live-streams-list'),
-        rootMargin: '0px',
-        threshold: 0.6
-    };
-
-    liveObserver = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            const item = entry.target;
-            const video = item.querySelector('video');
-            if (!video) return;
-
-            if (entry.isIntersecting) {
-                video.play().catch(err => {
-                    console.warn('Live-Video Autoplay blockiert:', err);
-                });
-            } else {
-                video.pause();
-            }
-        });
-    }, options);
-
-    document.querySelectorAll('#live-streams-list .reel-item').forEach(item => {
-        liveObserver.observe(item);
-    });
-}
-
 export async function loadLiveStreams() {
     const liveList = document.getElementById('live-streams-list');
     if (!liveList) return;
@@ -307,28 +290,18 @@ export async function loadLiveStreams() {
         const streamTitle = stream.title || 'Campus Stream';
         const streamId = stream.id ? String(stream.id) : '0000';
         const hostEmail = stream.host_email || '';
-        const streamMediaUrl = stream.stream_url && stream.stream_url.startsWith('http') ? stream.stream_url : '';
         const viewers = stream.viewers_count || 1;
-
-        let mediaContentHtml = '';
-        if (streamMediaUrl) {
-            mediaContentHtml = `<video src="${streamMediaUrl}" autoplay muted playsinline loop class="reel-media" style="object-fit: cover; width: 100%; height: 100%;"></video>`;
-        } else {
-            mediaContentHtml = `
-                <div style="width: 100%; height: 100%; background: linear-gradient(135deg, #0f172a, #1e1b4b); display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; text-align: center; position: relative;">
-                    <div style="font-size: 42px; margin-bottom: 8px;">🔴</div>
-                    <span style="background: rgba(99,102,241,0.3); color: #818cf8; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 800; margin-bottom: 8px;">${category}</span>
-                    <h3 style="font-size: 18px; font-weight: 900; color: #fff; margin-bottom: 4px;">${streamTitle}</h3>
-                    <p style="font-size: 11px; color: var(--text-muted);">👥 ${viewers} Zuschauer</p>
-                </div>
-            `;
-        }
 
         const isMyStream = state.currentUserEmail && hostEmail.toLowerCase() === state.currentUserEmail.toLowerCase();
 
         item.innerHTML = `
-            <div style="width: 100%; height: 100%; position: relative; cursor: pointer;" onclick="openLiveFullscreen('${streamId}', '${category}', '${location}', '${streamTitle}', ${isMyStream}, '${hostEmail}')">
-                ${mediaContentHtml}
+            <div style="width: 100%; height: 100%; position: relative; cursor: pointer; background: linear-gradient(135deg, #090d16, #1e1b4b);" onclick="openLiveFullscreen('${streamId}', '${category}', '${location}', '${streamTitle}', ${isMyStream}, '${hostEmail}')">
+                <div style="width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; text-align: center; position: relative;">
+                    <div style="font-size: 48px; margin-bottom: 8px;">🔴</div>
+                    <span style="background: rgba(239,68,68,0.2); border: 1px solid rgba(239,68,68,0.5); color: #ef4444; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 800; margin-bottom: 8px;">${category}</span>
+                    <h3 style="font-size: 18px; font-weight: 900; color: #fff; margin-bottom: 4px;">${streamTitle}</h3>
+                    <p style="font-size: 11px; color: var(--text-muted);">Streamer: ${hostEmail.split('@')[0]} • 👥 ${viewers} Zuschauer</p>
+                </div>
                 <div style="position: absolute; top: 16px; left: 16px; background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.5); color: #ef4444; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 800; display: flex; align-items: center; gap: 4px; z-index: 2;">
                     <span style="width: 8px; height: 8px; background: #ef4444; border-radius: 50%; display: inline-block;"></span> LIVE
                 </div>
@@ -343,8 +316,6 @@ export async function loadLiveStreams() {
         
         liveList.appendChild(item);
     });
-
-    setTimeout(initLiveAutoplayObserver, 100);
 
     if (!streamsListChannel) {
         streamsListChannel = _supabase
@@ -429,30 +400,12 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
     }, 2500);
 
     if (playerContainer) {
-        if (currentUserIsHost && localStream) {
-            const existingBadgeHtml = playerContainer.querySelector('#guaranteed-live-viewer-badge')?.outerHTML || '';
-            playerContainer.innerHTML = `
-                <video id="local-host-video" autoplay muted playsinline style="width: 100%; height: 100%; object-fit: cover; background: #000; position: absolute; top:0; left:0;"></video>
-                <div style="position: absolute; top: 16px; left: 16px; background: rgba(16,185,129,0.2); border: 1px solid #10b981; color: #10b981; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 800; z-index: 5;">🎥 Du sendest Live</div>
-                ${existingBadgeHtml}
-            `;
-            const vidEl = document.getElementById('local-host-video');
-            if (vidEl) {
-                vidEl.srcObject = localStream;
-                vidEl.play().catch(e => console.warn('Autoplay blockiert:', e));
-            }
-        } else {
-            const existingBadgeHtml = playerContainer.querySelector('#guaranteed-live-viewer-badge')?.outerHTML || '';
-            playerContainer.innerHTML = `
-                <div style="width: 100%; height: 100%; background: linear-gradient(135deg, #090d16, #1e1b4b); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 16px; position: relative;">
-                    <div style="font-size: 54px; margin-bottom: 12px;">🔴</div>
-                    <span style="background: rgba(239,68,68,0.2); border: 1px solid rgba(239,68,68,0.5); color: #ef4444; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 800; margin-bottom: 8px;">${category}</span>
-                    <h3 style="font-size: 18px; font-weight: 900; color: #fff; margin-bottom: 6px;">${streamTitle}</h3>
-                    <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Streamer: ${hostEmail ? hostEmail.split('@')[0] : 'Campus Creator'}</p>
-                </div>
-                ${existingBadgeHtml}
-            `;
-        }
+        const existingBadgeHtml = playerContainer.querySelector('#guaranteed-live-viewer-badge')?.outerHTML || '';
+        playerContainer.innerHTML = `
+            <video id="active-web-rtc-video" autoplay playsinline ${currentUserIsHost ? 'muted' : ''} style="width: 100%; height: 100%; object-fit: cover; background: #000; position: absolute; top:0; left:0;"></video>
+            <div style="position: absolute; top: 16px; left: 16px; background: rgba(16,185,129,0.2); border: 1px solid #10b981; color: #10b981; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 800; z-index: 5;">${currentUserIsHost ? '🎥 Du sendest Live (WebRTC)' : '🔴 Live WebRTC Stream'}</div>
+            ${existingBadgeHtml}
+        `;
     }
 
     if (chatInputContainer) {
@@ -480,7 +433,7 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
 
     const chatMessagesEl = document.getElementById('live-chat-messages');
     if (chatMessagesEl) {
-        chatMessagesEl.innerHTML = `<div style="color: var(--text-muted); text-align: center;">Willkommen im Live-Chat! 💬</div>`;
+        chatMessagesEl.innerHTML = `<div style="color: var(--text-muted); text-align: center;">WebRTC Verbindung wird aufgebaut... 🔗</div>`;
     }
 
     await loadExistingChatMessages(streamId);
@@ -500,6 +453,100 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
             appendMessageToChatUI(payload.new);
         })
         .subscribe();
+
+    if (chatPollInterval) clearInterval(chatPollInterval);
+    chatPollInterval = setInterval(() => {
+        loadExistingChatMessages(streamId);
+    }, 2000);
+
+    initWebRTCSignaling(streamId, currentUserIsHost);
+}
+
+function initWebRTCSignaling(streamId, isHost) {
+    if (signalingChannel) _supabase.removeChannel(signalingChannel);
+
+    signalingChannel = _supabase.channel(`webrtc:${streamId}`, {
+        config: { broadcast: { self: false } }
+    });
+
+    activePeerConnection = new RTCPeerConnection(rtcConfig);
+
+    if (isHost && localStream) {
+        localStream.getTracks().forEach(track => activePeerConnection.addTrack(track, localStream));
+        const vidEl = document.getElementById('active-web-rtc-video');
+        if (vidEl) vidEl.srcObject = localStream;
+    }
+
+    activePeerConnection.ontrack = (event) => {
+        remoteStream = event.streams[0];
+        const vidEl = document.getElementById('active-web-rtc-video');
+        if (vidEl && remoteStream) {
+            vidEl.srcObject = remoteStream;
+            vidEl.play().catch(e => console.warn('Remote Video Autoplay:', e));
+        }
+    };
+
+    activePeerConnection.onicecandidate = (event) => {
+        if (event.candidate) {
+            signalingChannel.send({
+                type: 'broadcast',
+                event: 'ice-candidate',
+                payload: { candidate: event.candidate, sender: state.currentUserEmail }
+            });
+        }
+    };
+
+    signalingChannel
+        .on('broadcast', { event: 'offer' }, async ({ payload }) => {
+            if (isHost) return;
+            try {
+                await activePeerConnection.setRemoteDescription(new RTCSessionDescription(payload.offer));
+                const answer = await activePeerConnection.createAnswer();
+                await activePeerConnection.setLocalDescription(answer);
+
+                signalingChannel.send({
+                    type: 'broadcast',
+                    event: 'answer',
+                    payload: { answer: answer, sender: state.currentUserEmail }
+                });
+            } catch (err) {
+                console.error('WebRTC Offer Fehler:', err);
+            }
+        })
+        .on('broadcast', { event: 'answer' }, async ({ payload }) => {
+            if (!isHost) return;
+            try {
+                await activePeerConnection.setRemoteDescription(new RTCSessionDescription(payload.answer));
+            } catch (err) {
+                console.error('WebRTC Answer Fehler:', err);
+            }
+        })
+        .on('broadcast', { event: 'ice-candidate' }, async ({ payload }) => {
+            try {
+                if (payload.candidate) {
+                    await activePeerConnection.addIceCandidate(new RTCIceCandidate(payload.candidate));
+                }
+            } catch (err) {
+                console.error('ICE Candidate Fehler:', err);
+            }
+        })
+        .subscribe(async (status) => {
+            if (status === 'SUBSCRIBED' && isHost) {
+                setTimeout(async () => {
+                    try {
+                        const offer = await activePeerConnection.createOffer();
+                        await activePeerConnection.setLocalDescription(offer);
+                        signalingChannel.send({
+                            type: 'broadcast',
+                            event: 'offer',
+                            payload: { offer: offer, sender: state.currentUserEmail }
+                        });
+                    } catch (err) {
+                        console.error('Host Offer Fehler:', err);
+                    }
+                }, 1000);
+            }
+        });
 }
 
 async function loadExistingChatMessages(streamId) {
@@ -509,25 +556,37 @@ async function loadExistingChatMessages(streamId) {
             .select('*')
             .eq('stream_id', streamId)
             .order('created_at', { ascending: true })
-            .limit(50);
+            .limit(100);
 
         if (!error && messages) {
-            messages.forEach(msg => appendMessageToChatUI(msg));
+            const chatList = document.getElementById('live-chat-messages');
+            if (!chatList) return;
+
+            const existingIds = new Set(Array.from(chatList.querySelectorAll('[data-msg-id]')).map(el => el.getAttribute('data-msg-id')));
+
+            messages.forEach(msg => {
+                if (!existingIds.has(String(msg.id))) {
+                    appendMessageToChatUI(msg);
+                }
+            });
         }
-    } catch (e) {
-        console.warn('Fehler beim Laden alter Chat-Nachrichten:', e);
-    }
+    } catch (e) {}
 }
 
 function appendMessageToChatUI(msg) {
     const chatList = document.getElementById('live-chat-messages');
     if (!chatList) return;
 
+    if (chatList.innerHTML.includes('WebRTC Verbindung') || chatList.innerHTML.includes('Willkommen im Live-Chat!')) {
+        chatList.innerHTML = '';
+    }
+
     const sender = msg.sender_email ? msg.sender_email.split('@')[0] : 'User';
     const isMe = state.currentUserEmail && msg.sender_email && msg.sender_email.toLowerCase() === state.currentUserEmail.toLowerCase();
     const color = isMe ? '#10b981' : '#818cf8';
 
     const msgDiv = document.createElement('div');
+    msgDiv.setAttribute('data-msg-id', msg.id);
     msgDiv.style.cssText = 'background: rgba(255,255,255,0.06); padding: 5px 8px; border-radius: 6px; font-size: 11px; margin-bottom: 3px; word-break: break-word;';
     msgDiv.innerHTML = `<strong style="color: ${color};">${sender}:</strong> ${msg.message_text}`;
     
@@ -803,9 +862,14 @@ export async function terminateActiveStream() {
 
 export async function closeLiveFullscreen() {
     if (viewerInterval) clearInterval(viewerInterval);
+    if (chatPollInterval) clearInterval(chatPollInterval);
     if (chatChannel) {
         _supabase.removeChannel(chatChannel);
         chatChannel = null;
+    }
+    if (signalingChannel) {
+        _supabase.removeChannel(signalingChannel);
+        signalingChannel = null;
     }
     
     if (activeStreamId) {
