@@ -124,6 +124,7 @@ function showPreLivePreviewModal() {
     const vidEl = document.getElementById('preview-camera-video');
     if (vidEl && localStream) {
         vidEl.srcObject = localStream;
+        vidEl.play().catch(() => {});
     }
 
     updateSubCategoriesUI('💬 Plaudern');
@@ -288,13 +289,11 @@ export async function loadLiveStreams() {
     }
 
     liveList.innerHTML = '';
-    // Grid-Layout für eine kompakte Vorschau-Übersicht
     liveList.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; padding: 16px; box-sizing: border-box;';
 
     streams.forEach(stream => {
         const item = document.createElement('div');
         item.className = 'reel-item';
-        // Kompakte feste Höhe für die Vorschau-Karte
         item.style.cssText = 'position: relative; width: 100%; height: 380px; overflow: hidden; background: #0b0f19; border: 1px solid var(--border); border-radius: 16px; cursor: pointer; box-shadow: 0 10px 25px rgba(0,0,0,0.5); transition: transform 0.2s ease, border-color 0.2s ease;';
         
         item.onmouseover = () => { item.style.transform = 'translateY(-3px)'; item.style.borderColor = 'var(--primary)'; };
@@ -309,6 +308,7 @@ export async function loadLiveStreams() {
 
         const isMyStream = state.currentUserEmail && hostEmail.toLowerCase() === state.currentUserEmail.toLowerCase();
 
+        // Wichtig: playsinline und muted für mobile Browser
         const backgroundMedia = `<video autoplay muted playsinline style="width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; z-index: 1;" id="preview-thumb-${streamId}"></video>`;
 
         item.innerHTML = `
@@ -333,7 +333,7 @@ export async function loadLiveStreams() {
 
             if (isMyStream && localStream) {
                 thumbVid.srcObject = localStream;
-                thumbVid.play().catch(() => {});
+                thumbVid.onloadedmetadata = () => thumbVid.play().catch(() => {});
             } else {
                 const pc = new RTCPeerConnection(rtcConfig);
                 previewPeerConnections[streamId] = pc;
@@ -341,7 +341,7 @@ export async function loadLiveStreams() {
                 pc.ontrack = (event) => {
                     if (event.streams[0]) {
                         thumbVid.srcObject = event.streams[0];
-                        thumbVid.play().catch(() => {});
+                        thumbVid.onloadedmetadata = () => thumbVid.play().catch(() => {});
                     }
                 };
 
@@ -462,7 +462,7 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
             const vidEl = document.getElementById('active-web-rtc-video');
             if (vidEl) {
                 vidEl.srcObject = localStream;
-                vidEl.play().catch(e => console.warn('Autoplay blockiert:', e));
+                vidEl.onloadedmetadata = () => vidEl.play().catch(e => console.warn('Autoplay blockiert:', e));
             }
         }
     }
@@ -492,7 +492,7 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
 
     const chatMessagesEl = document.getElementById('live-chat-messages');
     if (chatMessagesEl) {
-        chatMessagesEl.innerHTML = `<div style="color: var(--text-muted); text-align: center;">WebRTC Verbindung wird aufgebaut... 🔗</div>`;
+        chatMessagesEl.innerHTML = `<div id="webrtc-status-msg" style="color: var(--text-muted); text-align: center; padding: 10px;">WebRTC Verbindung wird aufgebaut... 🔗</div>`;
     }
 
     await loadExistingChatMessages(streamId);
@@ -539,12 +539,12 @@ function initWebRTCSignaling(streamId, isHost) {
         const vidEl = document.getElementById('active-web-rtc-video');
         if (vidEl && remoteStream) {
             vidEl.srcObject = remoteStream;
-            vidEl.play().catch(e => console.warn('Remote Video Autoplay:', e));
+            vidEl.onloadedmetadata = () => vidEl.play().catch(e => console.warn('Remote Video Autoplay:', e));
         }
 
-        const chatMessagesEl = document.getElementById('live-chat-messages');
-        if (chatMessagesEl && chatMessagesEl.innerHTML.includes('WebRTC Verbindung wird aufgebaut')) {
-            chatMessagesEl.innerHTML = `<div style="color: #10b981; text-align: center; font-size: 11px; font-weight: 700;">🟢 Live-Verbindung erfolgreich hergestellt!</div>`;
+        const statusMsg = document.getElementById('webrtc-status-msg');
+        if (statusMsg) {
+            statusMsg.remove();
         }
     };
 
@@ -663,9 +663,8 @@ function appendMessageToChatUI(msg) {
     const chatList = document.getElementById('live-chat-messages');
     if (!chatList) return;
 
-    if (chatList.innerHTML.includes('WebRTC Verbindung') || chatList.innerHTML.includes('Live-Verbindung erfolgreich')) {
-        chatList.innerHTML = '';
-    }
+    const statusMsg = document.getElementById('webrtc-status-msg');
+    if (statusMsg) statusMsg.remove();
 
     const sender = msg.sender_email ? msg.sender_email.split('@')[0] : 'User';
     const isMe = state.currentUserEmail && msg.sender_email && msg.sender_email.toLowerCase() === state.currentUserEmail.toLowerCase();
