@@ -292,22 +292,19 @@ export async function loadLiveStreams() {
     liveList.innerHTML = '';
     liveList.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; padding: 16px; box-sizing: border-box;';
 
+    // IntersectionObserver, damit mobile Browser im Viewport das Video direkt vollautomatisch abspielen
     if (liveObserver) {
         liveObserver.disconnect();
     }
 
-    liveObserver = new IntersectionObserver((entries, observer) => {
+    liveObserver = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
+            const thumbVid = entry.target;
             if (entry.isIntersecting) {
-                const thumbVid = entry.target;
-                if (thumbVid.paused) {
-                    thumbVid.play().catch(() => {});
-                }
+                thumbVid.muted = true;
+                thumbVid.play().catch(() => {});
             } else {
-                const thumbVid = entry.target;
-                if (!thumbVid.paused) {
-                    thumbVid.pause();
-                }
+                thumbVid.pause();
             }
         });
     }, { threshold: 0.1 });
@@ -329,10 +326,9 @@ export async function loadLiveStreams() {
 
         const isMyStream = state.currentUserEmail && hostEmail.toLowerCase() === state.currentUserEmail.toLowerCase();
 
-        const backgroundMedia = `<video autoplay muted playsinline style="width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; z-index: 1;" id="preview-thumb-${streamId}"></video>`;
-
+        // 💡 IMMER automatisch stumm & playsinline, startet ohne Klick im Feed
         item.innerHTML = `
-            ${backgroundMedia}
+            <video autoplay muted playsinline style="width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; z-index: 1;" id="preview-thumb-${streamId}"></video>
             <div style="position: absolute; top: 12px; left: 12px; background: rgba(239, 68, 68, 0.25); border: 1px solid rgba(239, 68, 68, 0.6); color: #ef4444; padding: 3px 8px; border-radius: 20px; font-size: 10px; font-weight: 900; display: flex; align-items: center; gap: 4px; z-index: 10; backdrop-filter: blur(4px);">
                 <span style="width: 6px; height: 6px; background: #ef4444; border-radius: 50%; display: inline-block;"></span> LIVE
             </div>
@@ -356,7 +352,7 @@ export async function loadLiveStreams() {
 
             if (isMyStream && localStream) {
                 thumbVid.srcObject = localStream;
-                thumbVid.onloadedmetadata = () => thumbVid.play().catch(() => {});
+                thumbVid.play().catch(() => {});
             } else {
                 const pc = new RTCPeerConnection(rtcConfig);
                 previewPeerConnections[streamId] = pc;
@@ -365,7 +361,7 @@ export async function loadLiveStreams() {
                     if (event.streams[0]) {
                         thumbVid.srcObject = event.streams[0];
                         thumbVid.muted = true;
-                        thumbVid.onloadedmetadata = () => thumbVid.play().catch(() => {});
+                        thumbVid.play().catch(() => {});
                     }
                 };
 
@@ -389,7 +385,7 @@ export async function loadLiveStreams() {
                     }
                 });
             }
-        }, 200);
+        }, 150);
     });
 
     if (!streamsListChannel) {
