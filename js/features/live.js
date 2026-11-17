@@ -17,6 +17,10 @@ let chatChannel = null;
 let streamsListChannel = null;
 let signalingChannel = null;
 
+// Aktive Vorschaubilder-Verbindungen speichern, um sie beim Refresh sauber zu schließen
+let previewPeerConnections = {};
+let previewChannels = {};
+
 const rtcConfig = {
     iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
@@ -269,6 +273,12 @@ export async function loadLiveStreams() {
 
     const { data: streams, error } = await query;
 
+    // Alte Vorschau-Verbindungen bereinigen
+    Object.values(previewChannels).forEach(ch => _supabase.removeChannel(ch));
+    previewChannels = {};
+    Object.values(previewPeerConnections).forEach(pc => pc.close());
+    previewPeerConnections = {};
+
     if (error || !streams || streams.length === 0) {
         liveList.innerHTML = `
             <div style="text-align: center; padding: 40px 20px;">
@@ -295,7 +305,7 @@ export async function loadLiveStreams() {
 
         const isMyStream = state.currentUserEmail && hostEmail.toLowerCase() === state.currentUserEmail.toLowerCase();
 
-        // 💡 IMMER direkt das Video-Element einbetten (nutzt localStream falls Host, ansonsten baut es eine WebRTC-Vorschau auf oder zeigt das Live-Bild)
+        // Vorschau-Videoelement (wird passiv über WebRTC vom Host befüllt, KEINE eigene Kamera!)
         const backgroundMedia = `<video autoplay muted playsinline style="width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; z-index: 1;" id="preview-thumb-${streamId}"></video>`;
 
         item.innerHTML = `
@@ -312,25 +322,48 @@ export async function loadLiveStreams() {
         `;
         
         item.onclick = () => openLiveFullscreen(streamId, category, location, streamTitle, isMyStream, hostEmail);
-
         liveList.appendChild(item);
 
-        // Stream in die Vorschau einbinden:
+        // WebRTC Passiv-Verbindung für die Vorschau-Karte aufbauen
         setTimeout(() => {
             const thumbVid = document.getElementById(`preview-thumb-${streamId}`);
-            if (thumbVid) {
-                if (isMyStream && localStream) {
-                    thumbVid.srcObject = localStream;
-                    thumbVid.play().catch(() => {});
-                } else {
-                    // Falls man Zuschauer ist, wird für die Vorschau ebenfalls die Kamera / der Stream verknüpft falls vorhanden
-                    navigator.mediaDevices.getUserMedia({ video: true, audio: false }).then(s => {
-                        thumbVid.srcObject = s;
+            if (!thumbVid) return;
+
+            if (isMyStream && localStream) {
+                thumbVid.srcObject = localStream;
+                thumbVid.play().catch(() => {});
+            } else {
+                const pc = new RTCPeerConnection(rtcConfig);
+                previewPeerConnections[streamId] = pc;
+
+                pc.ontrack = (event) => {
+                    if (event.streams[0]) {
+                        thumbVid.srcObject = event.streams[0];
                         thumbVid.play().catch(() => {});
-                    }).catch(() => {});
-                }
+                    }
+                };
+
+                const sChan = _supabase.channel(`webrtc:${streamId}`, { config: { broadcast: { self: false } } });
+                previewChannels[streamId] = sChan;
+
+                sChan.on('broadcast', { event: 'offer' }, async ({ payload }) => {
+                    try {
+                        await pc.setRemoteDescription(new RTCSessionDescription(payload.offer));
+                        const answer = await pc.createAnswer();
+                        await pc.setLocalDescription(answer);
+                        sChan.send({ type: 'broadcast', event: 'answer', payload: { answer, sender: 'preview' } });
+                    } catch (e) {}
+                }).on('broadcast', { event: 'ice-candidate' }, async ({ payload }) => {
+                    try {
+                        if (payload.candidate) await pc.addIceCandidate(new RTCIceCandidate(payload.candidate));
+                    } catch (e) {}
+                }).subscribe((status) => {
+                    if (status === 'SUBSCRIBED') {
+                        sChan.send({ type: 'broadcast', event: 'viewer-ready', payload: { viewer: 'preview' } });
+                    }
+                });
             }
-        }, 150);
+        }, 200);
     });
 
     if (!streamsListChannel) {
