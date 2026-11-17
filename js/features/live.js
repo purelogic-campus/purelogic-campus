@@ -292,6 +292,26 @@ export async function loadLiveStreams() {
     liveList.innerHTML = '';
     liveList.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; padding: 16px; box-sizing: border-box;';
 
+    if (liveObserver) {
+        liveObserver.disconnect();
+    }
+
+    liveObserver = new IntersectionObserver((entries, observer) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const thumbVid = entry.target;
+                if (thumbVid.paused) {
+                    thumbVid.play().catch(() => {});
+                }
+            } else {
+                const thumbVid = entry.target;
+                if (!thumbVid.paused) {
+                    thumbVid.pause();
+                }
+            }
+        });
+    }, { threshold: 0.1 });
+
     streams.forEach(stream => {
         const item = document.createElement('div');
         item.className = 'reel-item';
@@ -309,7 +329,6 @@ export async function loadLiveStreams() {
 
         const isMyStream = state.currentUserEmail && hostEmail.toLowerCase() === state.currentUserEmail.toLowerCase();
 
-        // 💡 IMMER zwingend muted="true" & playsinline für PC, Web App und Mobile
         const backgroundMedia = `<video autoplay muted playsinline style="width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; z-index: 1;" id="preview-thumb-${streamId}"></video>`;
 
         item.innerHTML = `
@@ -332,8 +351,8 @@ export async function loadLiveStreams() {
             const thumbVid = document.getElementById(`preview-thumb-${streamId}`);
             if (!thumbVid) return;
 
-            // Extra Absicherung im Code: Eigenschaft explizit auf true setzen
             thumbVid.muted = true;
+            liveObserver.observe(thumbVid);
 
             if (isMyStream && localStream) {
                 thumbVid.srcObject = localStream;
@@ -345,7 +364,7 @@ export async function loadLiveStreams() {
                 pc.ontrack = (event) => {
                     if (event.streams[0]) {
                         thumbVid.srcObject = event.streams[0];
-                        thumbVid.muted = true; // Nochmalige Absicherung für den WebRTC-Stream
+                        thumbVid.muted = true;
                         thumbVid.onloadedmetadata = () => thumbVid.play().catch(() => {});
                     }
                 };
@@ -457,7 +476,6 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
 
     if (playerContainer) {
         const existingBadgeHtml = playerContainer.querySelector('#guaranteed-live-viewer-badge')?.outerHTML || '';
-        // Im Vollbild ist der Stream nur für den Host stumm (damit es nicht hallt), Viewer hören den Ton
         playerContainer.innerHTML = `
             <video id="active-web-rtc-video" autoplay playsinline ${currentUserIsHost ? 'muted' : ''} style="width: 100%; height: 100%; object-fit: cover; background: #000; position: absolute; top:0; left:0;"></video>
             <div style="position: absolute; top: 16px; left: 16px; background: rgba(16,185,129,0.2); border: 1px solid #10b981; color: #10b981; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 800; z-index: 5;">${currentUserIsHost ? '🎥 Du sendest Live (WebRTC)' : '🔴 Live WebRTC Stream'}</div>
