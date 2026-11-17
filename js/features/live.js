@@ -17,7 +17,6 @@ let chatChannel = null;
 let streamsListChannel = null;
 let signalingChannel = null;
 
-// Aktive Vorschaubilder-Verbindungen speichern, um sie beim Refresh sauber zu schließen
 let previewPeerConnections = {};
 let previewChannels = {};
 
@@ -273,7 +272,6 @@ export async function loadLiveStreams() {
 
     const { data: streams, error } = await query;
 
-    // Alte Vorschau-Verbindungen bereinigen
     Object.values(previewChannels).forEach(ch => _supabase.removeChannel(ch));
     previewChannels = {};
     Object.values(previewPeerConnections).forEach(pc => pc.close());
@@ -305,7 +303,6 @@ export async function loadLiveStreams() {
 
         const isMyStream = state.currentUserEmail && hostEmail.toLowerCase() === state.currentUserEmail.toLowerCase();
 
-        // Vorschau-Videoelement (wird passiv über WebRTC vom Host befüllt, KEINE eigene Kamera!)
         const backgroundMedia = `<video autoplay muted playsinline style="width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; z-index: 1;" id="preview-thumb-${streamId}"></video>`;
 
         item.innerHTML = `
@@ -324,7 +321,6 @@ export async function loadLiveStreams() {
         item.onclick = () => openLiveFullscreen(streamId, category, location, streamTitle, isMyStream, hostEmail);
         liveList.appendChild(item);
 
-        // WebRTC Passiv-Verbindung für die Vorschau-Karte aufbauen
         setTimeout(() => {
             const thumbVid = document.getElementById(`preview-thumb-${streamId}`);
             if (!thumbVid) return;
@@ -539,6 +535,12 @@ function initWebRTCSignaling(streamId, isHost) {
             vidEl.srcObject = remoteStream;
             vidEl.play().catch(e => console.warn('Remote Video Autoplay:', e));
         }
+
+        // 💡 Sobald das erste Videobild ankommt, entfernen wir die "WebRTC Verbindung wird aufgebaut..." Meldung aus dem Chat!
+        const chatMessagesEl = document.getElementById('live-chat-messages');
+        if (chatMessagesEl && chatMessagesEl.innerHTML.includes('WebRTC Verbindung wird aufgebaut')) {
+            chatMessagesEl.innerHTML = `<div style="color: #10b981; text-align: center; font-size: 11px; font-weight: 700;">🟢 Live-Verbindung erfolgreich hergestellt!</div>`;
+        }
     };
 
     activePeerConnection.onicecandidate = (event) => {
@@ -656,7 +658,7 @@ function appendMessageToChatUI(msg) {
     const chatList = document.getElementById('live-chat-messages');
     if (!chatList) return;
 
-    if (chatList.innerHTML.includes('WebRTC Verbindung') || chatList.innerHTML.includes('Willkommen im Live-Chat!')) {
+    if (chatList.innerHTML.includes('WebRTC Verbindung') || chatList.innerHTML.includes('Live-Verbindung erfolgreich')) {
         chatList.innerHTML = '';
     }
 
