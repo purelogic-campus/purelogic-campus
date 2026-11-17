@@ -124,6 +124,7 @@ function showPreLivePreviewModal() {
     const vidEl = document.getElementById('preview-camera-video');
     if (vidEl && localStream) {
         vidEl.srcObject = localStream;
+        vidEl.muted = true;
         vidEl.play().catch(() => {});
     }
 
@@ -308,7 +309,7 @@ export async function loadLiveStreams() {
 
         const isMyStream = state.currentUserEmail && hostEmail.toLowerCase() === state.currentUserEmail.toLowerCase();
 
-        // Wichtig: playsinline und muted für mobile Browser
+        // 💡 IMMER zwingend muted="true" & playsinline für PC, Web App und Mobile
         const backgroundMedia = `<video autoplay muted playsinline style="width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; z-index: 1;" id="preview-thumb-${streamId}"></video>`;
 
         item.innerHTML = `
@@ -331,6 +332,9 @@ export async function loadLiveStreams() {
             const thumbVid = document.getElementById(`preview-thumb-${streamId}`);
             if (!thumbVid) return;
 
+            // Extra Absicherung im Code: Eigenschaft explizit auf true setzen
+            thumbVid.muted = true;
+
             if (isMyStream && localStream) {
                 thumbVid.srcObject = localStream;
                 thumbVid.onloadedmetadata = () => thumbVid.play().catch(() => {});
@@ -341,6 +345,7 @@ export async function loadLiveStreams() {
                 pc.ontrack = (event) => {
                     if (event.streams[0]) {
                         thumbVid.srcObject = event.streams[0];
+                        thumbVid.muted = true; // Nochmalige Absicherung für den WebRTC-Stream
                         thumbVid.onloadedmetadata = () => thumbVid.play().catch(() => {});
                     }
                 };
@@ -452,6 +457,7 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
 
     if (playerContainer) {
         const existingBadgeHtml = playerContainer.querySelector('#guaranteed-live-viewer-badge')?.outerHTML || '';
+        // Im Vollbild ist der Stream nur für den Host stumm (damit es nicht hallt), Viewer hören den Ton
         playerContainer.innerHTML = `
             <video id="active-web-rtc-video" autoplay playsinline ${currentUserIsHost ? 'muted' : ''} style="width: 100%; height: 100%; object-fit: cover; background: #000; position: absolute; top:0; left:0;"></video>
             <div style="position: absolute; top: 16px; left: 16px; background: rgba(16,185,129,0.2); border: 1px solid #10b981; color: #10b981; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 800; z-index: 5;">${currentUserIsHost ? '🎥 Du sendest Live (WebRTC)' : '🔴 Live WebRTC Stream'}</div>
@@ -461,6 +467,7 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
         if (currentUserIsHost && localStream) {
             const vidEl = document.getElementById('active-web-rtc-video');
             if (vidEl) {
+                vidEl.muted = true;
                 vidEl.srcObject = localStream;
                 vidEl.onloadedmetadata = () => vidEl.play().catch(e => console.warn('Autoplay blockiert:', e));
             }
