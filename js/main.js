@@ -16,10 +16,10 @@ let adminMapInstance = null;
 let adminMarkerInstance = null;
 let deferredPrompt = null;
 
-// Service Worker Registrierung für PWA
+// Service Worker Registrierung für PWA (relativer Pfad für GitHub Pages korrigiert)
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
+        navigator.serviceWorker.register('./sw.js')
             .then((reg) => console.log('PWA Service Worker aktiv:', reg.scope))
             .catch((err) => console.warn('Service Worker Registrierung fehlgeschlagen:', err));
     });
@@ -266,7 +266,7 @@ async function initMainAppSession() {
             .from('users')
             .select('*')
             .eq('email', state.currentUserEmail)
-            .single();
+            .maybeSingle();
 
         if (userData) {
             const scoreBadge = document.getElementById('score');
@@ -527,7 +527,7 @@ function setupGlobalWindowHandlers() {
                 .from('users')
                 .select('logic_score')
                 .eq('email', state.currentUserEmail)
-                .single();
+                .maybeSingle();
 
             if (userData) {
                 const newScore = (userData.logic_score || 0) + 10;
