@@ -1,4 +1,4 @@
-// js/features/live.js • PURE LOGIC Live-Stream, Supabase Canvas Frame-Sync, Chat, Geschenke, Abos & Like-Tap
+// js/features/live.js • PURE LOGIC Live-Stream, Vorschau-Logik (PC vs. Smartphone) & Muted-Anpassung
 import { _supabase } from '../config.js';
 import { state } from '../state.js';
 import { validateInputOrAlert } from './moderation.js';
@@ -365,7 +365,7 @@ export async function loadLiveStreams() {
             const previewImageSrc = stream.current_frame || streamerAvatarUrl;
             backgroundMediaHtml = `
                 <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; overflow: hidden; background: #000;">
-                    <img id="grid-thumb-img-${streamId}" src="${previewImageSrc}" style="width: 100%; height: 100%; object-fit: cover;" alt="Vorschau">
+                    <img id="grid-thumb-img-${streamId}" src="${previewImageSrc}" style="width: 100%; height: 100%; object-fit: cover;" muted playsinline alt="Live Vorschau">
                 </div>
             `;
         }
@@ -390,26 +390,28 @@ export async function loadLiveStreams() {
     });
 
     if (gridPollInterval) clearInterval(gridPollInterval);
-    gridPollInterval = setInterval(async () => {
-        const modal = document.getElementById('live-fullscreen-modal');
-        if (modal && !modal.classList.contains('hidden')) return;
+    if (!isMobileDevice) {
+        gridPollInterval = setInterval(async () => {
+            const modal = document.getElementById('live-fullscreen-modal');
+            if (modal && !modal.classList.contains('hidden')) return;
 
-        try {
-            const { data: freshStreams } = await _supabase
-                .from('live_streams')
-                .select('id,current_frame')
-                .gt('expires_at', oneHourAgoIso);
+            try {
+                const { data: freshStreams } = await _supabase
+                    .from('live_streams')
+                    .select('id,current_frame')
+                    .gt('expires_at', oneHourAgoIso);
 
-            if (freshStreams) {
-                freshStreams.forEach(s => {
-                    const imgEl = document.getElementById(`grid-thumb-img-${s.id}`);
-                    if (imgEl && s.current_frame) {
-                        imgEl.src = s.current_frame;
-                    }
-                });
-            }
-        } catch (e) {}
-    }, 400);
+                if (freshStreams) {
+                    freshStreams.forEach(s => {
+                        const imgEl = document.getElementById(`grid-thumb-img-${s.id}`);
+                        if (imgEl && s.current_frame) {
+                            imgEl.src = s.current_frame;
+                        }
+                    });
+                }
+            } catch (e) {}
+        }, 400);
+    }
 
     if (!streamsListChannel) {
         streamsListChannel = _supabase
