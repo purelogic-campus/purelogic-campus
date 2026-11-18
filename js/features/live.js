@@ -262,13 +262,13 @@ function startCanvasBroadcasting() {
         if (!activeStreamId || !localStream) return;
         try {
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-            const dataUrl = canvas.toDataURL('image/jpeg', 0.65);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.55);
             await _supabase
                 .from('live_streams')
                 .update({ current_frame: dataUrl })
                 .eq('id', activeStreamId);
         } catch (e) {}
-    }, 350);
+    }, 200); // 200ms Taktung für butterweiche Echtzeit-Übertragung
 }
 
 export async function loadLiveStreams() {
@@ -363,7 +363,11 @@ export async function loadLiveStreams() {
             `;
         } else {
             const previewImageSrc = stream.current_frame || streamerAvatarUrl;
-            backgroundMediaHtml = `<div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: url('${previewImageSrc}'); background-size: cover; background-position: center; z-index: 1;" id="grid-thumb-${streamId}"></div>`;
+            backgroundMediaHtml = `
+                <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; overflow: hidden; background: #000;">
+                    <img id="grid-thumb-img-${streamId}" src="${previewImageSrc}" style="width: 100%; height: 100%; object-fit: cover;" alt="Vorschau">
+                </div>
+            `;
         }
 
         const badgeHtml = isEnded 
@@ -398,14 +402,14 @@ export async function loadLiveStreams() {
 
             if (freshStreams) {
                 freshStreams.forEach(s => {
-                    const thumbEl = document.getElementById(`grid-thumb-${s.id}`);
-                    if (thumbEl && s.current_frame) {
-                        thumbEl.style.backgroundImage = `url('${s.current_frame}')`;
+                    const imgEl = document.getElementById(`grid-thumb-img-${s.id}`);
+                    if (imgEl && s.current_frame) {
+                        imgEl.src = s.current_frame;
                     }
                 });
             }
         } catch (e) {}
-    }, 1200);
+    }, 400);
 
     if (!streamsListChannel) {
         streamsListChannel = _supabase
@@ -511,14 +515,16 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
                 <div style="position: absolute; top: 16px; left: 16px; background: rgba(16,185,129,0.2); border: 1px solid #10b981; color: #10b981; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 800; z-index: 5;">🔴 Live Stream</div>
             `;
             
-            // Sofortiger Check beim Öffnen, falls current_frame schon da ist
+            // Sofortiger Frame-Abruf beim Beitreten
             try {
                 _supabase.from('live_streams').select('current_frame').eq('id', streamId).single().then(({ data: initData }) => {
                     if (initData && initData.current_frame) {
                         const imgEl = document.getElementById('active-stream-image-view');
-                        if (imgEl) imgEl.src = initData.current_frame;
-                        const statusMsg = document.getElementById('webrtc-status-msg');
-                        if (statusMsg) statusMsg.remove();
+                        if (imgEl) {
+                            imgEl.src = initData.current_frame;
+                            const statusMsg = document.getElementById('webrtc-status-msg');
+                            if (statusMsg) statusMsg.remove();
+                        }
                     }
                 });
             } catch(e){}
@@ -546,9 +552,11 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
 
                 if (!currentUserIsHost && sData.current_frame) {
                     const imgEl = document.getElementById('active-stream-image-view');
-                    if (imgEl) imgEl.src = sData.current_frame;
-                    const statusMsg = document.getElementById('webrtc-status-msg');
-                    if (statusMsg) statusMsg.remove();
+                    if (imgEl) {
+                        imgEl.src = sData.current_frame;
+                        const statusMsg = document.getElementById('webrtc-status-msg');
+                        if (statusMsg) statusMsg.remove();
+                    }
                 }
             }
         } catch (err) {}
@@ -567,12 +575,14 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
 
                 if (fData && fData.current_frame) {
                     const imgEl = document.getElementById('active-stream-image-view');
-                    if (imgEl) imgEl.src = fData.current_frame;
-                    const statusMsg = document.getElementById('webrtc-status-msg');
-                    if (statusMsg) statusMsg.remove();
+                    if (imgEl) {
+                        imgEl.src = fData.current_frame;
+                        const statusMsg = document.getElementById('webrtc-status-msg');
+                        if (statusMsg) statusMsg.remove();
+                    }
                 }
             } catch (e) {}
-        }, 300);
+        }, 150); // Extrem schneller Frame-Poll für flüssige Wiedergabe beim Zuschauer
     }
 
     if (chatInputContainer) {
@@ -1043,4 +1053,4 @@ window.sendLiveChatMessage = sendLiveChatMessage;
 window.sendLiveGift = sendLiveGift;
 window.subscribeToCreator = subscribeToCreator;
 window.sendScreenTapLike = sendScreenTapLike;
-window.handlePureLogoClick = handlePureLogicLogoClick;
+window.handlePureLogicLogoClick = handlePureLogicLogoClick;
