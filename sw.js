@@ -1,26 +1,26 @@
-const CACHE_NAME = 'pure-logic-v1.4.3';
+const CACHE_NAME = 'pure-logic-v1.4.4';
 
-// Definition aller statischen Assets, die für den Offline-Modus vorgecacht werden
+// Definition aller statischen Assets mit relativen Pfaden für GitHub Pages Subfolder
 const STATIC_ASSETS = [
-  '/',
-  '/index.html',
-  '/style.css?v=2',
-  '/manifest.json',
-  '/js/config.js?v=2',
-  '/js/state.js?v=2',
-  '/js/i18n.js?v=2',
-  '/js/auth.js?v=2',
-  '/js/main.js?v=2',
-  '/js/features/notifications.js?v=2',
-  '/js/features/lecture.js?v=2',
-  '/js/features/quiz.js?v=2',
-  '/js/features/profguide.js?v=2',
-  '/js/features/live.js?v=2',
-  '/js/features/crush.js?v=2',
-  '/js/features/feed.js?v=2',
-  '/js/features/dm.js?v=2',
-  '/js/features/board.js?v=2',
-  '/js/features/ranking.js?v=2'
+  './',
+  './index.html',
+  './style.css?v=2',
+  './manifest.json',
+  './js/config.js?v=2',
+  './js/state.js?v=2',
+  './js/i18n.js?v=2',
+  './js/auth.js?v=2',
+  './js/main.js?v=2',
+  './js/features/notifications.js?v=2',
+  './js/features/lecture.js?v=2',
+  './js/features/quiz.js?v=2',
+  './js/features/profguide.js?v=2',
+  './js/features/live.js?v=2',
+  './js/features/crush.js?v=2',
+  './js/features/feed.js?v=2',
+  './js/features/dm.js?v=2',
+  './js/features/board.js?v=2',
+  './js/features/ranking.js?v=2'
 ];
 
 // Installation: Grundgerüst und Assets cachen
@@ -74,7 +74,7 @@ self.addEventListener('fetch', (event) => {
             return cachedResponse;
           }
           if (event.request.mode === 'navigate') {
-            return caches.match('/index.html');
+            return caches.match('./index.html');
           }
         });
       })
