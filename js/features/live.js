@@ -580,7 +580,7 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
                     }
                 }
             } catch (e) {}
-        }, 120); // 120ms High-Speed Abfrage für butterweiche Wiedergabe
+        }, 120);
     }
 
     if (chatInputContainer) {
