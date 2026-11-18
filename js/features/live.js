@@ -268,7 +268,7 @@ function startCanvasBroadcasting() {
                 .update({ current_frame: dataUrl })
                 .eq('id', activeStreamId);
         } catch (e) {}
-    }, 150); // 150ms High-Speed Frame-Sync für butterweiche Wiedergabe beim Zuschauer
+    }, 150);
 }
 
 export async function loadLiveStreams() {
@@ -515,7 +515,6 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
                 <div style="position: absolute; top: 16px; left: 16px; background: rgba(16,185,129,0.2); border: 1px solid #10b981; color: #10b981; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 800; z-index: 5;">🔴 Live Stream</div>
             `;
             
-            // Sofortiger Frame-Abruf beim Beitreten
             try {
                 _supabase.from('live_streams').select('current_frame').eq('id', streamId).single().then(({ data: initData }) => {
                     if (initData && initData.current_frame) {
