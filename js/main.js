@@ -1,3 +1,4 @@
+// js/main.js - Vollständiges Hauptskript für PURE LOGIC
 import { _supabase } from './config.js';
 import { state } from './state.js';
 import { checkPasswordRecoveryFlow } from './auth.js';
@@ -10,13 +11,14 @@ import { openProfGuideModal, closeProfGuideModal, toggleProfForm, submitProfRevi
 import { openCrushModal, closeCrushModal, submitCrush } from './features/crush.js';
 import { openBlackboardModal, closeBlackboardModal } from './features/board.js';
 import { loadRankingData } from './features/ranking.js';
+import { initMatchMittwochTheme } from './features/match-mittwoch.js';
 import { changeLanguage } from './i18n.js';
 
 let adminMapInstance = null;
 let adminMarkerInstance = null;
 let deferredPrompt = null;
 
-// Service Worker Registrierung für PWA (relativer Pfad für GitHub Pages korrigiert)
+// Service Worker Registrierung für PWA
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js')
@@ -62,6 +64,9 @@ window.installPWA = async function() {
 // Haupt-Initialisierung beim Laden des DOM
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('PURE LOGIC • App initialisiert & Module geladen 🚀');
+
+    // Match-Mittwoch Theme beim Start vollautomatisch prüfen
+    initMatchMittwochTheme();
 
     setupGlobalWindowHandlers();
     setupAuthFormHandlers();

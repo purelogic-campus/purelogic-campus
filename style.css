@@ -450,7 +450,7 @@ input:focus, select:focus, textarea:focus {
   background: var(--card-hover);
 }
 
-/* Feed Container mit erzwungenem Vollbild-Snap (kein Peek / keine Ränder der Nachbar-Posts) */
+/* Feed Container mit erzwungenem Vollbild-Snap */
 #reels-list {
   scroll-snap-type: y mandatory;
   overflow-y: scroll;
@@ -459,7 +459,6 @@ input:focus, select:focus, textarea:focus {
   -webkit-overflow-scrolling: touch;
 }
 
-/* Reels & Feed Items im reinen Vollbild-Modus */
 .reel-item {
   scroll-snap-align: start;
   scroll-snap-stop: always;
@@ -576,9 +575,7 @@ input:focus, select:focus, textarea:focus {
   font-family: monospace;
 }
 
-/* ==========================================================================
-   SMARTPHONE-ANSICHT (STANDARD: EINSPALTIGES MOBILE-APP-LAYOUT)
-   ========================================================================== */
+/* Smartphone-Ansicht (Standard) */
 .main-app-layout {
   flex: 1;
   display: flex;
@@ -675,7 +672,6 @@ input:focus, select:focus, textarea:focus {
   transform: scale(0.95);
 }
 
-/* Footer Links (Mobil) */
 .footer-links {
   text-align: center;
   padding: 6px 8px 8px 8px;
@@ -703,9 +699,7 @@ input:focus, select:focus, textarea:focus {
   display: none !important;
 }
 
-/* ==========================================================================
-   PC-DESKTOP-ANSICHT (AB 768PX: LINKE SIDEBAR + ZENTRIERTER HAUPTBEREICH)
-   ========================================================================== */
+/* PC-Desktop-Ansicht (ab 768px) */
 @media (min-width: 768px) {
   .main-app-layout:not(.hidden) {
     display: grid !important;
@@ -837,4 +831,41 @@ input:focus, select:focus, textarea:focus {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--primary);
+}
+
+/* ==========================================================================
+   MATCH MITTWOCH AUTOMATISCHES THEME (Liebes- & Herzchen-Design)
+   ========================================================================== */
+body.match-mittwoch-active {
+    --primary: #ec4899 !important;
+    --primary-hover: #db2777 !important;
+    --gradient-main: linear-gradient(135deg, #f43f5e 0%, #ec4899 50%, #8b5cf6) !important;
+}
+
+body.match-mittwoch-active::before {
+    content: '💖 MATCH MITTWOCH • CAMPUS LOVE SPECIAL 💖';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background: linear-gradient(90deg, #f43f5e, #ec4899, #8b5cf6);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 900;
+    text-align: center;
+    padding: 5px 0;
+    z-index: 100000;
+    letter-spacing: 1px;
+    box-shadow: 0 2px 10px rgba(236, 72, 153, 0.5);
+    animation: pulseMatchBanner 2s infinite ease-in-out;
+}
+
+@keyframes pulseMatchBanner {
+    0% { opacity: 0.9; }
+    50% { opacity: 1; filter: brightness(1.15); }
+    100% { opacity: 0.9; }
+}
+
+body.match-mittwoch-active {
+    padding-top: 22px;
 }
