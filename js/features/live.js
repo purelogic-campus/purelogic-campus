@@ -1,4 +1,4 @@
-// js/features/live.js • PURE LOGIC Live-Stream, Vorschau-Logik (PC vs. Smartphone) & Muted-Anpassung
+// js/features/live.js • PURE LOGIC Live-Stream, Vorschau-Logik & feste Sortierung
 import { _supabase } from '../config.js';
 import { state } from '../state.js';
 import { validateInputOrAlert } from './moderation.js';
@@ -275,7 +275,7 @@ export async function loadLiveStreams() {
     const liveList = document.getElementById('live-streams-list');
     if (!liveList) return;
 
-    liveList.innerHTML = '<p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;">Lade aktive & beendete Streams...</p>';
+    liveList.innerHTML = '<p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;">Lade Streams...</p>';
 
     const oneHourAgoIso = new Date(Date.now() - 60 * 60 * 1000).toISOString();
 
@@ -306,7 +306,8 @@ export async function loadLiveStreams() {
 
     const isMobileDevice = (window.innerWidth <= 768) || (navigator.maxTouchPoints > 0);
 
-    streams.forEach(async stream => {
+    // Render-Schleife mit fester Reihenfolge nach Erstellungsdatum
+    for (const stream of streams) {
         const item = document.createElement('div');
         item.className = 'reel-item';
         item.style.cssText = 'position: relative; width: 100%; height: 380px; overflow: hidden; background: #0b0f19; border: 1px solid var(--border); border-radius: 16px; cursor: pointer; box-shadow: 0 10px 25px rgba(0,0,0,0.5); transition: transform 0.2s ease, border-color 0.2s ease;';
@@ -387,7 +388,7 @@ export async function loadLiveStreams() {
         
         item.onclick = () => openLiveFullscreen(streamId, category, location, streamTitle, isMyStream, hostEmail);
         liveList.appendChild(item);
-    });
+    }
 
     if (gridPollInterval) clearInterval(gridPollInterval);
     if (!isMobileDevice) {
