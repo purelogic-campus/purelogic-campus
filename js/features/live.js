@@ -397,7 +397,7 @@ export async function loadLiveStreams() {
         try {
             const { data: freshStreams } = await _supabase
                 .from('live_streams')
-                .select('id,current_frame') // <-- KORRIGIERT: Ohne Leerzeichen vor current_frame!
+                .select('id,current_frame')
                 .gt('expires_at', oneHourAgoIso);
 
             if (freshStreams) {
