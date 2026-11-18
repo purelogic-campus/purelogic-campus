@@ -1,4 +1,4 @@
-// js/features/live.js • PURE LOGIC Live-Stream, Vorschau-Logik & feste Sortierung
+// js/features/live.js • PURE LOGIC Live-Stream, Vorschau-Logik (PC vs. Smartphone), Ranking-Sortierung & Auto-Weiterleitung
 import { _supabase } from '../config.js';
 import { state } from '../state.js';
 import { validateInputOrAlert } from './moderation.js';
@@ -11,7 +11,6 @@ let currentActiveFilter = 'Alle';
 let viewerInterval = null;
 let chatPollInterval = null;
 let chatChannel = null;
-let streamsListChannel = null;
 let broadcastInterval = null;
 let framePollInterval = null;
 let gridPollInterval = null;
@@ -301,13 +300,68 @@ export async function loadLiveStreams() {
         return;
     }
 
+    // Gefolgte Streamer ermitteln (Twitch-Priorisierung)
+    let followedSet = new Set();
+    if (state.currentUserEmail) {
+        try {
+            const { data: follows } = await _supabase
+                .from('user_follows')
+                .select('following_email')
+                .eq('follower_email', state.currentUserEmail);
+
+            if (follows) {
+                follows.forEach(f => {
+                    if (f.following_email) followedSet.add(f.following_email.toLowerCase());
+                });
+            }
+        } catch (e) {}
+    }
+
+    // Feste, ruhige Sortierung:
+    // 1. Aktive Streams vor beendeten Streams
+    // 2. Gefolgte Streamer ganz oben
+    // 3. Aktivste Streams (Zuschauer + Likes) vor weniger aktiven
+    // 4. Tie-Breaker: Erstellungsdatum (keine Springerei!)
+    const nowMs = Date.now();
+    const sortedStreams = [...streams].sort((a, b) => {
+        const aEnded = new Date(a.expires_at).getTime() <= nowMs;
+        const bEnded = new Date(b.expires_at).getTime() <= nowMs;
+        if (aEnded !== bEnded) return aEnded ? 1 : -1;
+
+        const aFollowed = followedSet.has((a.host_email || '').toLowerCase()) ? 1 : 0;
+        const bFollowed = followedSet.has((b.host_email || '').toLowerCase()) ? 1 : 0;
+        if (bFollowed !== aFollowed) return bFollowed - aFollowed;
+
+        const aEngagement = (Number(a.viewers_count) || 0) * 2 + (Number(a.likes_count) || 0);
+        const bEngagement = (Number(b.viewers_count) || 0) * 2 + (Number(b.likes_count) || 0);
+        if (bEngagement !== aEngagement) return bEngagement - aEngagement;
+
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
+
+    // Avatare vorab in einem Schwung laden, damit Karten beim Rendern nicht springen
+    const hostEmails = [...new Set(sortedStreams.map(s => s.host_email).filter(Boolean))];
+    const avatarMap = {};
+    if (hostEmails.length > 0) {
+        try {
+            const { data: usersData } = await _supabase
+                .from('users')
+                .select('email, avatar_url')
+                .in('email', hostEmails);
+            if (usersData) {
+                usersData.forEach(u => {
+                    if (u.email && u.avatar_url) avatarMap[u.email.toLowerCase()] = u.avatar_url;
+                });
+            }
+        } catch (e) {}
+    }
+
     liveList.innerHTML = '';
     liveList.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; padding: 16px; box-sizing: border-box;';
 
     const isMobileDevice = (window.innerWidth <= 768) || (navigator.maxTouchPoints > 0);
 
-    // Render-Schleife mit fester Reihenfolge nach Erstellungsdatum
-    for (const stream of streams) {
+    for (const stream of sortedStreams) {
         const item = document.createElement('div');
         item.className = 'reel-item';
         item.style.cssText = 'position: relative; width: 100%; height: 380px; overflow: hidden; background: #0b0f19; border: 1px solid var(--border); border-radius: 16px; cursor: pointer; box-shadow: 0 10px 25px rgba(0,0,0,0.5); transition: transform 0.2s ease, border-color 0.2s ease;';
@@ -323,22 +377,10 @@ export async function loadLiveStreams() {
         const viewers = stream.viewers_count || 1;
         const expiresAt = new Date(stream.expires_at).getTime();
         const isEnded = expiresAt <= Date.now();
+        const isFollowed = followedSet.has(hostEmail.toLowerCase());
 
         const isMyStream = state.currentUserEmail && hostEmail.toLowerCase() === state.currentUserEmail.toLowerCase();
-
-        let streamerAvatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(hostEmail || 'campus')}`;
-        try {
-            if (hostEmail) {
-                const { data: userData } = await _supabase
-                    .from('users')
-                    .select('avatar_url')
-                    .eq('email', hostEmail)
-                    .single();
-                if (userData && userData.avatar_url) {
-                    streamerAvatarUrl = userData.avatar_url;
-                }
-            }
-        } catch (e) {}
+        const streamerAvatarUrl = avatarMap[hostEmail.toLowerCase()] || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(hostEmail || 'campus')}`;
 
         let backgroundMediaHtml = '';
 
@@ -373,7 +415,10 @@ export async function loadLiveStreams() {
 
         const badgeHtml = isEnded 
             ? `<div style="position: absolute; top: 12px; left: 12px; background: rgba(100, 116, 139, 0.25); border: 1px solid rgba(100, 116, 139, 0.6); color: #94a3b8; padding: 3px 8px; border-radius: 20px; font-size: 10px; font-weight: 900; z-index: 10;">VERGANGEN</div>`
-            : `<div style="position: absolute; top: 12px; left: 12px; background: rgba(239, 68, 68, 0.25); border: 1px solid rgba(239, 68, 68, 0.6); color: #ef4444; padding: 3px 8px; border-radius: 20px; font-size: 10px; font-weight: 900; display: flex; align-items: center; gap: 4px; z-index: 10; backdrop-filter: blur(4px);"><span style="width: 6px; height: 6px; background: #ef4444; border-radius: 50%; display: inline-block;"></span> LIVE</div>`;
+            : `<div style="position: absolute; top: 12px; left: 12px; display: flex; gap: 6px; z-index: 10;">
+                <div style="background: rgba(239, 68, 68, 0.25); border: 1px solid rgba(239, 68, 68, 0.6); color: #ef4444; padding: 3px 8px; border-radius: 20px; font-size: 10px; font-weight: 900; display: flex; align-items: center; gap: 4px; backdrop-filter: blur(4px);"><span style="width: 6px; height: 6px; background: #ef4444; border-radius: 50%; display: inline-block;"></span> LIVE</div>
+                ${isFollowed ? `<div style="background: rgba(16, 185, 129, 0.25); border: 1px solid rgba(16, 185, 129, 0.6); color: #10b981; padding: 3px 8px; border-radius: 20px; font-size: 10px; font-weight: 900; backdrop-filter: blur(4px);">★ Gefolgt</div>` : ''}
+               </div>`;
 
         item.innerHTML = `
             ${backgroundMediaHtml}
@@ -390,6 +435,7 @@ export async function loadLiveStreams() {
         liveList.appendChild(item);
     }
 
+    // Nur die Vorschaubilder aktualisieren, ohne die Karten neu zu sortieren oder hüpfen zu lassen
     if (gridPollInterval) clearInterval(gridPollInterval);
     if (!isMobileDevice) {
         gridPollInterval = setInterval(async () => {
@@ -400,7 +446,7 @@ export async function loadLiveStreams() {
                 const { data: freshStreams } = await _supabase
                     .from('live_streams')
                     .select('id,current_frame')
-                    .gt('expires_at', oneHourAgoIso);
+                    .gt('expires_at', new Date().toISOString());
 
                 if (freshStreams) {
                     freshStreams.forEach(s => {
@@ -411,16 +457,7 @@ export async function loadLiveStreams() {
                     });
                 }
             } catch (e) {}
-        }, 400);
-    }
-
-    if (!streamsListChannel) {
-        streamsListChannel = _supabase
-            .channel('public:live_streams_list')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'live_streams' }, () => {
-                loadLiveStreams();
-            })
-            .subscribe();
+        }, 600);
     }
 }
 
@@ -536,12 +573,20 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
 
     if (viewerInterval) clearInterval(viewerInterval);
     viewerInterval = setInterval(async () => {
+        if (!activeStreamId) return;
         try {
-            const { data: sData } = await _supabase
+            const { data: sData, error: sErr } = await _supabase
                 .from('live_streams')
-                .select('viewers_count, likes_count, current_frame')
+                .select('viewers_count, likes_count, current_frame, expires_at')
                 .eq('id', activeStreamId)
                 .single();
+
+            // Wenn der Host den Stream beendet hat -> Zuschauer automatisch zum nächsten aktiven Stream weiterleiten (Twitch Raid-Effekt)
+            const streamEndedOrMissing = sErr || !sData || (sData.expires_at && new Date(sData.expires_at).getTime() <= Date.now());
+            if (!currentUserIsHost && streamEndedOrMissing) {
+                await redirectViewerToNextLiveStream(activeStreamId);
+                return;
+            }
 
             if (sData) {
                 const vSpan = document.getElementById('live-viewer-count');
@@ -634,6 +679,35 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
     chatPollInterval = setInterval(() => {
         loadExistingChatMessages(streamId);
     }, 2000);
+}
+
+async function redirectViewerToNextLiveStream(endedStreamId) {
+    try {
+        const { data: nextStreams } = await _supabase
+            .from('live_streams')
+            .select('*')
+            .gt('expires_at', new Date().toISOString())
+            .neq('id', endedStreamId)
+            .order('viewers_count', { ascending: false })
+            .limit(1);
+
+        if (nextStreams && nextStreams.length > 0) {
+            const next = nextStreams[0];
+            await openLiveFullscreen(
+                String(next.id),
+                next.category || 'Live Stream',
+                next.location || 'Wien / Campus',
+                next.title || 'Campus Stream',
+                false,
+                next.host_email || ''
+            );
+        } else {
+            alert('Dieser Live-Stream wurde vom Host beendet.');
+            await closeLiveFullscreen();
+        }
+    } catch (e) {
+        await closeLiveFullscreen();
+    }
 }
 
 window.sendScreenTapLike = async function() {
