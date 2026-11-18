@@ -1,12 +1,10 @@
-// js/features/live.js • PURE LOGIC Live-Stream, WebRTC Peer-to-Peer, Realtime-Chat, Geschenke, Abos & Like-Tap
+// js/features/live.js • PURE LOGIC Live-Stream, Supabase Canvas Video-Sync, Chat, Geschenke, Abos & Like-Tap
 import { _supabase } from '../config.js';
 import { state } from '../state.js';
 import { validateInputOrAlert } from './moderation.js';
 
 let liveObserver = null;
 let localStream = null;
-let activePeerConnection = null;
-let remoteStream = null;
 let activeStreamId = null;
 let selectedMainCategory = '💬 Plaudern';
 let selectedSubCategory = 'Allgemein';
@@ -15,17 +13,8 @@ let viewerInterval = null;
 let chatPollInterval = null;
 let chatChannel = null;
 let streamsListChannel = null;
-let signalingChannel = null;
-
-let previewPeerConnections = {};
-let previewChannels = {};
-
-const rtcConfig = {
-    iceServers: [
-        { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' }
-    ]
-};
+let broadcastInterval = null;
+let framePollInterval = null;
 
 const campusGifts = [
     { id: 1, name: 'Kaffee ☕', cost: 10 },
@@ -85,13 +74,13 @@ function showPreLivePreviewModal() {
         previewModal.innerHTML = `
             <div style="width: 100%; max-width: 440px; background: #0f172a; border: 1px solid var(--border); border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 20px 40px rgba(0,0,0,0.8); max-height: 95vh;">
                 <div style="padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
-                    <h3 style="font-size: 15px; font-weight: 900; color: #fff; margin: 0;">🎥 WebRTC Stream-Setup</h3>
+                    <h3 style="font-size: 15px; font-weight: 900; color: #fff; margin: 0;">🎥 Live-Stream Setup</h3>
                     <button type="button" onclick="closePreLivePreview()" style="background: none; border: none; color: #fff; font-size: 22px; cursor: pointer;">&times;</button>
                 </div>
                 
                 <div style="position: relative; width: 100%; height: 180px; background: #000; flex-shrink: 0;">
                     <video id="preview-camera-video" autoplay muted playsinline style="width: 100%; height: 100%; object-fit: cover;"></video>
-                    <div style="position: absolute; top: 10px; left: 10px; background: rgba(16,185,129,0.2); border: 1px solid #10b981; color: #10b981; padding: 3px 8px; border-radius: 20px; font-size: 10px; font-weight: 800;">WebRTC bereit 🎥</div>
+                    <div style="position: absolute; top: 10px; left: 10px; background: rgba(16,185,129,0.2); border: 1px solid #10b981; color: #10b981; padding: 3px 8px; border-radius: 20px; font-size: 10px; font-weight: 800;">Kamera bereit 🎥</div>
                 </div>
 
                 <div style="padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; flex: 1;">
@@ -206,10 +195,10 @@ export async function confirmAndStartLiveStream() {
         previewModal.classList.add('hidden');
     }
 
-    await startLiveStreamBroadcast(finalCategoryLabel, location, finalTitle, 'webrtc-active');
+    await startLiveStreamBroadcast(finalCategoryLabel, location, finalTitle, 'active');
 }
 
-async function startLiveStreamBroadcast(category, location, title, streamUrl = 'webrtc-active') {
+async function startLiveStreamBroadcast(category, location, title, streamUrl = 'active') {
     try {
         const expiresAt = new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString();
 
@@ -240,6 +229,7 @@ async function startLiveStreamBroadcast(category, location, title, streamUrl = '
 
         activeStreamId = data.id;
         loadLiveStreams();
+        startCanvasBroadcasting();
 
         if (localStream) {
             openLiveFullscreen(data.id, category, location, title, true, data.host_email);
@@ -253,6 +243,32 @@ async function startLiveStreamBroadcast(category, location, title, streamUrl = '
             localStream = null;
         }
     }
+}
+
+function startCanvasBroadcasting() {
+    if (broadcastInterval) clearInterval(broadcastInterval);
+    const canvas = document.createElement('canvas');
+    canvas.width = 640;
+    canvas.height = 360;
+    const ctx = canvas.getContext('2d');
+    const video = document.createElement('video');
+    video.autoplay = true;
+    video.playsInline = true;
+    video.muted = true;
+    video.srcObject = localStream;
+    video.play().catch(() => {});
+
+    broadcastInterval = setInterval(async () => {
+        if (!activeStreamId || !localStream) return;
+        try {
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.65);
+            await _supabase
+                .from('live_streams')
+                .update({ current_frame: dataUrl })
+                .eq('id', activeStreamId);
+        } catch (e) {}
+    }, 600);
 }
 
 export async function loadLiveStreams() {
@@ -274,11 +290,6 @@ export async function loadLiveStreams() {
     }
 
     const { data: streams, error } = await query;
-
-    Object.values(previewChannels).forEach(ch => _supabase.removeChannel(ch));
-    previewChannels = {};
-    Object.values(previewPeerConnections).forEach(pc => pc.close());
-    previewPeerConnections = {};
 
     if (error || !streams || streams.length === 0) {
         liveList.innerHTML = `
@@ -351,7 +362,8 @@ export async function loadLiveStreams() {
                 </div>
             `;
         } else {
-            backgroundMediaHtml = `<video autoplay muted playsinline style="width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; z-index: 1;" id="preview-thumb-${streamId}"></video>`;
+            const previewImageSrc = stream.current_frame || streamerAvatarUrl;
+            backgroundMediaHtml = `<div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: url('${previewImageSrc}'); background-size: cover; background-position: center; z-index: 1;" id="preview-thumb-${streamId}"></div>`;
         }
 
         const badgeHtml = isEnded 
@@ -371,50 +383,6 @@ export async function loadLiveStreams() {
         
         item.onclick = () => openLiveFullscreen(streamId, category, location, streamTitle, isMyStream, hostEmail);
         liveList.appendChild(item);
-
-        if (!isMobileDevice && !isEnded) {
-            setTimeout(() => {
-                const thumbVid = document.getElementById(`preview-thumb-${streamId}`);
-                if (!thumbVid) return;
-                thumbVid.muted = true;
-
-                if (isMyStream && localStream) {
-                    thumbVid.srcObject = localStream;
-                    thumbVid.play().catch(() => {});
-                } else {
-                    const pc = new RTCPeerConnection(rtcConfig);
-                    previewPeerConnections[streamId] = pc;
-
-                    pc.ontrack = (event) => {
-                        if (event.streams[0]) {
-                            thumbVid.srcObject = event.streams[0];
-                            thumbVid.muted = true;
-                            thumbVid.play().catch(() => {});
-                        }
-                    };
-
-                    const sChan = _supabase.channel(`webrtc:${streamId}`, { config: { broadcast: { self: false } } });
-                    previewChannels[streamId] = sChan;
-
-                    sChan.on('broadcast', { event: 'offer' }, async ({ payload }) => {
-                        try {
-                            await pc.setRemoteDescription(new RTCSessionDescription(payload.offer));
-                            const answer = await pc.createAnswer();
-                            await pc.setLocalDescription(answer);
-                            sChan.send({ type: 'broadcast', event: 'answer', payload: { answer, sender: 'preview' } });
-                        } catch (e) {}
-                    }).on('broadcast', { event: 'ice-candidate' }, async ({ payload }) => {
-                        try {
-                            if (payload.candidate) await pc.addIceCandidate(new RTCIceCandidate(payload.candidate));
-                        } catch (e) {}
-                    }).subscribe((status) => {
-                        if (status === 'SUBSCRIBED') {
-                            sChan.send({ type: 'broadcast', event: 'viewer-ready', payload: { viewer: 'preview' } });
-                        }
-                    });
-                }
-            }, 150);
-        }
     });
 
     if (!streamsListChannel) {
@@ -503,7 +471,7 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
         try {
             const { data: sData } = await _supabase
                 .from('live_streams')
-                .select('viewers_count, likes_count')
+                .select('viewers_count, likes_count, current_frame')
                 .eq('id', activeStreamId)
                 .single();
 
@@ -513,9 +481,35 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
 
                 const lSpan = document.getElementById('live-likes-count-num');
                 if (lSpan) lSpan.textContent = sData.likes_count || 0;
+
+                if (!currentUserIsHost && sData.current_frame) {
+                    const imgEl = document.getElementById('active-stream-image-view');
+                    if (imgEl) imgEl.src = sData.current_frame;
+                }
             }
         } catch (err) {}
-    }, 2000);
+    }, 1000);
+
+    if (framePollInterval) clearInterval(framePollInterval);
+    if (!currentUserIsHost) {
+        framePollInterval = setInterval(async () => {
+            if (!activeStreamId) return;
+            try {
+                const { data: fData } = await _supabase
+                    .from('live_streams')
+                    .select('current_frame')
+                    .eq('id', activeStreamId)
+                    .single();
+
+                if (fData && fData.current_frame) {
+                    const imgEl = document.getElementById('active-stream-image-view');
+                    if (imgEl) imgEl.src = fData.current_frame;
+                    const statusMsg = document.getElementById('webrtc-status-msg');
+                    if (statusMsg) statusMsg.remove();
+                }
+            } catch (e) {}
+        }, 500);
+    }
 
     if (playerContainer) {
         playerContainer.onclick = (e) => {
@@ -523,22 +517,32 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
             sendScreenTapLikeAnim(e.clientX, e.clientY);
         };
 
-        playerContainer.innerHTML = `
-            <video id="active-web-rtc-video" autoplay playsinline ${currentUserIsHost ? 'muted' : ''} style="width: 100%; height: 100%; object-fit: cover; background: #000; position: absolute; top:0; left:0;"></video>
-            <div style="position: absolute; top: 16px; left: 16px; background: rgba(16,185,129,0.2); border: 1px solid #10b981; color: #10b981; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 800; z-index: 5;">${currentUserIsHost ? '🎥 Du sendest Live (WebRTC)' : '🔴 Live WebRTC Stream'}</div>
-        `;
+        if (currentUserIsHost) {
+            playerContainer.innerHTML = `
+                <video id="active-web-rtc-video" autoplay playsinline muted style="width: 100%; height: 100%; object-fit: cover; background: #000; position: absolute; top:0; left:0;"></video>
+                <div style="position: absolute; top: 16px; left: 16px; background: rgba(16,185,129,0.2); border: 1px solid #10b981; color: #10b981; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 800; z-index: 5;">🎥 Du sendest Live</div>
+            `;
+            const vidEl = document.getElementById('active-web-rtc-video');
+            if (vidEl && localStream) {
+                vidEl.srcObject = localStream;
+                vidEl.play().catch(() => {});
+            }
+        } else {
+            playerContainer.innerHTML = `
+                <img id="active-stream-image-view" src="" style="width: 100%; height: 100%; object-fit: cover; background: #000; position: absolute; top:0; left:0;" alt="Live Stream">
+                <div style="position: absolute; top: 16px; left: 16px; background: rgba(16,185,129,0.2); border: 1px solid #10b981; color: #10b981; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 800; z-index: 5;">🔴 Live Stream</div>
+            `;
+            try {
+                const { data: initData } = await _supabase.from('live_streams').select('current_frame').eq('id', streamId).single();
+                if (initData && initData.current_frame) {
+                    const imgEl = document.getElementById('active-stream-image-view');
+                    if (imgEl) imgEl.src = initData.current_frame;
+                }
+            } catch(e){}
+        }
         
         if (topControls) playerContainer.appendChild(topControls);
         if (badge) playerContainer.appendChild(badge);
-
-        if (currentUserIsHost && localStream) {
-            const vidEl = document.getElementById('active-web-rtc-video');
-            if (vidEl) {
-                vidEl.muted = true;
-                vidEl.srcObject = localStream;
-                vidEl.onloadedmetadata = () => vidEl.play().catch(e => console.warn('Autoplay blockiert:', e));
-            }
-        }
     }
 
     if (chatInputContainer) {
@@ -565,7 +569,7 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
 
     const chatMessagesEl = document.getElementById('live-chat-messages');
     if (chatMessagesEl) {
-        chatMessagesEl.innerHTML = `<div id="webrtc-status-msg" style="color: var(--text-muted); text-align: center; padding: 10px;">WebRTC Verbindung wird aufgebaut... 🔗</div>`;
+        chatMessagesEl.innerHTML = `<div id="webrtc-status-msg" style="color: var(--text-muted); text-align: center; padding: 10px;">Chat verbunden 💬</div>`;
     }
 
     await loadExistingChatMessages(streamId);
@@ -590,123 +594,6 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
     chatPollInterval = setInterval(() => {
         loadExistingChatMessages(streamId);
     }, 2000);
-
-    initWebRTCSignaling(streamId, currentUserIsHost);
-}
-
-function initWebRTCSignaling(streamId, isHost) {
-    if (signalingChannel) _supabase.removeChannel(signalingChannel);
-
-    signalingChannel = _supabase.channel(`webrtc:${streamId}`, {
-        config: { broadcast: { self: false } }
-    });
-
-    activePeerConnection = new RTCPeerConnection(rtcConfig);
-
-    if (isHost && localStream) {
-        localStream.getTracks().forEach(track => activePeerConnection.addTrack(track, localStream));
-    }
-
-    activePeerConnection.ontrack = (event) => {
-        remoteStream = event.streams[0];
-        const vidEl = document.getElementById('active-web-rtc-video');
-        if (vidEl && remoteStream) {
-            vidEl.srcObject = remoteStream;
-            vidEl.onloadedmetadata = () => vidEl.play().catch(e => console.warn('Remote Video Autoplay:', e));
-            vidEl.play().catch(() => {});
-        }
-
-        const statusMsg = document.getElementById('webrtc-status-msg');
-        if (statusMsg) {
-            statusMsg.remove();
-        }
-    };
-
-    activePeerConnection.onicecandidate = (event) => {
-        if (event.candidate) {
-            signalingChannel.send({
-                type: 'broadcast',
-                event: 'ice-candidate',
-                payload: { candidate: event.candidate, sender: state.currentUserEmail }
-            });
-        }
-    };
-
-    signalingChannel
-        .on('broadcast', { event: 'offer' }, async ({ payload }) => {
-            if (isHost) return;
-            try {
-                await activePeerConnection.setRemoteDescription(new RTCSessionDescription(payload.offer));
-                const answer = await activePeerConnection.createAnswer();
-                await activePeerConnection.setLocalDescription(answer);
-
-                signalingChannel.send({
-                    type: 'broadcast',
-                    event: 'answer',
-                    payload: { answer: answer, sender: state.currentUserEmail }
-                });
-            } catch (err) {
-                console.error('WebRTC Offer Fehler:', err);
-            }
-        })
-        .on('broadcast', { event: 'answer' }, async ({ payload }) => {
-            if (!isHost) return;
-            try {
-                await activePeerConnection.setRemoteDescription(new RTCSessionDescription(payload.answer));
-            } catch (err) {
-                console.error('WebRTC Answer Fehler:', err);
-            }
-        })
-        .on('broadcast', { event: 'ice-candidate' }, async ({ payload }) => {
-            try {
-                if (payload.candidate) {
-                    await activePeerConnection.addIceCandidate(new RTCIceCandidate(payload.candidate));
-                }
-            } catch (err) {
-                console.error('ICE Candidate Fehler:', err);
-            }
-        })
-        .subscribe(async (status) => {
-            if (status === 'SUBSCRIBED' && isHost) {
-                setTimeout(async () => {
-                    try {
-                        const offer = await activePeerConnection.createOffer();
-                        await activePeerConnection.setLocalDescription(offer);
-                        signalingChannel.send({
-                            type: 'broadcast',
-                            event: 'offer',
-                            payload: { offer: offer, sender: state.currentUserEmail }
-                        });
-                    } catch (err) {
-                        console.error('Host Offer Fehler:', err);
-                    }
-                }, 1200);
-            } else if (status === 'SUBSCRIBED' && !isHost) {
-                setTimeout(() => {
-                    signalingChannel.send({
-                        type: 'broadcast',
-                        event: 'viewer-ready',
-                        payload: { viewer: state.currentUserEmail }
-                    });
-                }, 1000);
-            }
-        });
-
-    signalingChannel.on('broadcast', { event: 'viewer-ready' }, async () => {
-        if (isHost && activePeerConnection) {
-            try {
-                const offer = await activePeerConnection.createOffer();
-                await activePeerConnection.setLocalDescription(offer);
-                signalingChannel.send({
-                    type: 'broadcast',
-                    event: 'offer',
-                    payload: { offer: offer, sender: state.currentUserEmail }
-                });
-            } catch (e) {
-                console.error('Re-offer Fehler:', e);
-            }
-        }
-    });
 }
 
 window.sendScreenTapLike = async function() {
@@ -1051,6 +938,8 @@ export async function sendLiveGift(giftName, cost, hostEmail) {
 export async function terminateActiveStream() {
     if (!confirm('Möchtest du deinen Live-Stream wirklich beenden?')) return;
 
+    if (broadcastInterval) clearInterval(broadcastInterval);
+    if (framePollInterval) clearInterval(framePollInterval);
     try {
         if (activeStreamId) {
             await _supabase
@@ -1069,13 +958,11 @@ export async function terminateActiveStream() {
 export async function closeLiveFullscreen() {
     if (viewerInterval) clearInterval(viewerInterval);
     if (chatPollInterval) clearInterval(chatPollInterval);
+    if (broadcastInterval) clearInterval(broadcastInterval);
+    if (framePollInterval) clearInterval(framePollInterval);
     if (chatChannel) {
         _supabase.removeChannel(chatChannel);
         chatChannel = null;
-    }
-    if (signalingChannel) {
-        _supabase.removeChannel(signalingChannel);
-        signalingChannel = null;
     }
     
     if (activeStreamId) {
@@ -1105,10 +992,6 @@ export async function closeLiveFullscreen() {
     if (localStream) {
         localStream.getTracks().forEach(track => track.stop());
         localStream = null;
-    }
-    if (activePeerConnection) {
-        activePeerConnection.close();
-        activePeerConnection = null;
     }
     activeStreamId = null;
     loadLiveStreams();
