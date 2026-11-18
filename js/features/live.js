@@ -3,7 +3,6 @@ import { _supabase } from '../config.js';
 import { state } from '../state.js';
 import { validateInputOrAlert } from './moderation.js';
 
-let liveObserver = null;
 let localStream = null;
 let activeStreamId = null;
 let selectedMainCategory = '💬 Plaudern';
@@ -15,6 +14,7 @@ let chatChannel = null;
 let streamsListChannel = null;
 let broadcastInterval = null;
 let framePollInterval = null;
+let gridPollInterval = null;
 
 const campusGifts = [
     { id: 1, name: 'Kaffee ☕', cost: 10 },
@@ -268,7 +268,7 @@ function startCanvasBroadcasting() {
                 .update({ current_frame: dataUrl })
                 .eq('id', activeStreamId);
         } catch (e) {}
-    }, 600);
+    }, 400);
 }
 
 export async function loadLiveStreams() {
@@ -363,7 +363,7 @@ export async function loadLiveStreams() {
             `;
         } else {
             const previewImageSrc = stream.current_frame || streamerAvatarUrl;
-            backgroundMediaHtml = `<div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: url('${previewImageSrc}'); background-size: cover; background-position: center; z-index: 1;" id="preview-thumb-${streamId}"></div>`;
+            backgroundMediaHtml = `<div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: url('${previewImageSrc}'); background-size: cover; background-position: center; z-index: 1;" id="grid-thumb-${streamId}"></div>`;
         }
 
         const badgeHtml = isEnded 
@@ -384,6 +384,28 @@ export async function loadLiveStreams() {
         item.onclick = () => openLiveFullscreen(streamId, category, location, streamTitle, isMyStream, hostEmail);
         liveList.appendChild(item);
     });
+
+    if (gridPollInterval) clearInterval(gridPollInterval);
+    gridPollInterval = setInterval(async () => {
+        const modal = document.getElementById('live-fullscreen-modal');
+        if (modal && !modal.classList.contains('hidden')) return; // Nicht pollen, wenn im Vollbild
+
+        try {
+            const { data: freshStreams } = await _supabase
+                .from('live_streams')
+                .select('id, current_frame')
+                .gt('expires_at', oneHourAgoIso);
+
+            if (freshStreams) {
+                freshStreams.forEach(s => {
+                    const thumbEl = document.getElementById(`grid-thumb-${s.id}`);
+                    if (thumbEl && s.current_frame) {
+                        thumbEl.style.backgroundImage = `url('${s.current_frame}')`;
+                    }
+                });
+            }
+        } catch (e) {}
+    }, 1500);
 
     if (!streamsListChannel) {
         streamsListChannel = _supabase
@@ -466,6 +488,43 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
         badge.innerHTML = `👥 <span id="live-viewer-count" style="color: #10b981;">${currentViewers}</span> Zuschauer`;
     }
 
+    if (playerContainer) {
+        playerContainer.onclick = (e) => {
+            if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
+            sendScreenTapLikeAnim(e.clientX, e.clientY);
+        };
+
+        if (currentUserIsHost) {
+            playerContainer.innerHTML = `
+                <video id="active-web-rtc-video" autoplay playsinline muted style="width: 100%; height: 100%; object-fit: cover; background: #000; position: absolute; top:0; left:0;"></video>
+                <div style="position: absolute; top: 16px; left: 16px; background: rgba(16,185,129,0.2); border: 1px solid #10b981; color: #10b981; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 800; z-index: 5;">🎥 Du sendest Live</div>
+            `;
+            const vidEl = document.getElementById('active-web-rtc-video');
+            if (vidEl && localStream) {
+                vidEl.srcObject = localStream;
+                vidEl.play().catch(() => {});
+            }
+        } else {
+            playerContainer.innerHTML = `
+                <img id="active-stream-image-view" src="" style="width: 100%; height: 100%; object-fit: cover; background: #000; position: absolute; top:0; left:0;" alt="Live Stream">
+                <div id="webrtc-status-msg" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #fff; font-size: 12px; background: rgba(0,0,0,0.7); padding: 8px 16px; border-radius: 8px; z-index: 6;">Verbinde mit Stream... 🔗</div>
+                <div style="position: absolute; top: 16px; left: 16px; background: rgba(16,185,129,0.2); border: 1px solid #10b981; color: #10b981; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 800; z-index: 5;">🔴 Live Stream</div>
+            `;
+            try {
+                const { data: initData } = await _supabase.from('live_streams').select('current_frame').eq('id', streamId).single();
+                if (initData && initData.current_frame) {
+                    const imgEl = document.getElementById('active-stream-image-view');
+                    if (imgEl) imgEl.src = initData.current_frame;
+                    const statusMsg = document.getElementById('webrtc-status-msg');
+                    if (statusMsg) statusMsg.remove();
+                }
+            } catch(e){}
+        }
+        
+        if (topControls) playerContainer.appendChild(topControls);
+        if (badge) playerContainer.appendChild(badge);
+    }
+
     if (viewerInterval) clearInterval(viewerInterval);
     viewerInterval = setInterval(async () => {
         try {
@@ -485,6 +544,8 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
                 if (!currentUserIsHost && sData.current_frame) {
                     const imgEl = document.getElementById('active-stream-image-view');
                     if (imgEl) imgEl.src = sData.current_frame;
+                    const statusMsg = document.getElementById('webrtc-status-msg');
+                    if (statusMsg) statusMsg.remove();
                 }
             }
         } catch (err) {}
@@ -508,41 +569,7 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
                     if (statusMsg) statusMsg.remove();
                 }
             } catch (e) {}
-        }, 500);
-    }
-
-    if (playerContainer) {
-        playerContainer.onclick = (e) => {
-            if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
-            sendScreenTapLikeAnim(e.clientX, e.clientY);
-        };
-
-        if (currentUserIsHost) {
-            playerContainer.innerHTML = `
-                <video id="active-web-rtc-video" autoplay playsinline muted style="width: 100%; height: 100%; object-fit: cover; background: #000; position: absolute; top:0; left:0;"></video>
-                <div style="position: absolute; top: 16px; left: 16px; background: rgba(16,185,129,0.2); border: 1px solid #10b981; color: #10b981; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 800; z-index: 5;">🎥 Du sendest Live</div>
-            `;
-            const vidEl = document.getElementById('active-web-rtc-video');
-            if (vidEl && localStream) {
-                vidEl.srcObject = localStream;
-                vidEl.play().catch(() => {});
-            }
-        } else {
-            playerContainer.innerHTML = `
-                <img id="active-stream-image-view" src="" style="width: 100%; height: 100%; object-fit: cover; background: #000; position: absolute; top:0; left:0;" alt="Live Stream">
-                <div style="position: absolute; top: 16px; left: 16px; background: rgba(16,185,129,0.2); border: 1px solid #10b981; color: #10b981; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 800; z-index: 5;">🔴 Live Stream</div>
-            `;
-            try {
-                const { data: initData } = await _supabase.from('live_streams').select('current_frame').eq('id', streamId).single();
-                if (initData && initData.current_frame) {
-                    const imgEl = document.getElementById('active-stream-image-view');
-                    if (imgEl) imgEl.src = initData.current_frame;
-                }
-            } catch(e){}
-        }
-        
-        if (topControls) playerContainer.appendChild(topControls);
-        if (badge) playerContainer.appendChild(badge);
+        }, 400);
     }
 
     if (chatInputContainer) {
@@ -569,7 +596,7 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
 
     const chatMessagesEl = document.getElementById('live-chat-messages');
     if (chatMessagesEl) {
-        chatMessagesEl.innerHTML = `<div id="webrtc-status-msg" style="color: var(--text-muted); text-align: center; padding: 10px;">Chat verbunden 💬</div>`;
+        chatMessagesEl.innerHTML = `<div id="chat-status-msg" style="color: var(--text-muted); text-align: center; padding: 10px;">Chat verbunden 💬</div>`;
     }
 
     await loadExistingChatMessages(streamId);
@@ -671,7 +698,7 @@ function appendMessageToChatUI(msg) {
     const chatList = document.getElementById('live-chat-messages');
     if (!chatList) return;
 
-    const statusMsg = document.getElementById('webrtc-status-msg');
+    const statusMsg = document.getElementById('chat-status-msg');
     if (statusMsg) statusMsg.remove();
 
     const sender = msg.sender_email ? msg.sender_email.split('@')[0] : 'User';
@@ -940,6 +967,7 @@ export async function terminateActiveStream() {
 
     if (broadcastInterval) clearInterval(broadcastInterval);
     if (framePollInterval) clearInterval(framePollInterval);
+    if (gridPollInterval) clearInterval(gridPollInterval);
     try {
         if (activeStreamId) {
             await _supabase
