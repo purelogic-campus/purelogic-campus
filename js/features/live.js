@@ -300,7 +300,6 @@ export async function loadLiveStreams() {
         return;
     }
 
-    // Gefolgte Streamer ermitteln (Twitch-Priorisierung)
     let followedSet = new Set();
     if (state.currentUserEmail) {
         try {
@@ -317,11 +316,6 @@ export async function loadLiveStreams() {
         } catch (e) {}
     }
 
-    // Feste, ruhige Sortierung:
-    // 1. Aktive Streams vor beendeten Streams
-    // 2. Gefolgte Streamer ganz oben
-    // 3. Aktivste Streams (Zuschauer + Likes) vor weniger aktiven
-    // 4. Tie-Breaker: Erstellungsdatum (keine Springerei!)
     const nowMs = Date.now();
     const sortedStreams = [...streams].sort((a, b) => {
         const aEnded = new Date(a.expires_at).getTime() <= nowMs;
@@ -339,7 +333,6 @@ export async function loadLiveStreams() {
         return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
 
-    // Avatare vorab in einem Schwung laden, damit Karten beim Rendern nicht springen
     const hostEmails = [...new Set(sortedStreams.map(s => s.host_email).filter(Boolean))];
     const avatarMap = {};
     if (hostEmails.length > 0) {
@@ -435,7 +428,6 @@ export async function loadLiveStreams() {
         liveList.appendChild(item);
     }
 
-    // Nur die Vorschaubilder aktualisieren, ohne die Karten neu zu sortieren oder hüpfen zu lassen
     if (gridPollInterval) clearInterval(gridPollInterval);
     if (!isMobileDevice) {
         gridPollInterval = setInterval(async () => {
@@ -479,21 +471,32 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
 
     if (titleDisplay) titleDisplay.textContent = `🔴 ${streamTitle || category}`;
     
-    const currentUserIsHost = isHost || (state.currentUserEmail && hostEmail && state.currentUserEmail.toLowerCase() === hostEmail.toLowerCase()) || (localStream !== null);
+    // EXakte Host-Prüfung über Datenbank-E-Mail und angemeldeten User (verhindert, dass Zuseher den Stream beenden können)
+    const currentUserIsHost = isHost || (Boolean(state.currentUserEmail) && Boolean(hostEmail) && state.currentUserEmail.toLowerCase() === hostEmail.toLowerCase());
+
+    // Wenn der aktuelle Nutzer NICHT der Host ist, wird ein eventuell geerbter lokaler Stream hart verworfen
+    if (!currentUserIsHost && localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+        localStream = null;
+    }
 
     let currentViewers = 1;
     let currentLikes = 0;
     try {
         const { data: streamData } = await _supabase
             .from('live_streams')
-            .select('viewers_count, likes_count, current_frame')
+            .select('viewers_count, likes_count, current_frame, host_email')
             .eq('id', streamId)
             .single();
 
         if (streamData) {
+            if (streamData.host_email && !hostEmail) hostEmail = streamData.host_email;
             currentViewers = streamData.viewers_count || 1;
             currentLikes = streamData.likes_count || 0;
-            if (!currentUserIsHost) {
+            
+            const realIsHost = Boolean(state.currentUserEmail) && Boolean(hostEmail) && state.currentUserEmail.toLowerCase() === hostEmail.toLowerCase();
+
+            if (!realIsHost) {
                 currentViewers += 1;
                 await _supabase
                     .from('live_streams')
@@ -513,6 +516,8 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
         playerContainer.style.position = 'relative';
         playerContainer.appendChild(topControls);
     }
+
+    const finalIsHost = Boolean(state.currentUserEmail) && Boolean(hostEmail) && state.currentUserEmail.toLowerCase() === hostEmail.toLowerCase();
 
     if (topControls) {
         topControls.innerHTML = `
@@ -538,7 +543,7 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
             sendScreenTapLikeAnim(e.clientX, e.clientY);
         };
 
-        if (currentUserIsHost) {
+        if (finalIsHost && localStream) {
             playerContainer.innerHTML = `
                 <video id="active-web-rtc-video" autoplay playsinline muted style="width: 100%; height: 100%; object-fit: cover; background: #000; position: absolute; top:0; left:0;"></video>
                 <div style="position: absolute; top: 16px; left: 16px; background: rgba(16,185,129,0.2); border: 1px solid #10b981; color: #10b981; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 800; z-index: 5;">🎥 Du sendest Live</div>
@@ -577,13 +582,14 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
         try {
             const { data: sData, error: sErr } = await _supabase
                 .from('live_streams')
-                .select('viewers_count, likes_count, current_frame, expires_at')
+                .select('viewers_count, likes_count, current_frame, expires_at, host_email')
                 .eq('id', activeStreamId)
                 .single();
 
-            // Wenn der Host den Stream beendet hat -> Zuschauer automatisch zum nächsten aktiven Stream weiterleiten (Twitch Raid-Effekt)
             const streamEndedOrMissing = sErr || !sData || (sData.expires_at && new Date(sData.expires_at).getTime() <= Date.now());
-            if (!currentUserIsHost && streamEndedOrMissing) {
+            const checkIsHost = Boolean(state.currentUserEmail) && Boolean(sData?.host_email) && state.currentUserEmail.toLowerCase() === sData.host_email.toLowerCase();
+
+            if (!checkIsHost && streamEndedOrMissing) {
                 await redirectViewerToNextLiveStream(activeStreamId);
                 return;
             }
@@ -595,7 +601,7 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
                 const lSpan = document.getElementById('live-likes-count-num');
                 if (lSpan) lSpan.textContent = sData.likes_count || 0;
 
-                if (!currentUserIsHost && sData.current_frame) {
+                if (!checkIsHost && sData.current_frame) {
                     const imgEl = document.getElementById('active-stream-image-view');
                     if (imgEl) {
                         imgEl.src = sData.current_frame;
@@ -608,7 +614,7 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
     }, 1000);
 
     if (framePollInterval) clearInterval(framePollInterval);
-    if (!currentUserIsHost) {
+    if (!finalIsHost) {
         framePollInterval = setInterval(async () => {
             if (!activeStreamId) return;
             try {
@@ -631,7 +637,7 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
     }
 
     if (chatInputContainer) {
-        if (currentUserIsHost) {
+        if (finalIsHost) {
             chatInputContainer.innerHTML = `
                 <button type="button" class="btn" style="background: #ef4444; color: #fff; font-weight: 900; font-size: 11px; padding: 8px; border-radius: 8px; width: 100%; border: none; cursor: pointer; box-shadow: 0 4px 12px rgba(239,68,68,0.4); margin-bottom: 4px;" onclick="terminateActiveStream()">🛑 Stream beenden</button>
                 <div style="display: flex; gap: 4px; width: 100%;">
@@ -803,10 +809,7 @@ function appendMessageToChatUI(msg) {
 
 export async function sendLiveChatMessage() {
     const input = document.getElementById('live-chat-input');
-    if (!input) {
-        console.warn('Chat-Input Feld nicht gefunden!');
-        return;
-    }
+    if (!input) return;
 
     const msgText = input.value.trim();
     if (!msgText) return;
@@ -837,15 +840,12 @@ export async function sendLiveChatMessage() {
             ]);
 
         if (error) {
-            console.error('Supabase Chat Insert Fehler:', error);
             alert('Fehler beim Senden der Nachricht: ' + error.message);
             return;
         }
 
         input.value = '';
-    } catch (err) {
-        console.error('Fehler beim Senden der Chat-Nachricht:', err);
-    }
+    } catch (err) {}
 }
 
 window.openGiftsGalleryModal = function(hostEmail) {
@@ -974,10 +974,7 @@ export async function subscribeToCreator(creatorEmail) {
 
         alert('Abo erfolgreich abgeschlossen! Du hast nun exklusive VIP-Vorteile in diesem Stream. 🎉');
 
-    } catch (err) {
-        console.error('Fehler beim Abo-Abschluss:', err);
-        alert('Fehler beim Abschließen des Abos.');
-    }
+    } catch (err) {}
 }
 
 export async function sendLiveGift(giftName, cost, hostEmail) {
@@ -1043,10 +1040,7 @@ export async function sendLiveGift(giftName, cost, hostEmail) {
                 ]);
         }
 
-    } catch (err) {
-        console.error('Fehler beim Senden des Geschenks:', err);
-        alert('Fehler beim Senden des Geschenks.');
-    }
+    } catch (err) {}
 }
 
 export async function terminateActiveStream() {
@@ -1062,9 +1056,7 @@ export async function terminateActiveStream() {
                 .delete()
                 .eq('id', activeStreamId);
         }
-    } catch (err) {
-        console.error('Fehler beim Löschen des Streams:', err);
-    }
+    } catch (err) {}
 
     closeLiveFullscreen();
     loadLiveStreams();
@@ -1113,7 +1105,6 @@ export async function closeLiveFullscreen() {
     loadLiveStreams();
 }
 
-// Globale Bindings
 window.loadLiveStreams = loadLiveStreams;
 window.handlePreLiveCheck = handlePreLiveCheck;
 window.closePreLivePreview = closePreLivePreview;
