@@ -1,4 +1,4 @@
-// js/features/live.js • PURE LOGIC Live-Stream, Supabase Canvas Frame-Sync, Chat, Geschenke, Abos & Like-Tap
+// js/features/live.js • PURE LOGIC Live-Stream, Supabase High-Performance Frame-Sync & Auto-Recovery, Chat, Geschenke, Abos & Like-Tap
 import { _supabase } from '../config.js';
 import { state } from '../state.js';
 import { validateInputOrAlert } from './moderation.js';
@@ -268,7 +268,7 @@ function startCanvasBroadcasting() {
                 .update({ current_frame: dataUrl })
                 .eq('id', activeStreamId);
         } catch (e) {}
-    }, 150); // 150ms High-Speed Frame-Sync für butterweiche Wiedergabe beim Zuschauer
+    }, 120); // 120ms High-Speed Frame-Sync für butterweiche Wiedergabe beim Zuschauer
 }
 
 export async function loadLiveStreams() {
@@ -509,23 +509,21 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
                 vidEl.play().catch(() => {});
             }
         } else {
-            // High-Performance Image Viewer für den Streamer-Inhalt beim Zuschauer mit sofortigem Direktabruf
+            // High-Performance Viewer mit sofortiger Frame-Ermittlung
             playerContainer.innerHTML = `
-                <img id="active-stream-image-view" src="" style="width: 100%; height: 100%; object-fit: cover; background: #000; position: absolute; top:0; left:0;" alt="Live Stream">
-                <div id="webrtc-status-msg" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #fff; font-size: 12px; background: rgba(0,0,0,0.7); padding: 8px 16px; border-radius: 8px; z-index: 6;">Lade Stream... 🔴</div>
+                <img id="active-stream-image-view" src="" style="width: 100%; height: 100%; object-fit: cover; background: #000; position: absolute; top:0; left:0; display: block;" alt="Live Stream">
+                <div id="webrtc-status-msg" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #fff; font-size: 13px; background: rgba(0,0,0,0.85); padding: 10px 20px; border-radius: 10px; z-index: 6; border: 1px solid var(--border);">Verbinde mit Live-Stream... 🔴</div>
                 <div style="position: absolute; top: 16px; left: 16px; background: rgba(16,185,129,0.2); border: 1px solid #10b981; color: #10b981; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 800; z-index: 5;">🔴 Live Stream</div>
             `;
             
-            // Sofortiger Frame-Abruf beim Beitreten, damit das Bild ohne Wartezeit da ist
+            // Sofortiger Direktabruf beim Öffnen
             try {
                 _supabase.from('live_streams').select('current_frame').eq('id', streamId).single().then(({ data: initData }) => {
                     if (initData && initData.current_frame) {
                         const imgEl = document.getElementById('active-stream-image-view');
-                        if (imgEl) {
-                            imgEl.src = initData.current_frame;
-                            const statusMsg = document.getElementById('webrtc-status-msg');
-                            if (statusMsg) statusMsg.remove();
-                        }
+                        const statusMsg = document.getElementById('webrtc-status-msg');
+                        if (imgEl) imgEl.src = initData.current_frame;
+                        if (statusMsg) statusMsg.remove();
                     }
                 });
             } catch(e){}
@@ -583,7 +581,7 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
                     }
                 }
             } catch (e) {}
-        }, 150); // 150ms Taktung für absolut flüssige Video-Wiedergabe beim Zuschauer
+        }, 120); // 120ms High-Speed Abfrage für butterweiche Wiedergabe
     }
 
     if (chatInputContainer) {
