@@ -26,6 +26,7 @@ let broadcastInterval = null;
 let framePollInterval = null;
 let gridPollInterval = null;
 let streamLimitCheckInterval = null;
+let isFetchingFrame = false;
 let audioCtx = null;
 let desktopChatOpacity = 0.6;
 let desktopChatCollapsed = false;
@@ -82,6 +83,21 @@ function canPollNetwork() {
 function isLiveTabVisible() {
     const liveTab = document.getElementById('tab-live');
     return Boolean(liveTab && !liveTab.classList.contains('hidden'));
+}
+
+function applyStreamFrameToViewer(frameSrc) {
+    if (!frameSrc || typeof frameSrc !== 'string' || !frameSrc.startsWith('data:image/')) {
+        return;
+    }
+    const imgEl = document.getElementById('active-stream-image-view');
+    const statusMsg = document.getElementById('webrtc-status-msg');
+    if (imgEl) {
+        imgEl.style.display = 'block';
+        imgEl.src = frameSrc;
+    }
+    if (statusMsg) {
+        statusMsg.remove();
+    }
 }
 
 function isStreamEnded(stream, nowMs = Date.now()) {
@@ -174,6 +190,7 @@ async function runScheduledStreamTermination(streamIdToEnd) {
     if (broadcastInterval) clearInterval(broadcastInterval);
     if (framePollInterval) clearInterval(framePollInterval);
     if (gridPollInterval) clearInterval(gridPollInterval);
+    isFetchingFrame = false;
 
     endedStreamIds.add(streamIdToEnd);
     const warnBanner = document.getElementById('stream-15min-warning-banner');
@@ -1211,6 +1228,7 @@ export function setLiveFilter(element, category) {
 
 export async function openLiveFullscreen(streamId, category, location, streamTitle = '', isHost = false, hostEmail = '') {
     activeStreamId = streamId;
+    isFetchingFrame = false;
     desktopChatCollapsed = false;
     const modal = document.getElementById('live-fullscreen-modal');
     if (modal) modal.classList.remove('hidden');
@@ -1230,6 +1248,7 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
 
     let currentViewers = 1;
     let currentLikes = 0;
+    let initialFrame = null;
     if (canPollNetwork()) {
         try {
             const { data: streamData } = await _supabase
@@ -1242,6 +1261,7 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
                 if (streamData.host_email && !hostEmail) hostEmail = streamData.host_email;
                 currentViewers = streamData.viewers_count || 1;
                 currentLikes = streamData.likes_count || 0;
+                initialFrame = streamData.current_frame || null;
                 
                 const realIsHost = Boolean(state.currentUserEmail) && Boolean(hostEmail) && state.currentUserEmail.toLowerCase() === hostEmail.toLowerCase();
 
@@ -1297,21 +1317,12 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
             }
         } else {
             playerContainer.innerHTML = `
-                <img id="active-stream-image-view" src="" style="width: 100%; height: 100%; object-fit: cover; background: #000; position: absolute; top:0; left:0; display: block;" alt="Live Stream">
-                <div id="webrtc-status-msg" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #fff; font-size: 13px; background: rgba(0,0,0,0.85); padding: 10px 20px; border-radius: 10px; z-index: 6; border: 1px solid var(--border);">Lade Stream... 🔴</div>
+                <img id="active-stream-image-view" src="" style="width: 100%; height: 100%; object-fit: cover; background: #000; position: absolute; top:0; left:0; display: ${initialFrame ? 'block' : 'none'};" alt="Live Stream">
+                <div id="webrtc-status-msg" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #fff; font-size: 13px; background: rgba(0,0,0,0.85); padding: 10px 20px; border-radius: 10px; z-index: 6; border: 1px solid var(--border);">${initialFrame ? 'Verbinde Live-Feed... 🔴' : 'Warte auf Live-Bild des Hosts... 🔴'}</div>
             `;
-            
-            if (canPollNetwork()) {
-                try {
-                    _supabase.from('live_streams').select('current_frame').eq('id', streamId).single().then(({ data: initData }) => {
-                        if (initData && initData.current_frame) {
-                            const imgEl = document.getElementById('active-stream-image-view');
-                            const statusMsg = document.getElementById('webrtc-status-msg');
-                            if (imgEl) imgEl.src = initData.current_frame;
-                            if (statusMsg) statusMsg.remove();
-                        }
-                    });
-                } catch (e) {}
+
+            if (initialFrame) {
+                applyStreamFrameToViewer(initialFrame);
             }
         }
         
@@ -1344,12 +1355,7 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
                 if (lSpan) lSpan.textContent = sData.likes_count || 0;
 
                 if (!checkIsHost && sData.current_frame) {
-                    const imgEl = document.getElementById('active-stream-image-view');
-                    if (imgEl) {
-                        imgEl.src = sData.current_frame;
-                        const statusMsg = document.getElementById('webrtc-status-msg');
-                        if (statusMsg) statusMsg.remove();
-                    }
+                    applyStreamFrameToViewer(sData.current_frame);
                 }
             }
         } catch (err) {}
@@ -1358,7 +1364,8 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
     if (framePollInterval) clearInterval(framePollInterval);
     if (!finalIsHost) {
         framePollInterval = setInterval(async () => {
-            if (!activeStreamId || !canPollNetwork()) return;
+            if (!activeStreamId || !canPollNetwork() || isFetchingFrame) return;
+            isFetchingFrame = true;
             try {
                 const { data: fData } = await _supabase
                     .from('live_streams')
@@ -1367,14 +1374,12 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
                     .single();
 
                 if (fData && fData.current_frame) {
-                    const imgEl = document.getElementById('active-stream-image-view');
-                    if (imgEl) {
-                        imgEl.src = fData.current_frame;
-                        const statusMsg = document.getElementById('webrtc-status-msg');
-                        if (statusMsg) statusMsg.remove();
-                    }
+                    applyStreamFrameToViewer(fData.current_frame);
                 }
-            } catch (e) {}
+            } catch (e) {
+            } finally {
+                isFetchingFrame = false;
+            }
         }, FRAME_POLL_MS);
     }
 
@@ -1849,6 +1854,7 @@ export async function terminateActiveStream() {
     if (broadcastInterval) clearInterval(broadcastInterval);
     if (framePollInterval) clearInterval(framePollInterval);
     if (gridPollInterval) clearInterval(gridPollInterval);
+    isFetchingFrame = false;
     if (streamLimitCheckInterval) {
         clearInterval(streamLimitCheckInterval);
         streamLimitCheckInterval = null;
@@ -1900,6 +1906,7 @@ export async function closeLiveFullscreen() {
     if (broadcastInterval) clearInterval(broadcastInterval);
     if (framePollInterval) clearInterval(framePollInterval);
     if (gridPollInterval) clearInterval(gridPollInterval);
+    isFetchingFrame = false;
     if (streamLimitCheckInterval) {
         clearInterval(streamLimitCheckInterval);
         streamLimitCheckInterval = null;
