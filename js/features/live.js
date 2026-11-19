@@ -1,4 +1,4 @@
-// js/features/live.js • PURE LOGIC Live-Stream, Vorschau-Logik (PC vs. Smartphone), Ranking-Sortierung, Auto-Weiterleitung, Geschenk-Animation (5s+), Geschenk-Sounds & Vertikaler PC-Chat (Links mit Randabstand, Transparenz-Regler & Ein-/Ausklappen)
+// js/features/live.js • PURE LOGIC Live-Stream, Vorschau-Logik (PC vs. Smartphone), Ranking-Sortierung, Auto-Weiterleitung, Geschenk-Animation (5s+), Geschenk-Sounds & Vertikaler PC-Chat (Links mit sauberem Randabstand, sichtbarer Steuerleiste, Transparenz-Regler & Ein-/Ausklappen)
 import { _supabase } from '../config.js';
 import { state } from '../state.js';
 import { validateInputOrAlert } from './moderation.js';
@@ -147,13 +147,13 @@ function ensureGiftAndDesktopStyles() {
                     display: inline-flex !important;
                     position: fixed !important;
                     top: 76px !important;
-                    left: 16px !important;
-                    z-index: 100075 !important;
+                    left: 24px !important;
+                    z-index: 100080 !important;
                     align-items: center;
                     gap: 6px;
-                    background: rgba(15, 23, 42, 0.94);
+                    background: rgba(15, 23, 42, 0.95);
                     color: #fff;
-                    border: 1px solid rgba(255, 255, 255, 0.28);
+                    border: 1px solid rgba(255, 255, 255, 0.3);
                     border-radius: 12px;
                     padding: 8px 14px;
                     font-size: 12px;
@@ -236,27 +236,27 @@ function applyDesktopChatLayout() {
 
         const alpha = desktopChatOpacity;
         const panelBg = `rgba(15, 23, 42, ${alpha})`;
-        const headerBg = `rgba(15, 23, 42, ${Math.min(1, alpha + 0.15)})`;
+        const headerBg = `rgba(15, 23, 42, ${Math.min(1, alpha + 0.18)})`;
 
         if (desktopChatCollapsed) {
             chatPanel.style.setProperty('display', 'none', 'important');
         } else {
             chatPanel.style.setProperty('position', 'fixed', 'important');
-            chatPanel.style.setProperty('top', '16px', 'important');
+            chatPanel.style.setProperty('top', '68px', 'important');
             chatPanel.style.setProperty('left', '16px', 'important');
             chatPanel.style.setProperty('bottom', '16px', 'important');
             chatPanel.style.setProperty('right', 'auto', 'important');
             chatPanel.style.setProperty('width', '330px', 'important');
             chatPanel.style.setProperty('max-width', 'calc(100vw - 32px)', 'important');
-            chatPanel.style.setProperty('height', 'calc(100vh - 32px)', 'important');
-            chatPanel.style.setProperty('max-height', 'calc(100vh - 32px)', 'important');
+            chatPanel.style.setProperty('height', 'calc(100vh - 84px)', 'important');
+            chatPanel.style.setProperty('max-height', 'calc(100vh - 84px)', 'important');
             chatPanel.style.setProperty('z-index', '100060', 'important');
             chatPanel.style.setProperty('display', 'flex', 'important');
             chatPanel.style.setProperty('flex-direction', 'column', 'important');
             chatPanel.style.setProperty('overflow', 'hidden', 'important');
             chatPanel.style.setProperty('background', panelBg, 'important');
             chatPanel.style.setProperty('background-color', panelBg, 'important');
-            chatPanel.style.setProperty('border', '1px solid rgba(255, 255, 255, 0.18)', 'important');
+            chatPanel.style.setProperty('border', '1px solid rgba(255, 255, 255, 0.2)', 'important');
             chatPanel.style.setProperty('border-radius', '16px', 'important');
             chatPanel.style.setProperty('box-shadow', '0 14px 36px rgba(0, 0, 0, 0.55)', 'important');
             chatPanel.style.setProperty('backdrop-filter', alpha < 0.98 ? 'blur(8px)' : 'none', 'important');
@@ -268,22 +268,22 @@ function applyDesktopChatLayout() {
         if (!controlsBar) {
             controlsBar = document.createElement('div');
             controlsBar.id = 'desktop-chat-controls-bar';
-            controlsBar.innerHTML = `
-                <button type="button" onclick="toggleDesktopLiveChatCollapse(true)" style="background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.24); color: #fff; font-size: 11px; font-weight: 800; padding: 5px 10px; border-radius: 8px; cursor: pointer; white-space: nowrap;">
-                    ➖ Einklappen
-                </button>
-                <div style="display: flex; align-items: center; gap: 6px; flex: 1; justify-content: flex-end;">
-                    <span style="font-size: 10px; font-weight: 700; color: #f1f5f9; white-space: nowrap;">Transparenz: <strong id="live-chat-opacity-label">${pctValue}%</strong></span>
-                    <input type="range" id="live-chat-opacity-slider" min="15" max="100" step="5" value="${pctValue}" oninput="setDesktopLiveChatOpacity(this.value)" onchange="setDesktopLiveChatOpacity(this.value)" style="width: 82px; margin: 0; padding: 0; accent-color: #ec4899; cursor: pointer;">
-                </div>
-            `;
         }
 
         if (controlsBar.parentElement !== chatPanel) {
             chatPanel.prepend(controlsBar);
         }
 
-        controlsBar.style.cssText = `display: flex !important; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.14); flex-shrink: 0; position: relative; z-index: 100070; background: ${headerBg};`;
+        controlsBar.style.cssText = `display: flex !important; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.16); flex-shrink: 0; position: relative; z-index: 100075; background: ${headerBg};`;
+        controlsBar.innerHTML = `
+            <button type="button" onclick="toggleDesktopLiveChatCollapse(true)" style="background: rgba(236, 72, 153, 0.25); border: 1px solid rgba(236, 72, 153, 0.65); color: #fff; font-size: 11px; font-weight: 900; padding: 5px 10px; border-radius: 8px; cursor: pointer; white-space: nowrap;">
+                ➖ Einklappen
+            </button>
+            <div style="display: flex; align-items: center; gap: 6px; flex: 1; justify-content: flex-end;">
+                <span style="font-size: 10px; font-weight: 800; color: #f8fafc; white-space: nowrap;">Transparenz: <strong id="live-chat-opacity-label">${pctValue}%</strong></span>
+                <input type="range" id="live-chat-opacity-slider" min="15" max="100" step="5" value="${pctValue}" oninput="setDesktopLiveChatOpacity(this.value)" onchange="setDesktopLiveChatOpacity(this.value)" style="width: 82px; margin: 0; padding: 0; accent-color: #ec4899; cursor: pointer;">
+            </div>
+        `;
         syncDesktopChatBarState();
 
         if (chatMessagesEl) {
@@ -344,7 +344,7 @@ window.setDesktopLiveChatOpacity = function(percentValue) {
     const chatInputContainer = modal?.querySelector('#live-chat-input-container') || document.getElementById('live-chat-input-container');
 
     const panelBg = `rgba(15, 23, 42, ${desktopChatOpacity})`;
-    const headerBg = `rgba(15, 23, 42, ${Math.min(1, desktopChatOpacity + 0.15)})`;
+    const headerBg = `rgba(15, 23, 42, ${Math.min(1, desktopChatOpacity + 0.18)})`;
 
     if (chatPanel && window.innerWidth >= 768) {
         chatPanel.style.setProperty('background', panelBg, 'important');
