@@ -10,6 +10,7 @@ const STATIC_ASSETS = [
   './js/state.js?v=2',
   './js/i18n.js?v=2',
   './js/auth.js?v=2',
+  './js/network.js?v=2',
   './js/main.js?v=2',
   './js/features/notifications.js?v=2',
   './js/features/lecture.js?v=2',
@@ -48,12 +49,43 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Fetch-Handling: Network-First für App-Dateien, Supabase-API immer direkt durchlassen
+// Fallback-Antwort bei fehlender Verbindung für API-/Datenabfragen
+function createOfflineFallbackResponse(request) {
+  const acceptsJson = (request.headers.get('accept') || '').includes('application/json');
+  if (acceptsJson) {
+    return new Response(
+      JSON.stringify({
+        offline: true,
+        error: 'Keine Internetverbindung. Bitte verbinde dich erneut, um Live-Daten abzurufen.'
+      }),
+      {
+        status: 503,
+        headers: { 'Content-Type': 'application/json; charset=utf-8' }
+      }
+    );
+  }
+
+  return new Response('Offline – keine Netzwerkverbindung verfügbar.', {
+    status: 503,
+    statusText: 'Service Unavailable',
+    headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+  });
+}
+
+// Fetch-Handling: Network-First mit sauberem Cache- & Offline-Fallback
 self.addEventListener('fetch', (event) => {
   const requestUrl = new URL(event.request.url);
 
-  // Nur GET-Requests und keine externen Supabase-API-Calls cachen
-  if (event.request.method !== 'GET' || requestUrl.hostname.includes('supabase.co')) {
+  // Nur GET-Requests verarbeiten
+  if (event.request.method !== 'GET') {
+    return;
+  }
+
+  // Externe Supabase-API-Calls direkt ausführen, bei Netzwerkausfall kontrollierten Fallback liefern
+  if (requestUrl.hostname.includes('supabase.co')) {
+    event.respondWith(
+      fetch(event.request).catch(() => createOfflineFallbackResponse(event.request))
+    );
     return;
   }
 
@@ -68,15 +100,18 @@ self.addEventListener('fetch', (event) => {
         }
         return networkResponse;
       })
-      .catch(() => {
-        return caches.match(event.request).then((cachedResponse) => {
-          if (cachedResponse) {
-            return cachedResponse;
+      .catch(async () => {
+        const cachedResponse = await caches.match(event.request);
+        if (cachedResponse) {
+          return cachedResponse;
+        }
+        if (event.request.mode === 'navigate') {
+          const indexFallback = await caches.match('./index.html');
+          if (indexFallback) {
+            return indexFallback;
           }
-          if (event.request.mode === 'navigate') {
-            return caches.match('./index.html');
-          }
-        });
+        }
+        return createOfflineFallbackResponse(event.request);
       })
   );
 });

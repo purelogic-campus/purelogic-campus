@@ -2,6 +2,7 @@
 import { _supabase } from './config.js';
 import { state } from './state.js';
 import { checkPasswordRecoveryFlow } from './auth.js';
+import { initNetworkMonitor, safeAsyncAction, renderOfflineBanner, removeOfflineFallbackNotice } from './network.js';
 import { initPushNotifications, subscribeToRealtimeNotifications } from './features/notifications.js';
 import { loadCampusFeed, loadMyProfilePosts, setReelFilter, setFilter, claimActiveDrop } from './features/feed.js';
 import { loadLiveStreams, setLiveFilter, handlePreLiveCheck, closeLiveFullscreen, sendLiveChatMessage } from './features/live.js';
@@ -21,77 +22,109 @@ let adminMapInstance = null;
 let adminMarkerInstance = null;
 let deferredPrompt = null;
 
+// Punkt 23: Zentrale Wiederherstellung & Synchronisierung bei Netzwerk-Reconnect
+window.retryNetworkSync = async function() {
+    if (!navigator.onLine) {
+        renderOfflineBanner(true);
+        alert('Es besteht weiterhin keine Internetverbindung.');
+        return;
+    }
+
+    renderOfflineBanner(false);
+    removeOfflineFallbackNotice();
+
+    if (state.currentUserEmail) {
+        await safeAsyncAction(
+            () => _supabase.from('users').select('*').eq('email', state.currentUserEmail).maybeSingle(),
+            {
+                silent: true,
+                onError: () => {}
+            }
+        );
+
+        loadCampusFeed(state.currentReelFilter || 'foryou');
+        loadLiveStreams();
+        loadMyProfilePosts();
+
+        const rankingTab = document.getElementById('tab-ranking');
+        if (rankingTab && !rankingTab.classList.contains('hidden') && typeof window.loadRankingData === 'function') {
+            window.loadRankingData();
+        }
+    }
+};
+
 // Punkt 21: Datenbank-Integritätsprüfung für Benutzer- und Test-Profile
 window.runTestProfileIntegrityCheck = async function() {
-    try {
-        const { data: users, error } = await _supabase
+    const { data: users, error } = await safeAsyncAction(
+        () => _supabase
             .from('users')
-            .select('id, email, username, full_name, university, avatar_url, logic_score, is_verified_student');
-
-        if (error) {
-            throw new Error('Abfrage auf users fehlgeschlagen: ' + error.message);
+            .select('id, email, username, full_name, university, avatar_url, logic_score, is_verified_student'),
+        {
+            fallbackValue: [],
+            errorPrefix: 'Abfrage auf users fehlgeschlagen'
         }
+    );
 
-        const list = Array.isArray(users) ? users : [];
-        const issues = [];
-        const seenEmails = new Set();
-        const seenUsernames = new Set();
-
-        for (const u of list) {
-            const label = u.email || u.username || u.id || 'Unbekanntes Profil';
-            const emailNorm = (u.email || '').trim().toLowerCase();
-            const userNorm = (u.username || '').trim().toLowerCase();
-
-            if (!emailNorm) {
-                issues.push(`${label}: E-Mail fehlt`);
-            } else if (seenEmails.has(emailNorm)) {
-                issues.push(`${label}: Doppelte E-Mail-Adresse`);
-            } else {
-                seenEmails.add(emailNorm);
-            }
-
-            if (!userNorm) {
-                issues.push(`${label}: Benutzername fehlt`);
-            } else if (seenUsernames.has(userNorm)) {
-                issues.push(`${label}: Doppelter Benutzername (${u.username})`);
-            } else {
-                seenUsernames.add(userNorm);
-            }
-
-            if (!u.full_name || !u.full_name.trim()) {
-                issues.push(`${label}: Vollständiger Name fehlt`);
-            }
-
-            if (typeof u.logic_score !== 'number' || Number.isNaN(u.logic_score)) {
-                issues.push(`${label}: logic_score ist ungültig oder leer`);
-            }
-        }
-
-        const report = {
-            checkedAt: new Date().toISOString(),
-            totalProfiles: list.length,
-            issuesCount: issues.length,
-            issues
-        };
-
-        window.lastProfileIntegrityReport = report;
-        console.log('Punkt 21 • Profil-Integritätsbericht:', report);
-
-        if (issues.length === 0) {
-            alert(`Integritätsprüfung erfolgreich! ✅\nGeprüfte Profile: ${list.length}\nGefundene Probleme: 0`);
-        } else {
-            alert(
-                `Integritätsprüfung abgeschlossen ⚠️\nGeprüfte Profile: ${list.length}\nProbleme (${issues.length}):\n- ` +
-                issues.slice(0, 12).join('\n- ')
-            );
-        }
-
-        return report;
-    } catch (err) {
-        console.error('Fehler bei Punkt 21 Integritätsprüfung:', err);
-        alert('Fehler bei der Integritätsprüfung: ' + err.message);
+    if (error) {
+        console.error('Fehler bei Punkt 21 Integritätsprüfung:', error);
         return null;
     }
+
+    const list = Array.isArray(users) ? users : [];
+    const issues = [];
+    const seenEmails = new Set();
+    const seenUsernames = new Set();
+
+    for (const u of list) {
+        const label = u.email || u.username || u.id || 'Unbekanntes Profil';
+        const emailNorm = (u.email || '').trim().toLowerCase();
+        const userNorm = (u.username || '').trim().toLowerCase();
+
+        if (!emailNorm) {
+            issues.push(`${label}: E-Mail fehlt`);
+        } else if (seenEmails.has(emailNorm)) {
+            issues.push(`${label}: Doppelte E-Mail-Adresse`);
+        } else {
+            seenEmails.add(emailNorm);
+        }
+
+        if (!userNorm) {
+            issues.push(`${label}: Benutzername fehlt`);
+        } else if (seenUsernames.has(userNorm)) {
+            issues.push(`${label}: Doppelter Benutzername (${u.username})`);
+        } else {
+            seenUsernames.add(userNorm);
+        }
+
+        if (!u.full_name || !u.full_name.trim()) {
+            issues.push(`${label}: Vollständiger Name fehlt`);
+        }
+
+        if (typeof u.logic_score !== 'number' || Number.isNaN(u.logic_score)) {
+            issues.push(`${label}: logic_score ist ungültig oder leer`);
+        }
+    }
+
+    const report = {
+        checkedAt: new Date().toISOString(),
+        totalProfiles: list.length,
+        issuesCount: issues.length,
+        issues
+    };
+
+    window.lastProfileIntegrityReport = report;
+    console.log('Punkt 21 • Profil-Integritätsbericht:', report);
+
+    if (issues.length === 0) {
+        alert(`Integritätsprüfung erfolgreich! ✅\nGeprüfte Profile: ${list.length}\nGefundene Probleme: 0`);
+    } else {
+        alert(
+            `Integritätsprüfung abgeschlossen ⚠️\nGeprüfte Profile: ${list.length}\nProbleme (${issues.length}):\n- ` +
+            issues.slice(0, 12).join('\n- ')
+        );
+    }
+
+    return report;
 };
 
 // Hilfsfunktion: Bilddatei als Data-URL einlesen (Fallback bei Storage-Problemen)
@@ -158,6 +191,12 @@ window.uploadAvatarFromDevice = async function(targetAvatarEl = null) {
         return;
     }
 
+    if (!navigator.onLine) {
+        renderOfflineBanner(true);
+        alert('Du bist aktuell offline. Bitte verbinde dich mit dem Internet, um ein Profilbild hochzuladen.');
+        return;
+    }
+
     const previewEl = targetAvatarEl || document.getElementById('my-profile-avatar-preview');
 
     const fileInput = ensureDeviceAvatarInput(async (file) => {
@@ -221,6 +260,7 @@ window.uploadAvatarFromDevice = async function(targetAvatarEl = null) {
             alert('Profilbild erfolgreich aus dem Gerätespeicher hochgeladen! 🎉');
         } catch (err) {
             console.error('Avatar-Upload Fehler:', err);
+            if (!navigator.onLine) renderOfflineBanner(true);
             alert(err.message || 'Fehler beim Hochladen des Profilbilds.');
         } finally {
             if (previewEl) {
@@ -295,6 +335,13 @@ window.installPWA = async function() {
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('PURE LOGIC • App initialisiert & Module geladen 🚀');
 
+    // Netzwerk-Monitor mit automatischem Reconnect-Sync starten
+    initNetworkMonitor(() => {
+        if (typeof window.retryNetworkSync === 'function') {
+            return window.retryNetworkSync();
+        }
+    });
+
     // Match-Mittwoch Theme beim Start vollautomatisch prüfen
     initMatchMittwochTheme();
 
@@ -304,11 +351,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     bindProfileAvatarClick();
 
     window.resetUser = async function() {
-        try {
-            await _supabase.auth.signOut();
-        } catch (err) {
-            console.warn('Supabase SignOut Fehler:', err);
-        }
+        await safeAsyncAction(() => _supabase.auth.signOut(), { silent: true });
         state.currentUserEmail = null;
         localStorage.clear();
         sessionStorage.clear();
@@ -325,14 +368,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // Session prüfen
-    try {
-        const { data: { session } } = await _supabase.auth.getSession();
-        if (session && session.user) {
-            state.currentUserEmail = session.user.email;
-            await initMainAppSession();
-        }
-    } catch (err) {
-        console.warn('Session Check fehlgeschlagen:', err);
+    const { data: sessionData } = await safeAsyncAction(
+        () => _supabase.auth.getSession(),
+        { silent: true }
+    );
+
+    const session = sessionData?.session;
+    if (session && session.user) {
+        state.currentUserEmail = session.user.email;
+        await initMainAppSession();
     }
 
     // Master-Admin Erkennung im Intervall prüfen
@@ -408,8 +452,14 @@ window.submitRegistration = async function() {
         return;
     }
 
+    if (!navigator.onLine) {
+        renderOfflineBanner(true);
+        showRegMsg('Keine Internetverbindung. Bitte verbinde dich erneut, um dich zu registrieren.', 'error');
+        return;
+    }
+
     try {
-        const { data, error } = await _supabase.auth.signUp({
+        const { error } = await _supabase.auth.signUp({
             email: email,
             password: password,
             options: {
@@ -461,8 +511,14 @@ function setupAuthFormHandlers() {
             return;
         }
 
+        if (!navigator.onLine) {
+            renderOfflineBanner(true);
+            window.showAuthMsg('Keine Internetverbindung. Login aktuell nicht möglich.', 'error');
+            return;
+        }
+
         try {
-            const { data, error } = await _supabase.auth.signInWithPassword({
+            const { error } = await _supabase.auth.signInWithPassword({
                 email: email,
                 password: password,
             });
@@ -499,53 +555,55 @@ async function initMainAppSession() {
         state.currentUserEmail?.toLowerCase().includes('admin')
     );
 
-    try {
-        const { data: userData } = await _supabase
+    const { data: userData } = await safeAsyncAction(
+        () => _supabase
             .from('users')
             .select('*')
             .eq('email', state.currentUserEmail)
-            .maybeSingle();
+            .maybeSingle(),
+        {
+            silent: true,
+            onError: (err) => console.error('Fehler beim Laden der User-Daten:', err)
+        }
+    );
 
-        if (userData) {
-            const scoreBadge = document.getElementById('score');
-            if (scoreBadge) scoreBadge.textContent = `${userData.logic_score || 0} P`;
-            state.isVerifiedStudent = userData.is_verified_student || false;
+    if (userData) {
+        const scoreBadge = document.getElementById('score');
+        if (scoreBadge) scoreBadge.textContent = `${userData.logic_score || 0} P`;
+        state.isVerifiedStudent = userData.is_verified_student || false;
 
-            if (isMasterAdmin || userData.is_admin || userData.role === 'admin') {
-                isMasterAdmin = true;
-            }
+        if (isMasterAdmin || userData.is_admin || userData.role === 'admin') {
+            isMasterAdmin = true;
+        }
 
-            const userHandleInput = document.getElementById('profile-username');
-            const userFullNameInput = document.getElementById('profile-fullname');
-            const userBioInput = document.getElementById('profile-bio');
-            const userAvatarInput = document.getElementById('profile-avatar');
-            const userAvatarPreview = document.getElementById('my-profile-avatar-preview');
-            const headerAvatarPreview = document.getElementById('header-avatar-preview');
-            const displayNameDisplay = document.getElementById('my-profile-display-name');
-            const handleDisplay = document.getElementById('my-profile-handle-preview');
-            const uniSelect = document.getElementById('profile-university');
+        const userHandleInput = document.getElementById('profile-username');
+        const userFullNameInput = document.getElementById('profile-fullname');
+        const userBioInput = document.getElementById('profile-bio');
+        const userAvatarInput = document.getElementById('profile-avatar');
+        const userAvatarPreview = document.getElementById('my-profile-avatar-preview');
+        const headerAvatarPreview = document.getElementById('header-avatar-preview');
+        const displayNameDisplay = document.getElementById('my-profile-display-name');
+        const handleDisplay = document.getElementById('my-profile-handle-preview');
+        const uniSelect = document.getElementById('profile-university');
 
-            if (userHandleInput) userHandleInput.value = userData.username || '';
-            if (userFullNameInput) userFullNameInput.value = userData.full_name || '';
-            if (userBioInput) userBioInput.value = userData.bio || '';
-            if (userAvatarInput) userAvatarInput.value = userData.avatar_url || '';
-            if (userAvatarPreview && userData.avatar_url) userAvatarPreview.src = userData.avatar_url;
-            if (headerAvatarPreview && userData.avatar_url) headerAvatarPreview.src = userData.avatar_url;
-            if (displayNameDisplay) displayNameDisplay.textContent = userData.full_name || 'Dein Name';
-            if (handleDisplay) handleDisplay.textContent = '@' + (userData.username || 'benutzername');
-            if (uniSelect && userData.university) uniSelect.value = userData.university;
+        if (userHandleInput) userHandleInput.value = userData.username || '';
+        if (userFullNameInput) userFullNameInput.value = userData.full_name || '';
+        if (userBioInput) userBioInput.value = userData.bio || '';
+        if (userAvatarInput) userAvatarInput.value = userData.avatar_url || '';
+        if (userAvatarPreview && userData.avatar_url) userAvatarPreview.src = userData.avatar_url;
+        if (headerAvatarPreview && userData.avatar_url) headerAvatarPreview.src = userData.avatar_url;
+        if (displayNameDisplay) displayNameDisplay.textContent = userData.full_name || 'Dein Name';
+        if (handleDisplay) handleDisplay.textContent = '@' + (userData.username || 'benutzername');
+        if (uniSelect && userData.university) uniSelect.value = userData.university;
 
-            const badgeContainer = document.getElementById('verified-student-badge-container');
-            if (badgeContainer) {
-                if (userData.is_verified_student) {
-                    badgeContainer.innerHTML = `<span style="display: inline-block; background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.4); padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 800; margin-top: 2px;">🎓 Verified Student (.ac.at)</span>`;
-                } else {
-                    badgeContainer.innerHTML = '';
-                }
+        const badgeContainer = document.getElementById('verified-student-badge-container');
+        if (badgeContainer) {
+            if (userData.is_verified_student) {
+                badgeContainer.innerHTML = `<span style="display: inline-block; background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.4); padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 800; margin-top: 2px;">🎓 Verified Student (.ac.at)</span>`;
+            } else {
+                badgeContainer.innerHTML = '';
             }
         }
-    } catch (err) {
-        console.error('Fehler beim Laden der User-Daten:', err);
     }
 
     bindProfileAvatarClick();
@@ -625,19 +683,18 @@ function setupGlobalWindowHandlers() {
             return;
         }
 
-        try {
-            const { error } = await _supabase
+        const { error } = await safeAsyncAction(
+            () => _supabase
                 .from('users')
                 .update({ logic_score: points })
-                .eq('email', state.currentUserEmail);
+                .eq('email', state.currentUserEmail),
+            { errorPrefix: 'Fehler beim Setzen der Punkte' }
+        );
 
-            if (error) throw error;
-
+        if (!error) {
             const scoreBadge = document.getElementById('score');
             if (scoreBadge) scoreBadge.textContent = `${points} P`;
             alert(`Test-Punktestand erfolgreich auf ${points} P gesetzt! ⚡`);
-        } catch (err) {
-            alert('Fehler beim Setzen der Punkte: ' + err.message);
         }
     };
 
@@ -655,8 +712,8 @@ function setupGlobalWindowHandlers() {
             return;
         }
 
-        try {
-            const { error } = await _supabase.from('campus_drops').insert([{
+        const { error } = await safeAsyncAction(
+            () => _supabase.from('campus_drops').insert([{
                 id: crypto.randomUUID(),
                 title,
                 reward_type: rewardType,
@@ -667,16 +724,15 @@ function setupGlobalWindowHandlers() {
                 radius,
                 created_by: state.currentUserEmail,
                 created_at: new Date().toISOString()
-            }]);
+            }]),
+            { errorPrefix: 'Fehler beim Erstellen des Drops' }
+        );
 
-            if (error) throw error;
-
+        if (!error) {
             const banner = document.getElementById('campus-drop-banner');
             if (banner) banner.style.display = 'block';
 
             alert('Campus-Drop erfolgreich mit GPS-Bindung freigegeben! 🚀');
-        } catch (err) {
-            alert('Fehler beim Erstellen des Drops: ' + err.message);
         }
     };
 
@@ -745,8 +801,8 @@ function setupGlobalWindowHandlers() {
 
         if (!state.currentUserEmail) return;
 
-        try {
-            const { error } = await _supabase
+        const { error } = await safeAsyncAction(
+            () => _supabase
                 .from('users')
                 .update({
                     username: username,
@@ -755,26 +811,32 @@ function setupGlobalWindowHandlers() {
                     avatar_url: avatarUrl,
                     university: university
                 })
-                .eq('email', state.currentUserEmail);
+                .eq('email', state.currentUserEmail),
+            { errorPrefix: 'Fehler beim Speichern des Profils' }
+        );
 
-            if (error) throw error;
+        if (!error) {
             applyAvatarPreview(avatarUrl);
             alert('Profil erfolgreich gespeichert! (+10 P)');
 
-            const { data: userData } = await _supabase
-                .from('users')
-                .select('logic_score')
-                .eq('email', state.currentUserEmail)
-                .maybeSingle();
+            const { data: userData } = await safeAsyncAction(
+                () => _supabase
+                    .from('users')
+                    .select('logic_score')
+                    .eq('email', state.currentUserEmail)
+                    .maybeSingle(),
+                { silent: true }
+            );
 
             if (userData) {
                 const newScore = (userData.logic_score || 0) + 10;
-                await _supabase.from('users').update({ logic_score: newScore }).eq('email', state.currentUserEmail);
+                await safeAsyncAction(
+                    () => _supabase.from('users').update({ logic_score: newScore }).eq('email', state.currentUserEmail),
+                    { silent: true }
+                );
                 const scoreBadge = document.getElementById('score');
                 if (scoreBadge) scoreBadge.textContent = `${newScore} P`;
             }
-        } catch (err) {
-            alert('Fehler beim Speichern des Profils: ' + err.message);
         }
     };
 
