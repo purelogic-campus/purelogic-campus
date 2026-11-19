@@ -11,6 +11,7 @@ let currentActiveFilter = 'Alle';
 let viewerInterval = null;
 let chatPollInterval = null;
 let chatChannel = null;
+let streamGridChannel = null;
 let broadcastInterval = null;
 let framePollInterval = null;
 let gridPollInterval = null;
@@ -813,6 +814,23 @@ function buildStreamCardHtml(stream, options) {
     `;
 }
 
+function markCardAsEnded(cardEl, streamObj, meta) {
+    if (!cardEl || cardEl.getAttribute('data-rendered-ended') === '1') return;
+    cardEl.setAttribute('data-rendered-ended', '1');
+    const hEmail = streamObj.host_email || '';
+    const isFollowed = meta.followedSet.has(hEmail.toLowerCase());
+    const isMyStream = state.currentUserEmail && hEmail.toLowerCase() === state.currentUserEmail.toLowerCase();
+    const sAvatar = meta.avatarMap[hEmail.toLowerCase()] || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(hEmail || 'campus')}`;
+    const endedStream = { ...streamObj, status: 'ended', is_ended: true, stream_url: 'ended' };
+    cardEl.innerHTML = buildStreamCardHtml(endedStream, {
+        isEnded: true,
+        isFollowed,
+        isMyStream,
+        isMobileDevice: meta.isMobileDevice,
+        streamerAvatarUrl: sAvatar
+    });
+}
+
 export async function loadLiveStreams() {
     ensureGiftAndDesktopStyles();
     const liveList = document.getElementById('live-streams-list');
@@ -897,11 +915,15 @@ export async function loadLiveStreams() {
     liveList.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; padding: 16px; box-sizing: border-box;';
 
     const isMobileDevice = (window.innerWidth <= 768) || (navigator.maxTouchPoints > 0);
+    const streamCacheById = new Map();
+    const gridMeta = { followedSet, avatarMap, isMobileDevice };
 
     for (const stream of sortedStreams) {
+        const streamId = stream.id ? String(stream.id) : '0000';
+        streamCacheById.set(streamId, stream);
+
         const item = document.createElement('div');
         item.className = 'reel-item';
-        const streamId = stream.id ? String(stream.id) : '0000';
         item.setAttribute('data-stream-id', streamId);
         item.style.cssText = 'position: relative; width: 100%; height: 380px; overflow: hidden; background: #0b0f19; border: 1px solid var(--border); border-radius: 16px; cursor: pointer; box-shadow: 0 10px 25px rgba(0,0,0,0.5); transition: transform 0.2s ease, border-color 0.2s ease;';
         
@@ -913,6 +935,7 @@ export async function loadLiveStreams() {
         const streamTitle = stream.title || 'Campus Stream';
         const hostEmail = stream.host_email || '';
         const isEnded = isStreamEnded(stream, Date.now());
+        if (isEnded) item.setAttribute('data-rendered-ended', '1');
         const isFollowed = followedSet.has(hostEmail.toLowerCase());
         const isMyStream = state.currentUserEmail && hostEmail.toLowerCase() === state.currentUserEmail.toLowerCase();
         const streamerAvatarUrl = avatarMap[hostEmail.toLowerCase()] || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(hostEmail || 'campus')}`;
@@ -929,6 +952,39 @@ export async function loadLiveStreams() {
         liveList.appendChild(item);
     }
 
+    if (streamGridChannel) {
+        _supabase.removeChannel(streamGridChannel);
+        streamGridChannel = null;
+    }
+
+    streamGridChannel = _supabase
+        .channel('public:live_streams:grid_updates')
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'live_streams' }, payload => {
+            const updated = payload.new;
+            if (!updated || !updated.id) return;
+            const sId = String(updated.id);
+            streamCacheById.set(sId, { ...(streamCacheById.get(sId) || {}), ...updated });
+            const cardEl = liveList.querySelector(`[data-stream-id="${sId}"]`);
+            if (!cardEl) return;
+
+            if (isStreamEnded(updated, Date.now())) {
+                markCardAsEnded(cardEl, updated, gridMeta);
+            } else if (!isMobileDevice && updated.current_frame && cardEl.getAttribute('data-rendered-ended') !== '1') {
+                const imgEl = document.getElementById(`grid-thumb-img-${sId}`);
+                if (imgEl) imgEl.src = updated.current_frame;
+            }
+        })
+        .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'live_streams' }, payload => {
+            const deletedId = payload.old?.id ? String(payload.old.id) : null;
+            if (!deletedId) return;
+            const cardEl = liveList.querySelector(`[data-stream-id="${deletedId}"]`);
+            if (cardEl) {
+                const cached = streamCacheById.get(deletedId) || { id: deletedId };
+                markCardAsEnded(cardEl, cached, gridMeta);
+            }
+        })
+        .subscribe();
+
     if (gridPollInterval) clearInterval(gridPollInterval);
     gridPollInterval = setInterval(async () => {
         const modal = document.getElementById('live-fullscreen-modal');
@@ -942,37 +998,39 @@ export async function loadLiveStreams() {
 
             if (freshStreams) {
                 const currentNow = Date.now();
+                const seenIds = new Set();
+
                 freshStreams.forEach(s => {
                     const sId = String(s.id);
+                    seenIds.add(sId);
+                    streamCacheById.set(sId, s);
+
                     const endedNow = isStreamEnded(s, currentNow);
                     const cardEl = liveList.querySelector(`[data-stream-id="${sId}"]`);
 
-                    if (endedNow && cardEl && !cardEl.getAttribute('data-rendered-ended')) {
-                        cardEl.setAttribute('data-rendered-ended', '1');
-                        const hEmail = s.host_email || '';
-                        const isFollowed = followedSet.has(hEmail.toLowerCase());
-                        const isMyStream = state.currentUserEmail && hEmail.toLowerCase() === state.currentUserEmail.toLowerCase();
-                        const sAvatar = avatarMap[hEmail.toLowerCase()] || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(hEmail || 'campus')}`;
-                        cardEl.innerHTML = buildStreamCardHtml(s, {
-                            isEnded: true,
-                            isFollowed,
-                            isMyStream,
-                            isMobileDevice,
-                            streamerAvatarUrl: sAvatar
-                        });
+                    if (endedNow && cardEl) {
+                        markCardAsEnded(cardEl, s, gridMeta);
                         return;
                     }
 
-                    if (!isMobileDevice && !endedNow) {
+                    if (!isMobileDevice && !endedNow && cardEl && cardEl.getAttribute('data-rendered-ended') !== '1') {
                         const imgEl = document.getElementById(`grid-thumb-img-${sId}`);
                         if (imgEl && s.current_frame) {
                             imgEl.src = s.current_frame;
                         }
                     }
                 });
+
+                liveList.querySelectorAll('[data-stream-id]').forEach(cardEl => {
+                    const cId = cardEl.getAttribute('data-stream-id');
+                    if (cId && !seenIds.has(cId) && cardEl.getAttribute('data-rendered-ended') !== '1') {
+                        const cached = streamCacheById.get(cId) || { id: cId };
+                        markCardAsEnded(cardEl, cached, gridMeta);
+                    }
+                });
             }
         } catch (e) {}
-    }, 600);
+    }, 300);
 }
 
 export function setLiveFilter(element, category) {
@@ -1576,12 +1634,38 @@ export async function terminateActiveStream() {
     if (broadcastInterval) clearInterval(broadcastInterval);
     if (framePollInterval) clearInterval(framePollInterval);
     if (gridPollInterval) clearInterval(gridPollInterval);
+
+    const streamIdToEnd = activeStreamId;
+    if (streamIdToEnd) {
+        const liveList = document.getElementById('live-streams-list');
+        const cardEl = liveList?.querySelector(`[data-stream-id="${String(streamIdToEnd)}"]`);
+        if (cardEl) {
+            markCardAsEnded(cardEl, { id: streamIdToEnd }, {
+                followedSet: new Set(),
+                avatarMap: {},
+                isMobileDevice: (window.innerWidth <= 768) || (navigator.maxTouchPoints > 0)
+            });
+        }
+    }
+
     try {
-        if (activeStreamId) {
-            await _supabase
+        if (streamIdToEnd) {
+            const nowIso = new Date().toISOString();
+            const { error: updErr } = await _supabase
                 .from('live_streams')
-                .delete()
-                .eq('id', activeStreamId);
+                .update({
+                    status: 'ended',
+                    stream_url: 'ended',
+                    expires_at: nowIso
+                })
+                .eq('id', streamIdToEnd);
+
+            if (updErr) {
+                await _supabase
+                    .from('live_streams')
+                    .update({ expires_at: nowIso })
+                    .eq('id', streamIdToEnd);
+            }
         }
     } catch (err) {}
 
