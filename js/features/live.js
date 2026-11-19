@@ -1,4 +1,4 @@
-// js/features/live.js • PURE LOGIC Live-Stream, Vorschau-Logik (PC vs. Smartphone), Ranking-Sortierung, Auto-Weiterleitung, Geschenk-Animation (5s+), Geschenk-Sounds & Vertikaler PC-Chat (Links mit sauberem Randabstand, sichtbarer Steuerleiste, Transparenz-Regler & Ein-/Ausklappen)
+// js/features/live.js • PURE LOGIC Live-Stream, Vorschau-Logik (PC vs. Smartphone), Ranking-Sortierung, Auto-Weiterleitung, Geschenk-Animation (5s+), Geschenk-Sounds & Vertikaler PC-Chat (Unter Abo-Button, ohne Weichzeichner, Transparenz-Regler & Ein-/Ausklappen)
 import { _supabase } from '../config.js';
 import { state } from '../state.js';
 import { validateInputOrAlert } from './moderation.js';
@@ -146,12 +146,12 @@ function ensureGiftAndDesktopStyles() {
                 #live-fullscreen-modal.desktop-left-chat-active.chat-is-collapsed #desktop-chat-reopen-btn {
                     display: inline-flex !important;
                     position: fixed !important;
-                    top: 76px !important;
-                    left: 24px !important;
+                    top: 112px !important;
+                    left: 16px !important;
                     z-index: 100080 !important;
                     align-items: center;
                     gap: 6px;
-                    background: rgba(15, 23, 42, 0.95);
+                    background: rgba(15, 23, 42, 0.92);
                     color: #fff;
                     border: 1px solid rgba(255, 255, 255, 0.3);
                     border-radius: 12px;
@@ -160,7 +160,7 @@ function ensureGiftAndDesktopStyles() {
                     font-weight: 900;
                     cursor: pointer;
                     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.65);
-                    backdrop-filter: blur(8px);
+                    backdrop-filter: none;
                 }
             }
         `;
@@ -236,20 +236,20 @@ function applyDesktopChatLayout() {
 
         const alpha = desktopChatOpacity;
         const panelBg = `rgba(15, 23, 42, ${alpha})`;
-        const headerBg = `rgba(15, 23, 42, ${Math.min(1, alpha + 0.18)})`;
+        const headerBg = `rgba(15, 23, 42, ${Math.min(1, alpha + 0.15)})`;
 
         if (desktopChatCollapsed) {
             chatPanel.style.setProperty('display', 'none', 'important');
         } else {
             chatPanel.style.setProperty('position', 'fixed', 'important');
-            chatPanel.style.setProperty('top', '68px', 'important');
+            chatPanel.style.setProperty('top', '112px', 'important');
             chatPanel.style.setProperty('left', '16px', 'important');
             chatPanel.style.setProperty('bottom', '16px', 'important');
             chatPanel.style.setProperty('right', 'auto', 'important');
             chatPanel.style.setProperty('width', '330px', 'important');
             chatPanel.style.setProperty('max-width', 'calc(100vw - 32px)', 'important');
-            chatPanel.style.setProperty('height', 'calc(100vh - 84px)', 'important');
-            chatPanel.style.setProperty('max-height', 'calc(100vh - 84px)', 'important');
+            chatPanel.style.setProperty('height', 'calc(100vh - 128px)', 'important');
+            chatPanel.style.setProperty('max-height', 'calc(100vh - 128px)', 'important');
             chatPanel.style.setProperty('z-index', '100060', 'important');
             chatPanel.style.setProperty('display', 'flex', 'important');
             chatPanel.style.setProperty('flex-direction', 'column', 'important');
@@ -259,7 +259,7 @@ function applyDesktopChatLayout() {
             chatPanel.style.setProperty('border', '1px solid rgba(255, 255, 255, 0.2)', 'important');
             chatPanel.style.setProperty('border-radius', '16px', 'important');
             chatPanel.style.setProperty('box-shadow', '0 14px 36px rgba(0, 0, 0, 0.55)', 'important');
-            chatPanel.style.setProperty('backdrop-filter', alpha < 0.98 ? 'blur(8px)' : 'none', 'important');
+            chatPanel.style.setProperty('backdrop-filter', 'none', 'important');
         }
 
         let controlsBar = document.getElementById('desktop-chat-controls-bar');
@@ -274,7 +274,7 @@ function applyDesktopChatLayout() {
             chatPanel.prepend(controlsBar);
         }
 
-        controlsBar.style.cssText = `display: flex !important; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.16); flex-shrink: 0; position: relative; z-index: 100075; background: ${headerBg};`;
+        controlsBar.style.cssText = `display: flex !important; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.16); flex-shrink: 0; position: relative; z-index: 100075; background: ${headerBg}; backdrop-filter: none;`;
         controlsBar.innerHTML = `
             <button type="button" onclick="toggleDesktopLiveChatCollapse(true)" style="background: rgba(236, 72, 153, 0.25); border: 1px solid rgba(236, 72, 153, 0.65); color: #fff; font-size: 11px; font-weight: 900; padding: 5px 10px; border-radius: 8px; cursor: pointer; white-space: nowrap;">
                 ➖ Einklappen
@@ -293,11 +293,13 @@ function applyDesktopChatLayout() {
             chatMessagesEl.style.setProperty('max-height', 'none', 'important');
             chatMessagesEl.style.setProperty('background', 'transparent', 'important');
             chatMessagesEl.style.setProperty('background-color', 'transparent', 'important');
+            chatMessagesEl.style.setProperty('backdrop-filter', 'none', 'important');
         }
 
         if (chatInputContainer) {
             chatInputContainer.style.setProperty('background', headerBg, 'important');
             chatInputContainer.style.setProperty('background-color', headerBg, 'important');
+            chatInputContainer.style.setProperty('backdrop-filter', 'none', 'important');
             chatInputContainer.style.setProperty('flex-shrink', '0', 'important');
         }
     } else {
@@ -313,12 +315,12 @@ function applyDesktopChatLayout() {
             ].forEach(prop => chatPanel.style.removeProperty(prop));
         }
         if (chatMessagesEl) {
-            ['flex', 'height', 'min-height', 'max-height', 'background', 'background-color'].forEach(prop => {
+            ['flex', 'height', 'min-height', 'max-height', 'background', 'background-color', 'backdrop-filter'].forEach(prop => {
                 chatMessagesEl.style.removeProperty(prop);
             });
         }
         if (chatInputContainer) {
-            ['background', 'background-color', 'flex-shrink'].forEach(prop => chatInputContainer.style.removeProperty(prop));
+            ['background', 'background-color', 'backdrop-filter', 'flex-shrink'].forEach(prop => chatInputContainer.style.removeProperty(prop));
         }
     }
 }
@@ -344,19 +346,21 @@ window.setDesktopLiveChatOpacity = function(percentValue) {
     const chatInputContainer = modal?.querySelector('#live-chat-input-container') || document.getElementById('live-chat-input-container');
 
     const panelBg = `rgba(15, 23, 42, ${desktopChatOpacity})`;
-    const headerBg = `rgba(15, 23, 42, ${Math.min(1, desktopChatOpacity + 0.18)})`;
+    const headerBg = `rgba(15, 23, 42, ${Math.min(1, desktopChatOpacity + 0.15)})`;
 
     if (chatPanel && window.innerWidth >= 768) {
         chatPanel.style.setProperty('background', panelBg, 'important');
         chatPanel.style.setProperty('background-color', panelBg, 'important');
-        chatPanel.style.setProperty('backdrop-filter', desktopChatOpacity < 0.98 ? 'blur(8px)' : 'none', 'important');
+        chatPanel.style.setProperty('backdrop-filter', 'none', 'important');
     }
     if (controlsBar) {
         controlsBar.style.background = headerBg;
+        controlsBar.style.backdropFilter = 'none';
     }
     if (chatInputContainer && window.innerWidth >= 768) {
         chatInputContainer.style.setProperty('background', headerBg, 'important');
         chatInputContainer.style.setProperty('background-color', headerBg, 'important');
+        chatInputContainer.style.setProperty('backdrop-filter', 'none', 'important');
     }
 };
 
@@ -920,8 +924,8 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
     if (topBar) {
         topBar.innerHTML = `
             <button type="button" onclick="subscribeToCreator('${hostEmail}')" class="btn" style="pointer-events: auto; margin: 0; width: auto; height: 32px; background: linear-gradient(135deg, #8b5cf6, #3b82f6); color: #fff; font-size: 11px; font-weight: 900; padding: 0 14px; border-radius: 20px; border: none; cursor: pointer; box-shadow: 0 4px 15px rgba(139,92,246,0.4); display: inline-flex; align-items: center; justify-content: center; white-space: nowrap;">⭐ Abo (150P/Mo)</button>
-            <div id="live-likes-counter-badge" onclick="sendScreenTapLike()" style="pointer-events: auto; position: absolute; left: 50%; transform: translateX(-50%); height: 32px; background: rgba(15, 23, 42, 0.85); border: 2px solid #ec4899; color: #fff; padding: 0 14px; border-radius: 20px; font-size: 12px; font-weight: 900; backdrop-filter: blur(8px); display: inline-flex; align-items: center; justify-content: center; gap: 5px; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.5); white-space: nowrap;">❤️ <span id="live-likes-count-num">${currentLikes}</span></div>
-            <div id="guaranteed-live-viewer-badge" style="pointer-events: auto; height: 32px; background: rgba(15, 23, 42, 0.85); border: 2px solid #10b981; color: #fff; padding: 0 14px; border-radius: 20px; font-size: 12px; font-weight: 900; backdrop-filter: blur(8px); box-shadow: 0 4px 15px rgba(0,0,0,0.5); display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap;">👥 <span id="live-viewer-count" style="color: #10b981;">${currentViewers}</span> Zuschauer</div>
+            <div id="live-likes-counter-badge" onclick="sendScreenTapLike()" style="pointer-events: auto; position: absolute; left: 50%; transform: translateX(-50%); height: 32px; background: rgba(15, 23, 42, 0.85); border: 2px solid #ec4899; color: #fff; padding: 0 14px; border-radius: 20px; font-size: 12px; font-weight: 900; display: inline-flex; align-items: center; justify-content: center; gap: 5px; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.5); white-space: nowrap;">❤️ <span id="live-likes-count-num">${currentLikes}</span></div>
+            <div id="guaranteed-live-viewer-badge" style="pointer-events: auto; height: 32px; background: rgba(15, 23, 42, 0.85); border: 2px solid #10b981; color: #fff; padding: 0 14px; border-radius: 20px; font-size: 12px; font-weight: 900; box-shadow: 0 4px 15px rgba(0,0,0,0.5); display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap;">👥 <span id="live-viewer-count" style="color: #10b981;">${currentViewers}</span> Zuschauer</div>
         `;
     }
 
