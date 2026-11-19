@@ -21,6 +21,79 @@ let adminMapInstance = null;
 let adminMarkerInstance = null;
 let deferredPrompt = null;
 
+// Punkt 21: Datenbank-Integritätsprüfung für Benutzer- und Test-Profile
+window.runTestProfileIntegrityCheck = async function() {
+    try {
+        const { data: users, error } = await _supabase
+            .from('users')
+            .select('id, email, username, full_name, university, avatar_url, logic_score, is_verified_student');
+
+        if (error) {
+            throw new Error('Abfrage auf users fehlgeschlagen: ' + error.message);
+        }
+
+        const list = Array.isArray(users) ? users : [];
+        const issues = [];
+        const seenEmails = new Set();
+        const seenUsernames = new Set();
+
+        for (const u of list) {
+            const label = u.email || u.username || u.id || 'Unbekanntes Profil';
+            const emailNorm = (u.email || '').trim().toLowerCase();
+            const userNorm = (u.username || '').trim().toLowerCase();
+
+            if (!emailNorm) {
+                issues.push(`${label}: E-Mail fehlt`);
+            } else if (seenEmails.has(emailNorm)) {
+                issues.push(`${label}: Doppelte E-Mail-Adresse`);
+            } else {
+                seenEmails.add(emailNorm);
+            }
+
+            if (!userNorm) {
+                issues.push(`${label}: Benutzername fehlt`);
+            } else if (seenUsernames.has(userNorm)) {
+                issues.push(`${label}: Doppelter Benutzername (${u.username})`);
+            } else {
+                seenUsernames.add(userNorm);
+            }
+
+            if (!u.full_name || !u.full_name.trim()) {
+                issues.push(`${label}: Vollständiger Name fehlt`);
+            }
+
+            if (typeof u.logic_score !== 'number' || Number.isNaN(u.logic_score)) {
+                issues.push(`${label}: logic_score ist ungültig oder leer`);
+            }
+        }
+
+        const report = {
+            checkedAt: new Date().toISOString(),
+            totalProfiles: list.length,
+            issuesCount: issues.length,
+            issues
+        };
+
+        window.lastProfileIntegrityReport = report;
+        console.log('Punkt 21 • Profil-Integritätsbericht:', report);
+
+        if (issues.length === 0) {
+            alert(`Integritätsprüfung erfolgreich! ✅\nGeprüfte Profile: ${list.length}\nGefundene Probleme: 0`);
+        } else {
+            alert(
+                `Integritätsprüfung abgeschlossen ⚠️\nGeprüfte Profile: ${list.length}\nProbleme (${issues.length}):\n- ` +
+                issues.slice(0, 12).join('\n- ')
+            );
+        }
+
+        return report;
+    } catch (err) {
+        console.error('Fehler bei Punkt 21 Integritätsprüfung:', err);
+        alert('Fehler bei der Integritätsprüfung: ' + err.message);
+        return null;
+    }
+};
+
 // Hilfsfunktion: Bilddatei als Data-URL einlesen (Fallback bei Storage-Problemen)
 function readFileAsDataUrl(file) {
     return new Promise((resolve, reject) => {
