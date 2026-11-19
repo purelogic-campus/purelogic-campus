@@ -19,6 +19,7 @@ let audioCtx = null;
 let desktopChatOpacity = 0.6;
 let desktopChatCollapsed = false;
 const animatedGiftMsgIds = new Set();
+const endedStreamIds = new Set();
 
 const campusGifts = [
     { id: 1, name: 'Kaffee ☕', cost: 10 },
@@ -65,6 +66,10 @@ const subCategoriesMap = {
 
 function isStreamEnded(stream, nowMs = Date.now()) {
     if (!stream) return false;
+    const sId = stream.id ? String(stream.id) : '';
+    if (sId && endedStreamIds.has(sId)) {
+        return true;
+    }
     if (stream.is_ended === true || stream.status === 'ended' || stream.stream_url === 'ended') {
         return true;
     }
@@ -705,6 +710,7 @@ async function startLiveStreamBroadcast(category, location, title, streamUrl = '
         }
 
         activeStreamId = data.id;
+        endedStreamIds.delete(String(data.id));
         loadLiveStreams();
         startCanvasBroadcasting();
 
@@ -736,7 +742,7 @@ function startCanvasBroadcasting() {
     video.play().catch(() => {});
 
     broadcastInterval = setInterval(async () => {
-        if (!activeStreamId || !localStream) return;
+        if (!activeStreamId || !localStream || endedStreamIds.has(String(activeStreamId))) return;
         try {
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             const dataUrl = canvas.toDataURL('image/jpeg', 0.65);
@@ -815,13 +821,15 @@ function buildStreamCardHtml(stream, options) {
 }
 
 function markCardAsEnded(cardEl, streamObj, meta) {
-    if (!cardEl || cardEl.getAttribute('data-rendered-ended') === '1') return;
+    if (!cardEl) return;
+    const sId = streamObj?.id ? String(streamObj.id) : cardEl.getAttribute('data-stream-id') || '';
+    if (sId) endedStreamIds.add(sId);
     cardEl.setAttribute('data-rendered-ended', '1');
-    const hEmail = streamObj.host_email || '';
+    const hEmail = streamObj?.host_email || '';
     const isFollowed = meta.followedSet.has(hEmail.toLowerCase());
     const isMyStream = state.currentUserEmail && hEmail.toLowerCase() === state.currentUserEmail.toLowerCase();
     const sAvatar = meta.avatarMap[hEmail.toLowerCase()] || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(hEmail || 'campus')}`;
-    const endedStream = { ...streamObj, status: 'ended', is_ended: true, stream_url: 'ended' };
+    const endedStream = { ...(streamObj || {}), id: sId, status: 'ended', is_ended: true, stream_url: 'ended' };
     cardEl.innerHTML = buildStreamCardHtml(endedStream, {
         isEnded: true,
         isFollowed,
@@ -977,6 +985,7 @@ export async function loadLiveStreams() {
         .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'live_streams' }, payload => {
             const deletedId = payload.old?.id ? String(payload.old.id) : null;
             if (!deletedId) return;
+            endedStreamIds.add(deletedId);
             const cardEl = liveList.querySelector(`[data-stream-id="${deletedId}"]`);
             if (cardEl) {
                 const cached = streamCacheById.get(deletedId) || { id: deletedId };
@@ -1023,7 +1032,7 @@ export async function loadLiveStreams() {
 
                 liveList.querySelectorAll('[data-stream-id]').forEach(cardEl => {
                     const cId = cardEl.getAttribute('data-stream-id');
-                    if (cId && !seenIds.has(cId) && cardEl.getAttribute('data-rendered-ended') !== '1') {
+                    if (cId && !seenIds.has(cId)) {
                         const cached = streamCacheById.get(cId) || { id: cId };
                         markCardAsEnded(cardEl, cached, gridMeta);
                     }
@@ -1635,10 +1644,11 @@ export async function terminateActiveStream() {
     if (framePollInterval) clearInterval(framePollInterval);
     if (gridPollInterval) clearInterval(gridPollInterval);
 
-    const streamIdToEnd = activeStreamId;
+    const streamIdToEnd = activeStreamId ? String(activeStreamId) : null;
     if (streamIdToEnd) {
+        endedStreamIds.add(streamIdToEnd);
         const liveList = document.getElementById('live-streams-list');
-        const cardEl = liveList?.querySelector(`[data-stream-id="${String(streamIdToEnd)}"]`);
+        const cardEl = liveList?.querySelector(`[data-stream-id="${streamIdToEnd}"]`);
         if (cardEl) {
             markCardAsEnded(cardEl, { id: streamIdToEnd }, {
                 followedSet: new Set(),
