@@ -14,9 +14,178 @@ import { loadRankingData } from './features/ranking.js';
 import { initMatchMittwochTheme } from './features/match-mittwoch.js';
 import { changeLanguage } from './i18n.js';
 
+const AVATAR_BUCKET = 'avatars';
+const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
+
 let adminMapInstance = null;
 let adminMarkerInstance = null;
 let deferredPrompt = null;
+
+// Hilfsfunktion: Bilddatei als Data-URL einlesen (Fallback bei Storage-Problemen)
+function readFileAsDataUrl(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ''));
+        reader.onerror = () => reject(new Error('Bilddatei konnte nicht gelesen werden.'));
+        reader.readAsDataURL(file);
+    });
+}
+
+// Hilfsfunktion: Avatar-Vorschau im Profil und Header aktualisieren
+function applyAvatarPreview(url) {
+    if (!url) return;
+    const avatarInput = document.getElementById('profile-avatar');
+    const profilePreview = document.getElementById('my-profile-avatar-preview');
+    const headerPreview = document.getElementById('header-avatar-preview');
+
+    if (avatarInput) avatarInput.value = url;
+    if (profilePreview) profilePreview.src = url;
+    if (headerPreview) headerPreview.src = url;
+}
+
+// Hilfsfunktion: Verstecktes Datei-Input-Feld für Smartphone & PC sicherstellen
+function ensureDeviceAvatarInput(onFileChosen) {
+    let fileInput = document.getElementById('pure-logic-avatar-file-input');
+    if (!fileInput) {
+        fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.id = 'pure-logic-avatar-file-input';
+        fileInput.accept = 'image/*';
+        fileInput.style.display = 'none';
+        document.body.appendChild(fileInput);
+    }
+
+    fileInput.onchange = async (event) => {
+        const file = event.target?.files?.[0];
+        event.target.value = '';
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+            alert('Bitte wähle eine gültige Bilddatei aus (JPG, PNG, WebP usw.).');
+            return;
+        }
+
+        if (file.size > MAX_AVATAR_BYTES) {
+            alert('Das Bild ist zu groß. Maximal 5 MB sind erlaubt.');
+            return;
+        }
+
+        if (typeof onFileChosen === 'function') {
+            await onFileChosen(file);
+        }
+    };
+
+    return fileInput;
+}
+
+// Lädt ein Profilbild aus dem Gerätespeicher (Smartphone/PC) hoch und speichert es in users.avatar_url
+window.uploadAvatarFromDevice = async function(triggerBtn = null) {
+    if (!state.currentUserEmail) {
+        alert('Bitte logge dich zuerst ein, um dein Profilbild zu ändern.');
+        return;
+    }
+
+    const fileInput = ensureDeviceAvatarInput(async (file) => {
+        const prevBtnText = triggerBtn ? triggerBtn.textContent : '';
+        if (triggerBtn) {
+            triggerBtn.disabled = true;
+            triggerBtn.textContent = 'Lädt hoch... ⏳';
+        }
+
+        try {
+            const extFromName = file.name.includes('.')
+                ? file.name.split('.').pop().toLowerCase().replace(/[^a-z0-9]/g, '')
+                : '';
+            const extFromMime = file.type.split('/')[1]?.split('+')[0]?.toLowerCase() || 'jpg';
+            const extension = extFromName || extFromMime || 'jpg';
+
+            const safeUserKey = state.currentUserEmail
+                .toLowerCase()
+                .replace(/[^a-z0-9._-]/g, '_');
+            const storagePath = `${safeUserKey}/avatar_${Date.now()}.${extension}`;
+
+            let finalAvatarUrl = '';
+
+            // Versuch 1: Upload in den öffentlichen Supabase Storage Bucket 'avatars'
+            const { error: uploadError } = await _supabase.storage
+                .from(AVATAR_BUCKET)
+                .upload(storagePath, file, {
+                    cacheControl: '3600',
+                    upsert: true,
+                    contentType: file.type
+                });
+
+            if (!uploadError) {
+                const { data: publicUrlData } = _supabase.storage
+                    .from(AVATAR_BUCKET)
+                    .getPublicUrl(storagePath);
+
+                if (publicUrlData?.publicUrl) {
+                    finalAvatarUrl = `${publicUrlData.publicUrl}?t=${Date.now()}`;
+                }
+            }
+
+            // Versuch 2: Fallback über Data-URL, falls Storage-Upload nicht greift
+            if (!finalAvatarUrl) {
+                finalAvatarUrl = await readFileAsDataUrl(file);
+            }
+
+            if (!finalAvatarUrl) {
+                throw new Error('Bild konnte nicht verarbeitet werden.');
+            }
+
+            const { error: dbError } = await _supabase
+                .from('users')
+                .update({ avatar_url: finalAvatarUrl })
+                .eq('email', state.currentUserEmail);
+
+            if (dbError) {
+                throw new Error('Speichern im Profil fehlgeschlagen: ' + dbError.message);
+            }
+
+            applyAvatarPreview(finalAvatarUrl);
+            alert('Profilbild erfolgreich aus dem Gerätespeicher hochgeladen! 🎉');
+        } catch (err) {
+            console.error('Avatar-Upload Fehler:', err);
+            alert(err.message || 'Fehler beim Hochladen des Profilbilds.');
+        } finally {
+            if (triggerBtn) {
+                triggerBtn.disabled = false;
+                triggerBtn.textContent = prevBtnText || '🖼️ Bild vom Gerät wählen';
+            }
+        }
+    });
+
+    fileInput.click();
+};
+
+// Bindet automatisch einen Upload-Button im Profilbereich ein, falls noch keiner vorhanden ist
+function ensureDeviceAvatarUploadButton() {
+    if (document.getElementById('device-avatar-upload-btn')) return;
+
+    const avatarPreview = document.getElementById('my-profile-avatar-preview');
+    const avatarInput = document.getElementById('profile-avatar');
+    const hostEl = avatarPreview?.parentElement || avatarInput?.parentElement;
+    if (!hostEl) return;
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.id = 'device-avatar-upload-btn';
+    btn.className = 'btn';
+    btn.textContent = '🖼️ Bild vom Gerät wählen';
+    btn.style.cssText = 'margin-top: 8px; padding: 7px 12px; font-size: 11px; font-weight: 800; cursor: pointer;';
+    btn.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        window.uploadAvatarFromDevice(btn);
+    };
+
+    if (avatarInput && avatarInput.parentElement === hostEl) {
+        avatarInput.insertAdjacentElement('afterend', btn);
+    } else {
+        hostEl.appendChild(btn);
+    }
+}
 
 // Service Worker Registrierung für PWA
 if ('serviceWorker' in navigator) {
@@ -71,6 +240,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupGlobalWindowHandlers();
     setupAuthFormHandlers();
     checkPasswordRecoveryFlow();
+    ensureDeviceAvatarUploadButton();
 
     window.resetUser = async function() {
         try {
@@ -256,6 +426,8 @@ async function initMainAppSession() {
     if (mainApp) mainApp.classList.remove('hidden');
     if (logoutBtn) logoutBtn.classList.remove('hidden');
     if (profileBtn) profileBtn.classList.remove('hidden');
+
+    ensureDeviceAvatarUploadButton();
 
     // Push-Benachrichtigungen und Realtime-Subscriptions starten
     await initPushNotifications();
@@ -496,12 +668,7 @@ function setupGlobalWindowHandlers() {
     };
 
     window.changeAvatarDirectly = function() {
-        const newUrl = prompt('Bitte gib die Bild-URL für dein neues Profilbild ein:');
-        if (newUrl) {
-            document.getElementById('profile-avatar').value = newUrl;
-            document.getElementById('my-profile-avatar-preview').src = newUrl;
-            document.getElementById('header-avatar-preview').src = newUrl;
-        }
+        window.uploadAvatarFromDevice(document.getElementById('device-avatar-upload-btn'));
     };
 
     window.saveMyProfile = async function() {
@@ -526,6 +693,7 @@ function setupGlobalWindowHandlers() {
                 .eq('email', state.currentUserEmail);
 
             if (error) throw error;
+            applyAvatarPreview(avatarUrl);
             alert('Profil erfolgreich gespeichert! (+10 P)');
 
             const { data: userData } = await _supabase
