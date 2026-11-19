@@ -1,4 +1,4 @@
-// js/features/live.js • PURE LOGIC Live-Stream, Vorschau-Logik (PC vs. Smartphone), Ranking-Sortierung, Auto-Weiterleitung, Geschenk-Animation (5s+), Geschenk-Sounds & Vertikaler PC-Chat (Sauber unter Abo-Button, ohne Weichzeichner, Transparenz-Regler & Ein-/Ausklappen)
+// js/features/live.js • PURE LOGIC Live-Stream, Vorschau-Logik (PC vs. Smartphone), Ranking-Sortierung, Auto-Weiterleitung, Geschenk-Animation (5s+), Geschenk-Sounds, Rubber-Stamp "Beendet" & Vertikaler PC-Chat
 import { _supabase } from '../config.js';
 import { state } from '../state.js';
 import { validateInputOrAlert } from './moderation.js';
@@ -133,6 +133,65 @@ function ensureGiftAndDesktopStyles() {
             }
         `;
         document.head.appendChild(style);
+    }
+
+    if (!document.getElementById('live-rubber-stamp-styles')) {
+        const stampStyle = document.createElement('style');
+        stampStyle.id = 'live-rubber-stamp-styles';
+        stampStyle.textContent = `
+            .rubber-stamp-ended {
+                position: relative;
+                display: inline-block;
+                padding: 8px 22px;
+                color: #ef233c;
+                font-family: 'Impact', 'Arial Black', 'Stencil', sans-serif;
+                font-size: 28px;
+                font-weight: 900;
+                letter-spacing: 3px;
+                text-transform: none;
+                transform: rotate(-11deg);
+                border: 3px solid #ef233c;
+                border-radius: 5px;
+                background: rgba(15, 23, 42, 0.72);
+                box-shadow:
+                    inset 0 0 0 2px rgba(239, 35, 60, 0.45),
+                    0 6px 18px rgba(0, 0, 0, 0.55);
+                filter: url(#rubber-stamp-distress);
+                user-select: none;
+                pointer-events: none;
+            }
+            .rubber-stamp-ended::after {
+                content: '';
+                position: absolute;
+                inset: 0;
+                background: repeating-linear-gradient(
+                    90deg,
+                    transparent 0px,
+                    transparent 11px,
+                    rgba(15, 23, 42, 0.55) 11px,
+                    rgba(15, 23, 42, 0.55) 13px
+                );
+                pointer-events: none;
+            }
+        `;
+        document.head.appendChild(stampStyle);
+    }
+
+    if (!document.getElementById('rubber-stamp-svg-filter')) {
+        const svgFilter = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svgFilter.id = 'rubber-stamp-svg-filter';
+        svgFilter.setAttribute('width', '0');
+        svgFilter.setAttribute('height', '0');
+        svgFilter.style.position = 'absolute';
+        svgFilter.innerHTML = `
+            <defs>
+                <filter id="rubber-stamp-distress" x="-15%" y="-15%" width="130%" height="130%">
+                    <feTurbulence type="fractalNoise" baseFrequency="0.14" numOctaves="3" seed="7" result="noise" />
+                    <feDisplacementMap in="SourceGraphic" in2="noise" scale="3.2" xChannelSelector="R" yChannelSelector="G" />
+                </filter>
+            </defs>
+        `;
+        document.body.appendChild(svgFilter);
     }
 
     if (!document.getElementById('live-desktop-left-chat-styles')) {
@@ -675,6 +734,7 @@ function startCanvasBroadcasting() {
 }
 
 export async function loadLiveStreams() {
+    ensureGiftAndDesktopStyles();
     const liveList = document.getElementById('live-streams-list');
     if (!liveList) return;
 
@@ -783,12 +843,12 @@ export async function loadLiveStreams() {
 
         if (isEnded) {
             backgroundMediaHtml = `
-                <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #090d16; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1; filter: grayscale(40%);">
-                    <div style="width: 80px; height: 80px; border-radius: 50%; border: 2px solid var(--text-muted); overflow: hidden; opacity: 0.6; margin-bottom: 10px;">
+                <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #090d16; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1; filter: grayscale(35%);">
+                    <div style="width: 80px; height: 80px; border-radius: 50%; border: 2px solid var(--text-muted); overflow: hidden; opacity: 0.55; margin-bottom: 10px;">
                         <img src="${streamerAvatarUrl}" alt="Streamer" style="width: 100%; height: 100%; object-fit: cover;">
                     </div>
-                    <div style="position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%) rotate(-14deg); border: 4px solid #ef4444; color: #ef4444; padding: 6px 24px; font-size: 26px; font-weight: 900; text-transform: uppercase; letter-spacing: 3px; border-radius: 8px; background: rgba(15,23,42,0.85); box-shadow: 0 0 20px rgba(239,68,68,0.5); z-index: 20; pointer-events: none;">
-                        BEENDET
+                    <div style="position: absolute; top: 41%; left: 50%; transform: translate(-50%, -50%); z-index: 20; pointer-events: none;">
+                        <span class="rubber-stamp-ended">Beendet</span>
                     </div>
                 </div>
             `;
@@ -821,7 +881,7 @@ export async function loadLiveStreams() {
             ${backgroundMediaHtml}
             ${badgeHtml}
             <div style="position: absolute; bottom: 0; left: 0; width: 100%; background: linear-gradient(0deg, rgba(9,13,22,0.98) 20%, rgba(9,13,22,0.7) 75%, transparent 100%); padding: 20px 14px 14px 14px; display: flex; flex-direction: column; align-items: flex-start; z-index: 10; box-sizing: border-box;">
-                <div style="font-size: 11px; font-weight: 800; color: #818cf8; margin-bottom: 2px;">🔴 ${category}</div>
+                <div style="font-size: 11px; font-weight: 800; color: #818cf8; margin-bottom: 2px;">${isEnded ? '⏹️' : '🔴'} ${category}</div>
                 <div style="font-size: 13px; color: #fff; font-weight: 900; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;">${streamTitle}</div>
                 <div style="font-size: 10px; color: var(--text-muted); margin-bottom: 8px;">${isEnded ? 'Stream beendet' : `👥 ${viewers} Zuschauer aktiv`}</div>
                 <button type="button" class="btn" style="width: 100%; padding: 7px; font-size: 11px; font-weight: 900; background: var(--gradient-main); cursor: pointer; border-radius: 8px;" onclick="event.stopPropagation(); openLiveFullscreen('${streamId}', '${category}', '${location}', '${streamTitle}', ${isMyStream}, '${hostEmail}')">${isEnded ? 'Details ansehen 🔍' : 'Vollbild beitreten 🚀'}</button>
@@ -841,11 +901,13 @@ export async function loadLiveStreams() {
             try {
                 const { data: freshStreams } = await _supabase
                     .from('live_streams')
-                    .select('id,current_frame')
-                    .gt('expires_at', new Date().toISOString());
+                    .select('id,current_frame,expires_at')
+                    .gt('expires_at', oneHourAgoIso);
 
                 if (freshStreams) {
+                    const currentNow = Date.now();
                     freshStreams.forEach(s => {
+                        if (new Date(s.expires_at).getTime() <= currentNow) return;
                         const imgEl = document.getElementById(`grid-thumb-img-${s.id}`);
                         if (imgEl && s.current_frame) {
                             imgEl.src = s.current_frame;
