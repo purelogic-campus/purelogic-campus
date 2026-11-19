@@ -62,6 +62,20 @@ const subCategoriesMap = {
     '📚 Lernen': ['Study With Me (Pomodoro)', 'Coding & Programming', 'Mathematik & Statistik', 'Vorbereitung Klausur', 'Fremdsprachen']
 };
 
+function isStreamEnded(stream, nowMs = Date.now()) {
+    if (!stream) return false;
+    if (stream.is_ended === true || stream.status === 'ended' || stream.stream_url === 'ended') {
+        return true;
+    }
+    if (stream.expires_at) {
+        const expMs = new Date(stream.expires_at).getTime();
+        if (Number.isFinite(expMs) && expMs <= nowMs) {
+            return true;
+        }
+    }
+    return false;
+}
+
 function getAudioContext() {
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     if (!AudioCtx) return null;
@@ -733,6 +747,72 @@ function startCanvasBroadcasting() {
     }, 150);
 }
 
+function buildStreamCardHtml(stream, options) {
+    const {
+        isEnded,
+        isFollowed,
+        isMyStream,
+        isMobileDevice,
+        streamerAvatarUrl
+    } = options;
+
+    const category = stream.category || 'Live Stream';
+    const location = stream.location || 'Wien / Campus';
+    const streamTitle = stream.title || 'Campus Stream';
+    const streamId = stream.id ? String(stream.id) : '0000';
+    const hostEmail = stream.host_email || '';
+    const viewers = stream.viewers_count || 1;
+
+    let backgroundMediaHtml = '';
+
+    if (isEnded) {
+        backgroundMediaHtml = `
+            <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #090d16; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1; filter: grayscale(35%);">
+                <div style="width: 80px; height: 80px; border-radius: 50%; border: 2px solid var(--text-muted); overflow: hidden; opacity: 0.55; margin-bottom: 10px;">
+                    <img src="${streamerAvatarUrl}" alt="Streamer" style="width: 100%; height: 100%; object-fit: cover;">
+                </div>
+                <div style="position: absolute; top: 41%; left: 50%; transform: translate(-50%, -50%); z-index: 20; pointer-events: none;">
+                    <span class="rubber-stamp-ended">Beendet</span>
+                </div>
+            </div>
+        `;
+    } else if (isMobileDevice) {
+        backgroundMediaHtml = `
+            <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at center, #1e293b 0%, #090d16 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1;">
+                <div style="width: 88px; height: 88px; border-radius: 50%; border: 3px solid var(--primary); overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.6); background: #0f172a; margin-bottom: 10px;">
+                    <img src="${streamerAvatarUrl}" alt="Streamer" style="width: 100%; height: 100%; object-fit: cover;">
+                </div>
+                <span style="font-size: 11px; font-weight: 800; color: var(--text-muted); background: rgba(255,255,255,0.05); padding: 4px 10px; border-radius: 20px; border: 1px solid var(--border);">Live-Profil 🔴</span>
+            </div>
+        `;
+    } else {
+        const previewImageSrc = stream.current_frame || streamerAvatarUrl;
+        backgroundMediaHtml = `
+            <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; overflow: hidden; background: #000;">
+                <img id="grid-thumb-img-${streamId}" src="${previewImageSrc}" style="width: 100%; height: 100%; object-fit: cover;" muted playsinline alt="Live Vorschau">
+            </div>
+        `;
+    }
+
+    const badgeHtml = isEnded
+        ? `<div style="position: absolute; top: 12px; left: 12px; background: rgba(100, 116, 139, 0.25); border: 1px solid rgba(100, 116, 139, 0.6); color: #94a3b8; padding: 3px 8px; border-radius: 20px; font-size: 10px; font-weight: 900; z-index: 10;">VERGANGEN</div>`
+        : `<div style="position: absolute; top: 12px; left: 12px; display: flex; gap: 6px; z-index: 10;">
+            <div style="background: rgba(239, 68, 68, 0.25); border: 1px solid rgba(239, 68, 68, 0.6); color: #ef4444; padding: 3px 8px; border-radius: 20px; font-size: 10px; font-weight: 900; display: flex; align-items: center; gap: 4px; backdrop-filter: blur(4px);"><span style="width: 6px; height: 6px; background: #ef4444; border-radius: 50%; display: inline-block;"></span> LIVE</div>
+            ${isFollowed ? `<div style="background: rgba(16, 185, 129, 0.25); border: 1px solid rgba(16, 185, 129, 0.6); color: #10b981; padding: 3px 8px; border-radius: 20px; font-size: 10px; font-weight: 900; backdrop-filter: blur(4px);">★ Gefolgt</div>` : ''}
+           </div>`;
+
+    return `
+        ${backgroundMediaHtml}
+        ${badgeHtml}
+        <div style="position: absolute; bottom: 0; left: 0; width: 100%; background: linear-gradient(0deg, rgba(9,13,22,0.98) 20%, rgba(9,13,22,0.7) 75%, transparent 100%); padding: 20px 14px 14px 14px; display: flex; flex-direction: column; align-items: flex-start; z-index: 10; box-sizing: border-box;">
+            <div style="font-size: 11px; font-weight: 800; color: #818cf8; margin-bottom: 2px;">${isEnded ? '⏹️' : '🔴'} ${category}</div>
+            <div style="font-size: 13px; color: #fff; font-weight: 900; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;">${streamTitle}</div>
+            <div style="font-size: 10px; color: var(--text-muted); margin-bottom: 8px;">${isEnded ? 'Stream beendet' : `👥 ${viewers} Zuschauer aktiv`}</div>
+            <button type="button" class="btn" style="width: 100%; padding: 7px; font-size: 11px; font-weight: 900; background: var(--gradient-main); cursor: pointer; border-radius: 8px;" onclick="event.stopPropagation(); openLiveFullscreen('${streamId}', '${category}', '${location}', '${streamTitle}', ${isMyStream}, '${hostEmail}')">${isEnded ? 'Details ansehen 🔍' : 'Vollbild beitreten 🚀'}</button>
+        </div>
+    `;
+}
+
 export async function loadLiveStreams() {
     ensureGiftAndDesktopStyles();
     const liveList = document.getElementById('live-streams-list');
@@ -782,8 +862,8 @@ export async function loadLiveStreams() {
 
     const nowMs = Date.now();
     const sortedStreams = [...streams].sort((a, b) => {
-        const aEnded = new Date(a.expires_at).getTime() <= nowMs;
-        const bEnded = new Date(b.expires_at).getTime() <= nowMs;
+        const aEnded = isStreamEnded(a, nowMs);
+        const bEnded = isStreamEnded(b, nowMs);
         if (aEnded !== bEnded) return aEnded ? 1 : -1;
 
         const aFollowed = followedSet.has((a.host_email || '').toLowerCase()) ? 1 : 0;
@@ -821,6 +901,8 @@ export async function loadLiveStreams() {
     for (const stream of sortedStreams) {
         const item = document.createElement('div');
         item.className = 'reel-item';
+        const streamId = stream.id ? String(stream.id) : '0000';
+        item.setAttribute('data-stream-id', streamId);
         item.style.cssText = 'position: relative; width: 100%; height: 380px; overflow: hidden; background: #0b0f19; border: 1px solid var(--border); border-radius: 16px; cursor: pointer; box-shadow: 0 10px 25px rgba(0,0,0,0.5); transition: transform 0.2s ease, border-color 0.2s ease;';
         
         item.onmouseover = () => { item.style.transform = 'translateY(-3px)'; item.style.borderColor = 'var(--primary)'; };
@@ -829,94 +911,68 @@ export async function loadLiveStreams() {
         const category = stream.category || 'Live Stream';
         const location = stream.location || 'Wien / Campus';
         const streamTitle = stream.title || 'Campus Stream';
-        const streamId = stream.id ? String(stream.id) : '0000';
         const hostEmail = stream.host_email || '';
-        const viewers = stream.viewers_count || 1;
-        const expiresAt = new Date(stream.expires_at).getTime();
-        const isEnded = expiresAt <= Date.now();
+        const isEnded = isStreamEnded(stream, Date.now());
         const isFollowed = followedSet.has(hostEmail.toLowerCase());
-
         const isMyStream = state.currentUserEmail && hostEmail.toLowerCase() === state.currentUserEmail.toLowerCase();
         const streamerAvatarUrl = avatarMap[hostEmail.toLowerCase()] || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(hostEmail || 'campus')}`;
 
-        let backgroundMediaHtml = '';
-
-        if (isEnded) {
-            backgroundMediaHtml = `
-                <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #090d16; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1; filter: grayscale(35%);">
-                    <div style="width: 80px; height: 80px; border-radius: 50%; border: 2px solid var(--text-muted); overflow: hidden; opacity: 0.55; margin-bottom: 10px;">
-                        <img src="${streamerAvatarUrl}" alt="Streamer" style="width: 100%; height: 100%; object-fit: cover;">
-                    </div>
-                    <div style="position: absolute; top: 41%; left: 50%; transform: translate(-50%, -50%); z-index: 20; pointer-events: none;">
-                        <span class="rubber-stamp-ended">Beendet</span>
-                    </div>
-                </div>
-            `;
-        } else if (isMobileDevice) {
-            backgroundMediaHtml = `
-                <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at center, #1e293b 0%, #090d16 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1;">
-                    <div style="width: 88px; height: 88px; border-radius: 50%; border: 3px solid var(--primary); overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.6); background: #0f172a; margin-bottom: 10px;">
-                        <img src="${streamerAvatarUrl}" alt="Streamer" style="width: 100%; height: 100%; object-fit: cover;">
-                    </div>
-                    <span style="font-size: 11px; font-weight: 800; color: var(--text-muted); background: rgba(255,255,255,0.05); padding: 4px 10px; border-radius: 20px; border: 1px solid var(--border);">Live-Profil 🔴</span>
-                </div>
-            `;
-        } else {
-            const previewImageSrc = stream.current_frame || streamerAvatarUrl;
-            backgroundMediaHtml = `
-                <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; overflow: hidden; background: #000;">
-                    <img id="grid-thumb-img-${streamId}" src="${previewImageSrc}" style="width: 100%; height: 100%; object-fit: cover;" muted playsinline alt="Live Vorschau">
-                </div>
-            `;
-        }
-
-        const badgeHtml = isEnded 
-            ? `<div style="position: absolute; top: 12px; left: 12px; background: rgba(100, 116, 139, 0.25); border: 1px solid rgba(100, 116, 139, 0.6); color: #94a3b8; padding: 3px 8px; border-radius: 20px; font-size: 10px; font-weight: 900; z-index: 10;">VERGANGEN</div>`
-            : `<div style="position: absolute; top: 12px; left: 12px; display: flex; gap: 6px; z-index: 10;">
-                <div style="background: rgba(239, 68, 68, 0.25); border: 1px solid rgba(239, 68, 68, 0.6); color: #ef4444; padding: 3px 8px; border-radius: 20px; font-size: 10px; font-weight: 900; display: flex; align-items: center; gap: 4px; backdrop-filter: blur(4px);"><span style="width: 6px; height: 6px; background: #ef4444; border-radius: 50%; display: inline-block;"></span> LIVE</div>
-                ${isFollowed ? `<div style="background: rgba(16, 185, 129, 0.25); border: 1px solid rgba(16, 185, 129, 0.6); color: #10b981; padding: 3px 8px; border-radius: 20px; font-size: 10px; font-weight: 900; backdrop-filter: blur(4px);">★ Gefolgt</div>` : ''}
-               </div>`;
-
-        item.innerHTML = `
-            ${backgroundMediaHtml}
-            ${badgeHtml}
-            <div style="position: absolute; bottom: 0; left: 0; width: 100%; background: linear-gradient(0deg, rgba(9,13,22,0.98) 20%, rgba(9,13,22,0.7) 75%, transparent 100%); padding: 20px 14px 14px 14px; display: flex; flex-direction: column; align-items: flex-start; z-index: 10; box-sizing: border-box;">
-                <div style="font-size: 11px; font-weight: 800; color: #818cf8; margin-bottom: 2px;">${isEnded ? '⏹️' : '🔴'} ${category}</div>
-                <div style="font-size: 13px; color: #fff; font-weight: 900; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;">${streamTitle}</div>
-                <div style="font-size: 10px; color: var(--text-muted); margin-bottom: 8px;">${isEnded ? 'Stream beendet' : `👥 ${viewers} Zuschauer aktiv`}</div>
-                <button type="button" class="btn" style="width: 100%; padding: 7px; font-size: 11px; font-weight: 900; background: var(--gradient-main); cursor: pointer; border-radius: 8px;" onclick="event.stopPropagation(); openLiveFullscreen('${streamId}', '${category}', '${location}', '${streamTitle}', ${isMyStream}, '${hostEmail}')">${isEnded ? 'Details ansehen 🔍' : 'Vollbild beitreten 🚀'}</button>
-            </div>
-        `;
+        item.innerHTML = buildStreamCardHtml(stream, {
+            isEnded,
+            isFollowed,
+            isMyStream,
+            isMobileDevice,
+            streamerAvatarUrl
+        });
         
         item.onclick = () => openLiveFullscreen(streamId, category, location, streamTitle, isMyStream, hostEmail);
         liveList.appendChild(item);
     }
 
     if (gridPollInterval) clearInterval(gridPollInterval);
-    if (!isMobileDevice) {
-        gridPollInterval = setInterval(async () => {
-            const modal = document.getElementById('live-fullscreen-modal');
-            if (modal && !modal.classList.contains('hidden')) return;
+    gridPollInterval = setInterval(async () => {
+        const modal = document.getElementById('live-fullscreen-modal');
+        if (modal && !modal.classList.contains('hidden')) return;
 
-            try {
-                const { data: freshStreams } = await _supabase
-                    .from('live_streams')
-                    .select('id,current_frame,expires_at')
-                    .gt('expires_at', oneHourAgoIso);
+        try {
+            const { data: freshStreams } = await _supabase
+                .from('live_streams')
+                .select('*')
+                .gt('expires_at', oneHourAgoIso);
 
-                if (freshStreams) {
-                    const currentNow = Date.now();
-                    freshStreams.forEach(s => {
-                        if (new Date(s.expires_at).getTime() <= currentNow) return;
-                        const imgEl = document.getElementById(`grid-thumb-img-${s.id}`);
+            if (freshStreams) {
+                const currentNow = Date.now();
+                freshStreams.forEach(s => {
+                    const sId = String(s.id);
+                    const endedNow = isStreamEnded(s, currentNow);
+                    const cardEl = liveList.querySelector(`[data-stream-id="${sId}"]`);
+
+                    if (endedNow && cardEl && !cardEl.getAttribute('data-rendered-ended')) {
+                        cardEl.setAttribute('data-rendered-ended', '1');
+                        const hEmail = s.host_email || '';
+                        const isFollowed = followedSet.has(hEmail.toLowerCase());
+                        const isMyStream = state.currentUserEmail && hEmail.toLowerCase() === state.currentUserEmail.toLowerCase();
+                        const sAvatar = avatarMap[hEmail.toLowerCase()] || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(hEmail || 'campus')}`;
+                        cardEl.innerHTML = buildStreamCardHtml(s, {
+                            isEnded: true,
+                            isFollowed,
+                            isMyStream,
+                            isMobileDevice,
+                            streamerAvatarUrl: sAvatar
+                        });
+                        return;
+                    }
+
+                    if (!isMobileDevice && !endedNow) {
+                        const imgEl = document.getElementById(`grid-thumb-img-${sId}`);
                         if (imgEl && s.current_frame) {
                             imgEl.src = s.current_frame;
                         }
-                    });
-                }
-            } catch (e) {}
-        }, 600);
-    }
+                    }
+                });
+            }
+        } catch (e) {}
+    }, 600);
 }
 
 export function setLiveFilter(element, category) {
@@ -1033,11 +1089,11 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
         try {
             const { data: sData, error: sErr } = await _supabase
                 .from('live_streams')
-                .select('viewers_count, likes_count, current_frame, expires_at, host_email')
+                .select('*')
                 .eq('id', activeStreamId)
                 .single();
 
-            const streamEndedOrMissing = sErr || !sData || (sData.expires_at && new Date(sData.expires_at).getTime() <= Date.now());
+            const streamEndedOrMissing = sErr || !sData || isStreamEnded(sData, Date.now());
             const checkIsHost = Boolean(state.currentUserEmail) && Boolean(sData?.host_email) && state.currentUserEmail.toLowerCase() === sData.host_email.toLowerCase();
 
             if (!checkIsHost && streamEndedOrMissing) {
