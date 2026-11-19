@@ -471,10 +471,9 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
 
     if (titleDisplay) titleDisplay.textContent = `🔴 ${streamTitle || category}`;
     
-    // EXakte Host-Prüfung über Datenbank-E-Mail und angemeldeten User (verhindert, dass Zuseher den Stream beenden können)
+    // Exakte Host-Prüfung über Datenbank-E-Mail und angemeldeten User
     const currentUserIsHost = isHost || (Boolean(state.currentUserEmail) && Boolean(hostEmail) && state.currentUserEmail.toLowerCase() === hostEmail.toLowerCase());
 
-    // Wenn der aktuelle Nutzer NICHT der Host ist, wird ein eventuell geerbter lokaler Stream hart verworfen
     if (!currentUserIsHost && localStream) {
         localStream.getTracks().forEach(track => track.stop());
         localStream = null;
@@ -508,45 +507,34 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
         console.warn('Viewer Count Sync Fehler:', e);
     }
 
-    let topControls = document.getElementById('live-top-center-controls');
-    if (!topControls && playerContainer) {
-        topControls = document.createElement('div');
-        topControls.id = 'live-top-center-controls';
-        topControls.style.cssText = 'position: absolute; top: 16px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; z-index: 99998; pointer-events: auto;';
-        playerContainer.style.position = 'relative';
-        playerContainer.appendChild(topControls);
-    }
-
     const finalIsHost = Boolean(state.currentUserEmail) && Boolean(hostEmail) && state.currentUserEmail.toLowerCase() === hostEmail.toLowerCase();
 
-    if (topControls) {
-        topControls.innerHTML = `
-            <button type="button" onclick="subscribeToCreator('${hostEmail}')" class="btn" style="background: linear-gradient(135deg, #8b5cf6, #3b82f6); color: #fff; font-size: 11px; font-weight: 900; padding: 6px 16px; border-radius: 20px; border: none; cursor: pointer; box-shadow: 0 4px 15px rgba(139,92,246,0.4);">⭐ Abo (150P/Mo)</button>
-            <div id="live-likes-counter-badge" style="background: rgba(15, 23, 42, 0.85); border: 2px solid #ec4899; color: #fff; padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: 900; backdrop-filter: blur(8px); display: flex; align-items: center; gap: 5px; cursor: pointer;" onclick="sendScreenTapLike()">❤️ <span id="live-likes-count-num">${currentLikes}</span></div>
-        `;
+    // Top-Leiste: Abo links, Herz-Button Mitte, Zuschauer rechts — alle exakt auf top: 16px
+    let topBar = document.getElementById('live-top-overlay-bar');
+    if (!topBar && playerContainer) {
+        topBar = document.createElement('div');
+        topBar.id = 'live-top-overlay-bar';
+        topBar.style.cssText = 'position: absolute; top: 16px; left: 16px; right: 16px; height: 34px; display: flex; align-items: center; justify-content: space-between; z-index: 99999; pointer-events: none;';
+        playerContainer.style.position = 'relative';
     }
 
-    let badge = document.getElementById('guaranteed-live-viewer-badge');
-    if (!badge && playerContainer) {
-        badge = document.createElement('div');
-        badge.id = 'guaranteed-live-viewer-badge';
-        badge.style.cssText = 'position: absolute; top: 16px; right: 16px; background: rgba(15, 23, 42, 0.85); border: 2px solid #10b981; color: #fff; padding: 6px 14px; border-radius: 30px; font-size: 12px; font-weight: 900; z-index: 99999; backdrop-filter: blur(8px); box-shadow: 0 4px 20px rgba(0,0,0,0.6); display: flex; align-items: center; gap: 6px;';
-        playerContainer.appendChild(badge);
-    }
-    if (badge) {
-        badge.innerHTML = `👥 <span id="live-viewer-count" style="color: #10b981;">${currentViewers}</span> Zuschauer`;
+    if (topBar) {
+        topBar.innerHTML = `
+            <button type="button" onclick="subscribeToCreator('${hostEmail}')" class="btn" style="pointer-events: auto; margin: 0; width: auto; height: 32px; background: linear-gradient(135deg, #8b5cf6, #3b82f6); color: #fff; font-size: 11px; font-weight: 900; padding: 0 14px; border-radius: 20px; border: none; cursor: pointer; box-shadow: 0 4px 15px rgba(139,92,246,0.4); display: inline-flex; align-items: center; justify-content: center; white-space: nowrap;">⭐ Abo (150P/Mo)</button>
+            <div id="live-likes-counter-badge" onclick="sendScreenTapLike()" style="pointer-events: auto; position: absolute; left: 50%; transform: translateX(-50%); height: 32px; background: rgba(15, 23, 42, 0.85); border: 2px solid #ec4899; color: #fff; padding: 0 14px; border-radius: 20px; font-size: 12px; font-weight: 900; backdrop-filter: blur(8px); display: inline-flex; align-items: center; justify-content: center; gap: 5px; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.5); white-space: nowrap;">❤️ <span id="live-likes-count-num">${currentLikes}</span></div>
+            <div id="guaranteed-live-viewer-badge" style="pointer-events: auto; height: 32px; background: rgba(15, 23, 42, 0.85); border: 2px solid #10b981; color: #fff; padding: 0 14px; border-radius: 20px; font-size: 12px; font-weight: 900; backdrop-filter: blur(8px); box-shadow: 0 4px 15px rgba(0,0,0,0.5); display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap;">👥 <span id="live-viewer-count" style="color: #10b981;">${currentViewers}</span> Zuschauer</div>
+        `;
     }
 
     if (playerContainer) {
         playerContainer.onclick = (e) => {
-            if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
+            if (e.target.tagName === 'BUTTON' || e.target.closest('button') || e.target.closest('#live-likes-counter-badge')) return;
             sendScreenTapLikeAnim(e.clientX, e.clientY);
         };
 
         if (finalIsHost && localStream) {
             playerContainer.innerHTML = `
                 <video id="active-web-rtc-video" autoplay playsinline muted style="width: 100%; height: 100%; object-fit: cover; background: #000; position: absolute; top:0; left:0;"></video>
-                <div style="position: absolute; top: 16px; left: 16px; background: rgba(16,185,129,0.2); border: 1px solid #10b981; color: #10b981; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 800; z-index: 5;">🎥 Du sendest Live</div>
             `;
             const vidEl = document.getElementById('active-web-rtc-video');
             if (vidEl && localStream) {
@@ -557,7 +545,6 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
             playerContainer.innerHTML = `
                 <img id="active-stream-image-view" src="" style="width: 100%; height: 100%; object-fit: cover; background: #000; position: absolute; top:0; left:0; display: block;" alt="Live Stream">
                 <div id="webrtc-status-msg" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #fff; font-size: 13px; background: rgba(0,0,0,0.85); padding: 10px 20px; border-radius: 10px; z-index: 6; border: 1px solid var(--border);">Lade Stream... 🔴</div>
-                <div style="position: absolute; top: 16px; left: 16px; background: rgba(16,185,129,0.2); border: 1px solid #10b981; color: #10b981; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 800; z-index: 5;">🔴 Live Stream</div>
             `;
             
             try {
@@ -569,11 +556,10 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
                         if (statusMsg) statusMsg.remove();
                     }
                 });
-            } catch(e){}
+            } catch (e) {}
         }
         
-        if (topControls) playerContainer.appendChild(topControls);
-        if (badge) playerContainer.appendChild(badge);
+        if (topBar) playerContainer.appendChild(topBar);
     }
 
     if (viewerInterval) clearInterval(viewerInterval);
@@ -660,7 +646,8 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
 
     const chatMessagesEl = document.getElementById('live-chat-messages');
     if (chatMessagesEl) {
-        chatMessagesEl.innerHTML = `<div id="chat-status-msg" style="color: var(--text-muted); text-align: center; padding: 10px;">Chat verbunden 💬</div>`;
+        chatMessagesEl.style.cssText = 'height: 168px; min-height: 168px; max-height: 168px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; padding: 8px 10px; box-sizing: border-box;';
+        chatMessagesEl.innerHTML = `<div id="chat-status-msg" style="color: var(--text-muted); text-align: center; padding: 10px; font-size: 11px;">Chat verbunden 💬</div>`;
     }
 
     await loadExistingChatMessages(streamId);
@@ -800,7 +787,7 @@ function appendMessageToChatUI(msg) {
 
     const msgDiv = document.createElement('div');
     msgDiv.setAttribute('data-msg-id', msg.id);
-    msgDiv.style.cssText = 'background: rgba(255,255,255,0.06); padding: 5px 8px; border-radius: 6px; font-size: 11px; margin-bottom: 3px; word-break: break-word;';
+    msgDiv.style.cssText = 'background: rgba(255,255,255,0.06); padding: 4px 8px; border-radius: 6px; font-size: 11px; line-height: 1.35; word-break: break-word; flex-shrink: 0;';
     msgDiv.innerHTML = `<strong style="color: ${color};">${sender}:</strong> ${msg.message_text}`;
     
     chatList.appendChild(msgDiv);
