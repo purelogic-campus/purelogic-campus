@@ -1,4 +1,4 @@
-// js/features/live.js • PURE LOGIC Live-Stream, Vorschau-Logik (PC vs. Smartphone), Ranking-Sortierung & Auto-Weiterleitung
+// js/features/live.js • PURE LOGIC Live-Stream, Vorschau-Logik (PC vs. Smartphone), Ranking-Sortierung, Auto-Weiterleitung & Geschenk-Animation
 import { _supabase } from '../config.js';
 import { state } from '../state.js';
 import { validateInputOrAlert } from './moderation.js';
@@ -14,6 +14,7 @@ let chatChannel = null;
 let broadcastInterval = null;
 let framePollInterval = null;
 let gridPollInterval = null;
+const animatedGiftMsgIds = new Set();
 
 const campusGifts = [
     { id: 1, name: 'Kaffee ☕', cost: 10 },
@@ -39,6 +40,96 @@ const subCategoriesMap = {
     '🎵 Musik': ['Rock / Metal', 'Pop & Charts', 'Hip-Hop / Rap', 'Electronic / Techno', 'Lo-Fi / Chill Beats', 'Akustik / Live Jam'],
     '📚 Lernen': ['Study With Me (Pomodoro)', 'Coding & Programming', 'Mathematik & Statistik', 'Vorbereitung Klausur', 'Fremdsprachen']
 };
+
+function ensureGiftAnimationStyles() {
+    if (document.getElementById('live-gift-anim-styles')) return;
+    const style = document.createElement('style');
+    style.id = 'live-gift-anim-styles';
+    style.textContent = `
+        @keyframes liveGiftBannerPop {
+            0% { transform: translate(-50%, 24px) scale(0.75); opacity: 0; }
+            15% { transform: translate(-50%, 0) scale(1.05); opacity: 1; }
+            25% { transform: translate(-50%, 0) scale(1); opacity: 1; }
+            82% { transform: translate(-50%, -8px) scale(1); opacity: 1; }
+            100% { transform: translate(-50%, -28px) scale(0.92); opacity: 0; }
+        }
+        @keyframes liveGiftEmojiBurst {
+            0% { transform: translateY(0) scale(0.5) rotate(-10deg); opacity: 0; }
+            20% { opacity: 1; transform: translateY(-20px) scale(1.25) rotate(8deg); }
+            100% { transform: translateY(-180px) scale(1.5) rotate(-12deg); opacity: 0; }
+        }
+    `;
+    document.head.appendChild(style);
+}
+
+export function playLiveGiftAnimation(giftText, senderLabel = 'Jemand') {
+    const playerContainer = document.getElementById('live-stream-player-container');
+    if (!playerContainer) return;
+
+    ensureGiftAnimationStyles();
+
+    const cleanSender = senderLabel.includes('@') ? senderLabel.split('@')[0] : senderLabel;
+    const emojiMatch = giftText.match(/(\p{Extended_Pictographic})/gu);
+    const giftEmoji = emojiMatch && emojiMatch.length > 0 ? emojiMatch[emojiMatch.length - 1] : '🎁';
+    const shortLabel = giftText
+        .replace(/^🎁\s*HAT\s+/i, '')
+        .replace(/\s*GESENDET!.*$/i, '')
+        .trim();
+
+    const banner = document.createElement('div');
+    banner.style.cssText = `
+        position: absolute;
+        bottom: 24px;
+        left: 50%;
+        transform: translate(-50%, 0);
+        z-index: 99998;
+        pointer-events: none;
+        background: linear-gradient(135deg, rgba(245, 158, 11, 0.95), rgba(236, 72, 153, 0.95));
+        color: #fff;
+        padding: 10px 18px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 900;
+        letter-spacing: 0.3px;
+        box-shadow: 0 10px 30px rgba(236, 72, 153, 0.55);
+        border: 2px solid rgba(255, 255, 255, 0.45);
+        white-space: nowrap;
+        animation: liveGiftBannerPop 2.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    `;
+    banner.innerHTML = `${giftEmoji} <strong>${cleanSender}</strong> sendet <strong>${shortLabel || giftText}</strong> ✨`;
+    playerContainer.appendChild(banner);
+    setTimeout(() => banner.remove(), 2900);
+
+    for (let i = 0; i < 6; i++) {
+        const burst = document.createElement('div');
+        const offsetX = 18 + Math.random() * 64;
+        const delayMs = i * 110;
+        burst.textContent = i % 2 === 0 ? giftEmoji : '✨';
+        burst.style.cssText = `
+            position: absolute;
+            left: ${offsetX}%;
+            bottom: 48px;
+            font-size: ${24 + Math.floor(Math.random() * 14)}px;
+            z-index: 99997;
+            pointer-events: none;
+            animation: liveGiftEmojiBurst 1.8s ease-out ${delayMs}ms forwards;
+        `;
+        playerContainer.appendChild(burst);
+        setTimeout(() => burst.remove(), 1950 + delayMs);
+    }
+}
+
+function triggerGiftAnimationIfNeeded(msg) {
+    if (!msg || !msg.message_text) return;
+    const isGiftMessage = msg.message_text.includes('🎁') && msg.message_text.includes('GESENDET');
+    if (!isGiftMessage) return;
+
+    const msgKey = String(msg.id || `${msg.sender_email}_${msg.message_text}_${msg.created_at}`);
+    if (animatedGiftMsgIds.has(msgKey)) return;
+    animatedGiftMsgIds.add(msgKey);
+
+    playLiveGiftAnimation(msg.message_text, msg.sender_email || 'Jemand');
+}
 
 export async function handlePreLiveCheck() {
     if (!state.currentUserEmail) {
@@ -508,7 +599,6 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
 
     const finalIsHost = Boolean(state.currentUserEmail) && Boolean(hostEmail) && state.currentUserEmail.toLowerCase() === hostEmail.toLowerCase();
 
-    // Top-Leiste: Abo links, Herz-Button Mitte, Zuschauer rechts — alle exakt auf top: 16px
     let topBar = document.getElementById('live-top-overlay-bar');
     if (!topBar && playerContainer) {
         topBar = document.createElement('div');
@@ -649,7 +739,7 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
         chatMessagesEl.innerHTML = `<div id="chat-status-msg" style="color: var(--text-muted); text-align: center; padding: 10px; font-size: 11px;">Chat verbunden 💬</div>`;
     }
 
-    await loadExistingChatMessages(streamId);
+    await loadExistingChatMessages(streamId, true);
 
     if (chatChannel) {
         _supabase.removeChannel(chatChannel);
@@ -663,13 +753,13 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
             table: 'live_chat_messages',
             filter: `stream_id=eq.${streamId}`
         }, payload => {
-            appendMessageToChatUI(payload.new);
+            appendMessageToChatUI(payload.new, false);
         })
         .subscribe();
 
     if (chatPollInterval) clearInterval(chatPollInterval);
     chatPollInterval = setInterval(() => {
-        loadExistingChatMessages(streamId);
+        loadExistingChatMessages(streamId, false);
     }, 2000);
 }
 
@@ -749,7 +839,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-async function loadExistingChatMessages(streamId) {
+async function loadExistingChatMessages(streamId, isInitialLoad = false) {
     try {
         const { data: messages, error } = await _supabase
             .from('live_chat_messages')
@@ -765,15 +855,20 @@ async function loadExistingChatMessages(streamId) {
             const existingIds = new Set(Array.from(chatList.querySelectorAll('[data-msg-id]')).map(el => el.getAttribute('data-msg-id')));
 
             messages.forEach(msg => {
+                if (isInitialLoad && msg.message_text && msg.message_text.includes('🎁') && msg.message_text.includes('GESENDET')) {
+                    const msgKey = String(msg.id || `${msg.sender_email}_${msg.message_text}_${msg.created_at}`);
+                    animatedGiftMsgIds.add(msgKey);
+                }
+
                 if (!existingIds.has(String(msg.id))) {
-                    appendMessageToChatUI(msg);
+                    appendMessageToChatUI(msg, isInitialLoad);
                 }
             });
         }
     } catch (e) {}
 }
 
-function appendMessageToChatUI(msg) {
+function appendMessageToChatUI(msg, skipGiftAnimation = false) {
     const chatList = document.getElementById('live-chat-messages');
     if (!chatList) return;
 
@@ -791,6 +886,10 @@ function appendMessageToChatUI(msg) {
     
     chatList.appendChild(msgDiv);
     chatList.scrollTop = chatList.scrollHeight;
+
+    if (!skipGiftAnimation) {
+        triggerGiftAnimationIfNeeded(msg);
+    }
 }
 
 export async function sendLiveChatMessage() {
@@ -1012,15 +1111,20 @@ export async function sendLiveGift(giftName, cost, hostEmail) {
 
         closeGiftsGalleryModal();
 
+        const giftMessageText = `🎁 HAT ${giftName.toUpperCase()} (${cost} P) GESENDET! 🎉`;
+        const giftMsgId = crypto.randomUUID();
+        animatedGiftMsgIds.add(giftMsgId);
+        playLiveGiftAnimation(giftMessageText, state.currentUserEmail || 'Du');
+
         if (activeStreamId) {
             await _supabase
                 .from('live_chat_messages')
                 .insert([
                     {
-                        id: crypto.randomUUID(),
+                        id: giftMsgId,
                         stream_id: activeStreamId,
                         sender_email: state.currentUserEmail,
-                        message_text: `🎁 HAT ${giftName.toUpperCase()} (${cost} P) GESENDET! 🎉`,
+                        message_text: giftMessageText,
                         created_at: new Date().toISOString()
                     }
                 ]);
@@ -1104,3 +1208,4 @@ window.sendLiveGift = sendLiveGift;
 window.subscribeToCreator = subscribeToCreator;
 window.sendScreenTapLike = sendScreenTapLike;
 window.handlePureLogicLogoClick = handlePureLogicLogoClick;
+window.playLiveGiftAnimation = playLiveGiftAnimation;
