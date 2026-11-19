@@ -1,4 +1,4 @@
-// js/features/live.js • PURE LOGIC Live-Stream, Vorschau-Logik (PC vs. Smartphone), Ranking-Sortierung, Auto-Weiterleitung, Geschenk-Animation (5s+), Geschenk-Sounds & Vertikaler PC-Chat (60% Transparenz + Collapse)
+// js/features/live.js • PURE LOGIC Live-Stream, Vorschau-Logik (PC vs. Smartphone), Ranking-Sortierung, Auto-Weiterleitung, Geschenk-Animation (5s+), Geschenk-Sounds & Vertikaler PC-Chat (Links Vollhöhe, funktionierender Transparenz-Regler, Ein-/Ausklappen)
 import { _supabase } from '../config.js';
 import { state } from '../state.js';
 import { validateInputOrAlert } from './moderation.js';
@@ -139,52 +139,66 @@ function ensureGiftAndDesktopStyles() {
         const desktopStyle = document.createElement('style');
         desktopStyle.id = 'live-desktop-left-chat-styles';
         desktopStyle.textContent = `
+            #desktop-chat-reopen-btn {
+                display: none;
+            }
             @media (min-width: 768px) {
-                #live-fullscreen-modal.desktop-left-chat-active .live-modal-body,
-                #live-fullscreen-modal.desktop-left-chat-active > div > div:last-child {
-                    position: relative;
+                #live-fullscreen-modal.desktop-left-chat-active {
+                    --live-chat-alpha: 0.6;
                 }
                 #live-fullscreen-modal.desktop-left-chat-active #live-chat-panel,
                 #live-fullscreen-modal.desktop-left-chat-active [id*="live-chat-panel"] {
                     position: fixed !important;
-                    top: 76px !important;
-                    left: 20px !important;
-                    bottom: 20px !important;
-                    width: 320px !important;
-                    max-width: calc(100vw - 40px) !important;
-                    height: auto !important;
-                    max-height: calc(100vh - 96px) !important;
+                    top: 0 !important;
+                    left: 0 !important;
+                    bottom: 0 !important;
+                    width: 330px !important;
+                    max-width: 85vw !important;
+                    height: 100vh !important;
+                    max-height: 100vh !important;
                     z-index: 10050 !important;
-                    border-radius: 16px !important;
-                    border: 1px solid rgba(255, 255, 255, 0.16) !important;
-                    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65) !important;
+                    border-radius: 0 16px 16px 0 !important;
+                    border-right: 1px solid rgba(255, 255, 255, 0.18) !important;
+                    box-shadow: 8px 0 32px rgba(0, 0, 0, 0.55) !important;
                     display: flex !important;
                     flex-direction: column !important;
                     overflow: hidden !important;
-                    transition: width 0.22s ease, opacity 0.2s ease;
+                    background-color: rgba(15, 23, 42, var(--live-chat-alpha)) !important;
+                    backdrop-filter: blur(8px);
                 }
-                #live-fullscreen-modal.desktop-left-chat-active.chat-is-collapsed #live-chat-panel,
-                #live-fullscreen-modal.desktop-left-chat-active.chat-is-collapsed [id*="live-chat-panel"] {
-                    width: auto !important;
-                    height: auto !important;
-                    top: 76px !important;
-                    left: 20px !important;
-                    bottom: auto !important;
-                }
-                #live-fullscreen-modal.desktop-left-chat-active.chat-is-collapsed #live-chat-messages,
-                #live-fullscreen-modal.desktop-left-chat-active.chat-is-collapsed #live-chat-input-container,
-                #live-fullscreen-modal.desktop-left-chat-active.chat-is-collapsed .live-chat-opacity-row {
-                    display: none !important;
+                #live-fullscreen-modal.desktop-left-chat-active #live-chat-messages,
+                #live-fullscreen-modal.desktop-left-chat-active #live-chat-input-container,
+                #live-fullscreen-modal.desktop-left-chat-active #desktop-chat-controls-bar {
+                    background-color: rgba(15, 23, 42, var(--live-chat-alpha)) !important;
                 }
                 #live-fullscreen-modal.desktop-left-chat-active #live-chat-messages {
                     flex: 1 !important;
                     height: auto !important;
                     min-height: 168px !important;
                     max-height: none !important;
-                    background: transparent !important;
                 }
-                #live-fullscreen-modal.desktop-left-chat-active #live-chat-input-container {
-                    background: rgba(15, 23, 42, 0.55) !important;
+                #live-fullscreen-modal.desktop-left-chat-active.chat-is-collapsed #live-chat-panel,
+                #live-fullscreen-modal.desktop-left-chat-active.chat-is-collapsed [id*="live-chat-panel"] {
+                    display: none !important;
+                }
+                #live-fullscreen-modal.desktop-left-chat-active.chat-is-collapsed #desktop-chat-reopen-btn {
+                    display: inline-flex !important;
+                    position: fixed !important;
+                    top: 76px !important;
+                    left: 14px !important;
+                    z-index: 10060 !important;
+                    align-items: center;
+                    gap: 6px;
+                    background: rgba(15, 23, 42, 0.9);
+                    color: #fff;
+                    border: 1px solid rgba(255, 255, 255, 0.25);
+                    border-radius: 12px;
+                    padding: 8px 14px;
+                    font-size: 12px;
+                    font-weight: 900;
+                    cursor: pointer;
+                    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
+                    backdrop-filter: blur(8px);
                 }
             }
         `;
@@ -208,55 +222,68 @@ function applyDesktopChatLayout() {
         chatPanel.id = 'live-chat-panel';
     }
 
+    let reopenBtn = document.getElementById('desktop-chat-reopen-btn');
+    if (!reopenBtn) {
+        reopenBtn = document.createElement('button');
+        reopenBtn.id = 'desktop-chat-reopen-btn';
+        reopenBtn.type = 'button';
+        reopenBtn.textContent = '💬 Chat ausklappen';
+        reopenBtn.onclick = () => toggleDesktopLiveChatCollapse(false);
+        modal.appendChild(reopenBtn);
+    }
+
     const isDesktop = window.innerWidth >= 768;
 
     if (isDesktop && chatPanel) {
         modal.classList.add('desktop-left-chat-active');
         modal.classList.toggle('chat-is-collapsed', desktopChatCollapsed);
-
-        const alpha = desktopChatOpacity;
-        chatPanel.style.backgroundColor = `rgba(15, 23, 42, ${alpha})`;
-        chatPanel.style.backdropFilter = alpha < 0.95 ? 'blur(10px)' : 'none';
+        modal.style.setProperty('--live-chat-alpha', String(desktopChatOpacity));
 
         let controlsBar = document.getElementById('desktop-chat-controls-bar');
         if (!controlsBar) {
             controlsBar = document.createElement('div');
             controlsBar.id = 'desktop-chat-controls-bar';
-            controlsBar.style.cssText = 'display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.12); background: rgba(9, 13, 22, 0.45); flex-shrink: 0;';
+            controlsBar.style.cssText = 'display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.14); flex-shrink: 0;';
             chatPanel.prepend(controlsBar);
         }
 
         const pctValue = Math.round(desktopChatOpacity * 100);
         controlsBar.innerHTML = `
-            <button type="button" onclick="toggleDesktopLiveChatCollapse()" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.18); color: #fff; font-size: 11px; font-weight: 800; padding: 4px 9px; border-radius: 8px; cursor: pointer; white-space: nowrap;">
-                ${desktopChatCollapsed ? '💬 Chat öffnen' : '➖ Einklappen'}
+            <button type="button" onclick="toggleDesktopLiveChatCollapse(true)" style="background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2); color: #fff; font-size: 11px; font-weight: 800; padding: 5px 10px; border-radius: 8px; cursor: pointer; white-space: nowrap;">
+                ➖ Einklappen
             </button>
-            <div class="live-chat-opacity-row" style="display: flex; align-items: center; gap: 6px; flex: 1; justify-content: flex-end;">
-                <span style="font-size: 10px; font-weight: 700; color: #cbd5e1; white-space: nowrap;">Transparenz: <strong id="live-chat-opacity-label">${pctValue}%</strong></span>
-                <input type="range" id="live-chat-opacity-slider" min="15" max="100" step="5" value="${pctValue}" oninput="setDesktopLiveChatOpacity(this.value)" style="width: 78px; margin: 0; padding: 0; accent-color: #ec4899; cursor: pointer;">
+            <div style="display: flex; align-items: center; gap: 6px; flex: 1; justify-content: flex-end;">
+                <span style="font-size: 10px; font-weight: 700; color: #e2e8f0; white-space: nowrap;">Transparenz: <strong id="live-chat-opacity-label">${pctValue}%</strong></span>
+                <input type="range" id="live-chat-opacity-slider" min="15" max="100" step="5" value="${pctValue}" oninput="setDesktopLiveChatOpacity(this.value)" onchange="setDesktopLiveChatOpacity(this.value)" style="width: 82px; margin: 0; padding: 0; accent-color: #ec4899; cursor: pointer;">
             </div>
         `;
     } else {
         modal.classList.remove('desktop-left-chat-active', 'chat-is-collapsed');
+        modal.style.removeProperty('--live-chat-alpha');
         const controlsBar = document.getElementById('desktop-chat-controls-bar');
         if (controlsBar) controlsBar.remove();
-        if (chatPanel) {
-            chatPanel.style.backgroundColor = '';
-            chatPanel.style.backdropFilter = '';
-        }
     }
 }
 
-window.toggleDesktopLiveChatCollapse = function() {
-    desktopChatCollapsed = !desktopChatCollapsed;
+window.toggleDesktopLiveChatCollapse = function(forceCollapse = null) {
+    if (typeof forceCollapse === 'boolean') {
+        desktopChatCollapsed = forceCollapse;
+    } else {
+        desktopChatCollapsed = !desktopChatCollapsed;
+    }
     applyDesktopChatLayout();
 };
 
 window.setDesktopLiveChatOpacity = function(percentValue) {
-    const num = Math.max(15, Math.min(100, Number(percentValue) || 60));
+    const parsed = Number(percentValue);
+    const num = Number.isFinite(parsed) ? Math.max(15, Math.min(100, parsed)) : 60;
     desktopChatOpacity = num / 100;
     const label = document.getElementById('live-chat-opacity-label');
     if (label) label.textContent = `${num}%`;
+    const modal = document.getElementById('live-fullscreen-modal');
+    if (modal) {
+        modal.style.setProperty('--live-chat-alpha', String(desktopChatOpacity));
+    }
     applyDesktopChatLayout();
 };
 
