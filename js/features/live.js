@@ -1,10 +1,15 @@
-// js/features/live.js • PURE LOGIC Live-Stream, Vorschau-Logik (PC vs. Smartphone), Ranking-Sortierung, Auto-Weiterleitung, Geschenk-Animation (5s+), Geschenk-Sounds, Rubber-Stamp "Beendet" & Vertikaler PC-Chat
+// js/features/live.js • PURE LOGIC Live-Stream, Vorschau-Logik (PC vs. Smartphone), Ranking-Sortierung, Auto-Weiterleitung, Geschenk-Animation (5s+), Geschenk-Sounds, Rubber-Stamp "Beendet", Vertikaler PC-Chat & Offline-Schutz
 import { _supabase } from '../config.js';
 import { state } from '../state.js';
 import { validateInputOrAlert } from './moderation.js';
+import { renderOfflineBanner, isNetworkError } from '../network.js';
 
 const MAX_STREAM_DURATION_MS = 12 * 60 * 60 * 1000;
 const WARNING_BEFORE_END_MS = 15 * 60 * 1000;
+const GRID_POLL_MS = 2500;
+const VIEWER_POLL_MS = 1500;
+const FRAME_POLL_MS = 250;
+const CHAT_POLL_MS = 2500;
 
 let localStream = null;
 let activeStreamId = null;
@@ -69,6 +74,15 @@ const subCategoriesMap = {
     '🎵 Musik': ['Rock / Metal', 'Pop & Charts', 'Hip-Hop / Rap', 'Electronic / Techno', 'Lo-Fi / Chill Beats', 'Akustik / Live Jam'],
     '📚 Lernen': ['Study With Me (Pomodoro)', 'Coding & Programming', 'Mathematik & Statistik', 'Vorbereitung Klausur', 'Fremdsprachen']
 };
+
+function canPollNetwork() {
+    return typeof navigator === 'undefined' || navigator.onLine !== false;
+}
+
+function isLiveTabVisible() {
+    const liveTab = document.getElementById('tab-live');
+    return Boolean(liveTab && !liveTab.classList.contains('hidden'));
+}
 
 function isStreamEnded(stream, nowMs = Date.now()) {
     if (!stream) return false;
@@ -175,24 +189,26 @@ async function runScheduledStreamTermination(streamIdToEnd) {
         });
     }
 
-    try {
-        const nowIso = new Date().toISOString();
-        const { error: updErr } = await _supabase
-            .from('live_streams')
-            .update({
-                status: 'ended',
-                stream_url: 'ended',
-                expires_at: nowIso
-            })
-            .eq('id', streamIdToEnd);
-
-        if (updErr) {
-            await _supabase
+    if (canPollNetwork()) {
+        try {
+            const nowIso = new Date().toISOString();
+            const { error: updErr } = await _supabase
                 .from('live_streams')
-                .update({ expires_at: nowIso })
+                .update({
+                    status: 'ended',
+                    stream_url: 'ended',
+                    expires_at: nowIso
+                })
                 .eq('id', streamIdToEnd);
-        }
-    } catch (err) {}
+
+            if (updErr) {
+                await _supabase
+                    .from('live_streams')
+                    .update({ expires_at: nowIso })
+                    .eq('id', streamIdToEnd);
+            }
+        } catch (err) {}
+    }
 
     alert('Die maximale Stream-Dauer von 12 Stunden ist erreicht. Dein Stream wurde automatisch beendet.');
     await closeLiveFullscreen();
@@ -645,6 +661,12 @@ export async function handlePreLiveCheck() {
         return;
     }
 
+    if (!canPollNetwork()) {
+        renderOfflineBanner(true);
+        alert('Du bist aktuell offline. Bitte verbinde dich mit dem Internet, um einen Live-Stream zu starten.');
+        return;
+    }
+
     try {
         localStream = await navigator.mediaDevices.getUserMedia({ 
             video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } }, 
@@ -788,6 +810,12 @@ export async function confirmAndStartLiveStream() {
 
     if (!validateInputOrAlert(finalCategoryLabel) || !validateInputOrAlert(location)) return;
 
+    if (!canPollNetwork()) {
+        renderOfflineBanner(true);
+        alert('Keine Internetverbindung. Live-Stream kann aktuell nicht gestartet werden.');
+        return;
+    }
+
     const previewModal = document.getElementById('live-preview-modal');
     if (previewModal) {
         previewModal.classList.add('hidden');
@@ -820,6 +848,7 @@ async function startLiveStreamBroadcast(category, location, title, streamUrl = '
             .single();
 
         if (error) {
+            if (isNetworkError(error)) renderOfflineBanner(true);
             console.error('Supabase Insert Fehler:', error);
             alert('Datenbank-Fehler beim Starten: ' + error.message);
             return;
@@ -836,6 +865,7 @@ async function startLiveStreamBroadcast(category, location, title, streamUrl = '
             openLiveFullscreen(data.id, category, location, title, true, data.host_email);
         }
     } catch (err) {
+        if (isNetworkError(err)) renderOfflineBanner(true);
         console.error('Fehler beim Starten des Streams:', err);
         alert('Fehler beim Starten des Streams: ' + err.message);
         
@@ -861,6 +891,7 @@ function startCanvasBroadcasting() {
 
     broadcastInterval = setInterval(async () => {
         if (!activeStreamId || !localStream || endedStreamIds.has(String(activeStreamId))) return;
+        if (!canPollNetwork()) return;
         try {
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             const dataUrl = canvas.toDataURL('image/jpeg', 0.65);
@@ -869,7 +900,7 @@ function startCanvasBroadcasting() {
                 .update({ current_frame: dataUrl })
                 .eq('id', activeStreamId);
         } catch (e) {}
-    }, 150);
+    }, 250);
 }
 
 function buildStreamCardHtml(stream, options) {
@@ -962,6 +993,12 @@ export async function loadLiveStreams() {
     const liveList = document.getElementById('live-streams-list');
     if (!liveList) return;
 
+    if (!canPollNetwork()) {
+        renderOfflineBanner(true);
+        liveList.innerHTML = '<p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;">Offline – Live-Streams können aktuell nicht geladen werden.</p>';
+        return;
+    }
+
     liveList.innerHTML = '<p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;">Lade Streams...</p>';
 
     const oneHourAgoIso = new Date(Date.now() - 60 * 60 * 1000).toISOString();
@@ -979,6 +1016,9 @@ export async function loadLiveStreams() {
     const { data: streams, error } = await query;
 
     if (error || !streams || streams.length === 0) {
+        if (error && isNetworkError(error)) {
+            renderOfflineBanner(true);
+        }
         liveList.innerHTML = `
             <div style="text-align: center; padding: 40px 20px;">
                 <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 12px;">Keine Streams für "${currentActiveFilter}".</p>
@@ -1114,6 +1154,8 @@ export async function loadLiveStreams() {
 
     if (gridPollInterval) clearInterval(gridPollInterval);
     gridPollInterval = setInterval(async () => {
+        if (!canPollNetwork()) return;
+        if (!isLiveTabVisible()) return;
         const modal = document.getElementById('live-fullscreen-modal');
         if (modal && !modal.classList.contains('hidden')) return;
 
@@ -1157,7 +1199,7 @@ export async function loadLiveStreams() {
                 });
             }
         } catch (e) {}
-    }, 300);
+    }, GRID_POLL_MS);
 }
 
 export function setLiveFilter(element, category) {
@@ -1188,34 +1230,36 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
 
     let currentViewers = 1;
     let currentLikes = 0;
-    try {
-        const { data: streamData } = await _supabase
-            .from('live_streams')
-            .select('viewers_count, likes_count, current_frame, host_email, expires_at')
-            .eq('id', streamId)
-            .single();
+    if (canPollNetwork()) {
+        try {
+            const { data: streamData } = await _supabase
+                .from('live_streams')
+                .select('viewers_count, likes_count, current_frame, host_email, expires_at')
+                .eq('id', streamId)
+                .single();
 
-        if (streamData) {
-            if (streamData.host_email && !hostEmail) hostEmail = streamData.host_email;
-            currentViewers = streamData.viewers_count || 1;
-            currentLikes = streamData.likes_count || 0;
-            
-            const realIsHost = Boolean(state.currentUserEmail) && Boolean(hostEmail) && state.currentUserEmail.toLowerCase() === hostEmail.toLowerCase();
+            if (streamData) {
+                if (streamData.host_email && !hostEmail) hostEmail = streamData.host_email;
+                currentViewers = streamData.viewers_count || 1;
+                currentLikes = streamData.likes_count || 0;
+                
+                const realIsHost = Boolean(state.currentUserEmail) && Boolean(hostEmail) && state.currentUserEmail.toLowerCase() === hostEmail.toLowerCase();
 
-            if (realIsHost && streamData.expires_at) {
-                startHostStreamDurationWatch(streamId, streamData.expires_at);
+                if (realIsHost && streamData.expires_at) {
+                    startHostStreamDurationWatch(streamId, streamData.expires_at);
+                }
+
+                if (!realIsHost) {
+                    currentViewers += 1;
+                    await _supabase
+                        .from('live_streams')
+                        .update({ viewers_count: currentViewers })
+                        .eq('id', streamId);
+                }
             }
-
-            if (!realIsHost) {
-                currentViewers += 1;
-                await _supabase
-                    .from('live_streams')
-                    .update({ viewers_count: currentViewers })
-                    .eq('id', streamId);
-            }
+        } catch (e) {
+            console.warn('Viewer Count Sync Fehler:', e);
         }
-    } catch (e) {
-        console.warn('Viewer Count Sync Fehler:', e);
     }
 
     const finalIsHost = Boolean(state.currentUserEmail) && Boolean(hostEmail) && state.currentUserEmail.toLowerCase() === hostEmail.toLowerCase();
@@ -1257,16 +1301,18 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
                 <div id="webrtc-status-msg" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #fff; font-size: 13px; background: rgba(0,0,0,0.85); padding: 10px 20px; border-radius: 10px; z-index: 6; border: 1px solid var(--border);">Lade Stream... 🔴</div>
             `;
             
-            try {
-                _supabase.from('live_streams').select('current_frame').eq('id', streamId).single().then(({ data: initData }) => {
-                    if (initData && initData.current_frame) {
-                        const imgEl = document.getElementById('active-stream-image-view');
-                        const statusMsg = document.getElementById('webrtc-status-msg');
-                        if (imgEl) imgEl.src = initData.current_frame;
-                        if (statusMsg) statusMsg.remove();
-                    }
-                });
-            } catch (e) {}
+            if (canPollNetwork()) {
+                try {
+                    _supabase.from('live_streams').select('current_frame').eq('id', streamId).single().then(({ data: initData }) => {
+                        if (initData && initData.current_frame) {
+                            const imgEl = document.getElementById('active-stream-image-view');
+                            const statusMsg = document.getElementById('webrtc-status-msg');
+                            if (imgEl) imgEl.src = initData.current_frame;
+                            if (statusMsg) statusMsg.remove();
+                        }
+                    });
+                } catch (e) {}
+            }
         }
         
         if (topBar) playerContainer.appendChild(topBar);
@@ -1274,7 +1320,7 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
 
     if (viewerInterval) clearInterval(viewerInterval);
     viewerInterval = setInterval(async () => {
-        if (!activeStreamId) return;
+        if (!activeStreamId || !canPollNetwork()) return;
         try {
             const { data: sData, error: sErr } = await _supabase
                 .from('live_streams')
@@ -1307,12 +1353,12 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
                 }
             }
         } catch (err) {}
-    }, 1000);
+    }, VIEWER_POLL_MS);
 
     if (framePollInterval) clearInterval(framePollInterval);
     if (!finalIsHost) {
         framePollInterval = setInterval(async () => {
-            if (!activeStreamId) return;
+            if (!activeStreamId || !canPollNetwork()) return;
             try {
                 const { data: fData } = await _supabase
                     .from('live_streams')
@@ -1329,7 +1375,7 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
                     }
                 }
             } catch (e) {}
-        }, 120);
+        }, FRAME_POLL_MS);
     }
 
     if (chatInputContainer) {
@@ -1383,11 +1429,17 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
 
     if (chatPollInterval) clearInterval(chatPollInterval);
     chatPollInterval = setInterval(() => {
+        if (!canPollNetwork()) return;
         loadExistingChatMessages(streamId, false);
-    }, 2000);
+    }, CHAT_POLL_MS);
 }
 
 async function redirectViewerToNextLiveStream(endedStreamId) {
+    if (!canPollNetwork()) {
+        await closeLiveFullscreen();
+        return;
+    }
+
     try {
         const { data: nextStreams } = await _supabase
             .from('live_streams')
@@ -1418,6 +1470,10 @@ async function redirectViewerToNextLiveStream(endedStreamId) {
 
 window.sendScreenTapLike = async function() {
     if (!activeStreamId) return;
+    if (!canPollNetwork()) {
+        renderOfflineBanner(true);
+        return;
+    }
     try {
         const { data } = await _supabase.from('live_streams').select('likes_count').eq('id', activeStreamId).single();
         const newLikes = (data?.likes_count || 0) + 1;
@@ -1425,7 +1481,9 @@ window.sendScreenTapLike = async function() {
         
         const lSpan = document.getElementById('live-likes-count-num');
         if (lSpan) lSpan.textContent = newLikes;
-    } catch (e) {}
+    } catch (e) {
+        if (isNetworkError(e)) renderOfflineBanner(true);
+    }
 };
 
 function sendScreenTapLikeAnim(clientX, clientY) {
@@ -1464,6 +1522,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 async function loadExistingChatMessages(streamId, isInitialLoad = false) {
+    if (!canPollNetwork()) return;
     try {
         const { data: messages, error } = await _supabase
             .from('live_chat_messages')
@@ -1535,6 +1594,12 @@ export async function sendLiveChatMessage() {
         return;
     }
 
+    if (!canPollNetwork()) {
+        renderOfflineBanner(true);
+        alert('Keine Internetverbindung. Nachricht konnte nicht gesendet werden.');
+        return;
+    }
+
     try {
         const { error } = await _supabase
             .from('live_chat_messages')
@@ -1549,12 +1614,15 @@ export async function sendLiveChatMessage() {
             ]);
 
         if (error) {
+            if (isNetworkError(error)) renderOfflineBanner(true);
             alert('Fehler beim Senden der Nachricht: ' + error.message);
             return;
         }
 
         input.value = '';
-    } catch (err) {}
+    } catch (err) {
+        if (isNetworkError(err)) renderOfflineBanner(true);
+    }
 }
 
 window.openGiftsGalleryModal = function(hostEmail) {
@@ -1628,6 +1696,12 @@ export async function subscribeToCreator(creatorEmail) {
         return;
     }
 
+    if (!canPollNetwork()) {
+        renderOfflineBanner(true);
+        alert('Keine Internetverbindung. Abo aktuell nicht möglich.');
+        return;
+    }
+
     const subCost = 150;
 
     if (!confirm(`Möchtest du diesen Creator für 1 Monat abonnieren? Kosten: ${subCost} Campus-Punkte ⚡`)) {
@@ -1684,7 +1758,9 @@ export async function subscribeToCreator(creatorEmail) {
 
         alert('Abo erfolgreich abgeschlossen! Du hast nun exklusive VIP-Vorteile in diesem Stream. 🎉');
 
-    } catch (err) {}
+    } catch (err) {
+        if (isNetworkError(err)) renderOfflineBanner(true);
+    }
 }
 
 export async function sendLiveGift(giftName, cost, hostEmail, matchedGift = null) {
@@ -1696,6 +1772,12 @@ export async function sendLiveGift(giftName, cost, hostEmail, matchedGift = null
 
     if (hostEmail && state.currentUserEmail.toLowerCase() === hostEmail.toLowerCase()) {
         alert('Du kannst dir selbst keine Geschenke senden! 😉');
+        return;
+    }
+
+    if (!canPollNetwork()) {
+        renderOfflineBanner(true);
+        alert('Keine Internetverbindung. Geschenk kann aktuell nicht gesendet werden.');
         return;
     }
 
@@ -1756,7 +1838,9 @@ export async function sendLiveGift(giftName, cost, hostEmail, matchedGift = null
                 ]);
         }
 
-    } catch (err) {}
+    } catch (err) {
+        if (isNetworkError(err)) renderOfflineBanner(true);
+    }
 }
 
 export async function terminateActiveStream() {
@@ -1784,26 +1868,28 @@ export async function terminateActiveStream() {
         }
     }
 
-    try {
-        if (streamIdToEnd) {
-            const nowIso = new Date().toISOString();
-            const { error: updErr } = await _supabase
-                .from('live_streams')
-                .update({
-                    status: 'ended',
-                    stream_url: 'ended',
-                    expires_at: nowIso
-                })
-                .eq('id', streamIdToEnd);
-
-            if (updErr) {
-                await _supabase
+    if (canPollNetwork()) {
+        try {
+            if (streamIdToEnd) {
+                const nowIso = new Date().toISOString();
+                const { error: updErr } = await _supabase
                     .from('live_streams')
-                    .update({ expires_at: nowIso })
+                    .update({
+                        status: 'ended',
+                        stream_url: 'ended',
+                        expires_at: nowIso
+                    })
                     .eq('id', streamIdToEnd);
+
+                if (updErr) {
+                    await _supabase
+                        .from('live_streams')
+                        .update({ expires_at: nowIso })
+                        .eq('id', streamIdToEnd);
+                }
             }
-        }
-    } catch (err) {}
+        } catch (err) {}
+    }
 
     await closeLiveFullscreen();
 }
@@ -1826,7 +1912,7 @@ export async function closeLiveFullscreen() {
     const warnBanner = document.getElementById('stream-15min-warning-banner');
     if (warnBanner) warnBanner.remove();
     
-    if (activeStreamId) {
+    if (activeStreamId && canPollNetwork()) {
         try {
             const { data: sData } = await _supabase
                 .from('live_streams')
