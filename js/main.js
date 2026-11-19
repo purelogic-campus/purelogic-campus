@@ -79,17 +79,18 @@ function ensureDeviceAvatarInput(onFileChosen) {
 }
 
 // Lädt ein Profilbild aus dem Gerätespeicher (Smartphone/PC) hoch und speichert es in users.avatar_url
-window.uploadAvatarFromDevice = async function(triggerBtn = null) {
+window.uploadAvatarFromDevice = async function(targetAvatarEl = null) {
     if (!state.currentUserEmail) {
         alert('Bitte logge dich zuerst ein, um dein Profilbild zu ändern.');
         return;
     }
 
+    const previewEl = targetAvatarEl || document.getElementById('my-profile-avatar-preview');
+
     const fileInput = ensureDeviceAvatarInput(async (file) => {
-        const prevBtnText = triggerBtn ? triggerBtn.textContent : '';
-        if (triggerBtn) {
-            triggerBtn.disabled = true;
-            triggerBtn.textContent = 'Lädt hoch... ⏳';
+        const prevOpacity = previewEl ? previewEl.style.opacity : '';
+        if (previewEl) {
+            previewEl.style.opacity = '0.5';
         }
 
         try {
@@ -149,9 +150,8 @@ window.uploadAvatarFromDevice = async function(triggerBtn = null) {
             console.error('Avatar-Upload Fehler:', err);
             alert(err.message || 'Fehler beim Hochladen des Profilbilds.');
         } finally {
-            if (triggerBtn) {
-                triggerBtn.disabled = false;
-                triggerBtn.textContent = prevBtnText || '🖼️ Bild vom Gerät wählen';
+            if (previewEl) {
+                previewEl.style.opacity = prevOpacity || '1';
             }
         }
     });
@@ -159,32 +159,20 @@ window.uploadAvatarFromDevice = async function(triggerBtn = null) {
     fileInput.click();
 };
 
-// Bindet automatisch einen Upload-Button im Profilbereich ein, falls noch keiner vorhanden ist
-function ensureDeviceAvatarUploadButton() {
-    if (document.getElementById('device-avatar-upload-btn')) return;
+// Macht das Profilbild-Symbol im Profil direkt anklickbar (ohne zusätzlichen Button)
+function bindProfileAvatarClick() {
+    const profileAvatar = document.getElementById('my-profile-avatar-preview');
+    if (!profileAvatar) return;
 
-    const avatarPreview = document.getElementById('my-profile-avatar-preview');
-    const avatarInput = document.getElementById('profile-avatar');
-    const hostEl = avatarPreview?.parentElement || avatarInput?.parentElement;
-    if (!hostEl) return;
+    profileAvatar.style.cursor = 'pointer';
+    if (profileAvatar.getAttribute('data-avatar-click-bound') === '1') return;
+    profileAvatar.setAttribute('data-avatar-click-bound', '1');
 
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.id = 'device-avatar-upload-btn';
-    btn.className = 'btn';
-    btn.textContent = '🖼️ Bild vom Gerät wählen';
-    btn.style.cssText = 'margin-top: 8px; padding: 7px 12px; font-size: 11px; font-weight: 800; cursor: pointer;';
-    btn.onclick = (e) => {
+    profileAvatar.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        window.uploadAvatarFromDevice(btn);
-    };
-
-    if (avatarInput && avatarInput.parentElement === hostEl) {
-        avatarInput.insertAdjacentElement('afterend', btn);
-    } else {
-        hostEl.appendChild(btn);
-    }
+        window.uploadAvatarFromDevice(profileAvatar);
+    });
 }
 
 // Service Worker Registrierung für PWA
@@ -240,7 +228,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupGlobalWindowHandlers();
     setupAuthFormHandlers();
     checkPasswordRecoveryFlow();
-    ensureDeviceAvatarUploadButton();
+    bindProfileAvatarClick();
 
     window.resetUser = async function() {
         try {
@@ -427,7 +415,7 @@ async function initMainAppSession() {
     if (logoutBtn) logoutBtn.classList.remove('hidden');
     if (profileBtn) profileBtn.classList.remove('hidden');
 
-    ensureDeviceAvatarUploadButton();
+    bindProfileAvatarClick();
 
     // Push-Benachrichtigungen und Realtime-Subscriptions starten
     await initPushNotifications();
@@ -487,6 +475,8 @@ async function initMainAppSession() {
         console.error('Fehler beim Laden der User-Daten:', err);
     }
 
+    bindProfileAvatarClick();
+
     if (isMasterAdmin) {
         const scoreBadge = document.getElementById('score');
         if (scoreBadge) scoreBadge.classList.add('admin-badge');
@@ -543,7 +533,9 @@ function setupGlobalWindowHandlers() {
             targetTab.classList.remove('hidden');
         }
 
-        if (tabName === 'admin') {
+        if (tabName === 'profile') {
+            bindProfileAvatarClick();
+        } else if (tabName === 'admin') {
             initAdminMap();
         } else if (tabName === 'ranking') {
             if (typeof window.loadRankingData === 'function') {
@@ -668,7 +660,7 @@ function setupGlobalWindowHandlers() {
     };
 
     window.changeAvatarDirectly = function() {
-        window.uploadAvatarFromDevice(document.getElementById('device-avatar-upload-btn'));
+        window.uploadAvatarFromDevice(document.getElementById('my-profile-avatar-preview'));
     };
 
     window.saveMyProfile = async function() {
