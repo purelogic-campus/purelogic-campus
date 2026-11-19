@@ -1,4 +1,4 @@
-// js/features/live.js • PURE LOGIC Live-Stream, Vorschau-Logik (PC vs. Smartphone), Ranking-Sortierung, Auto-Weiterleitung, Geschenk-Animation (5s+), Geschenk-Sounds & Vertikaler PC-Chat (Unter Abo-Button, ohne Weichzeichner, Transparenz-Regler & Ein-/Ausklappen)
+// js/features/live.js • PURE LOGIC Live-Stream, Vorschau-Logik (PC vs. Smartphone), Ranking-Sortierung, Auto-Weiterleitung, Geschenk-Animation (5s+), Geschenk-Sounds & Vertikaler PC-Chat (Sauber unter Abo-Button, ohne Weichzeichner, Transparenz-Regler & Ein-/Ausklappen)
 import { _supabase } from '../config.js';
 import { state } from '../state.js';
 import { validateInputOrAlert } from './moderation.js';
@@ -146,7 +146,7 @@ function ensureGiftAndDesktopStyles() {
                 #live-fullscreen-modal.desktop-left-chat-active.chat-is-collapsed #desktop-chat-reopen-btn {
                     display: inline-flex !important;
                     position: fixed !important;
-                    top: 112px !important;
+                    top: 146px !important;
                     left: 16px !important;
                     z-index: 100080 !important;
                     align-items: center;
@@ -242,14 +242,14 @@ function applyDesktopChatLayout() {
             chatPanel.style.setProperty('display', 'none', 'important');
         } else {
             chatPanel.style.setProperty('position', 'fixed', 'important');
-            chatPanel.style.setProperty('top', '112px', 'important');
+            chatPanel.style.setProperty('top', '146px', 'important');
             chatPanel.style.setProperty('left', '16px', 'important');
             chatPanel.style.setProperty('bottom', '16px', 'important');
             chatPanel.style.setProperty('right', 'auto', 'important');
             chatPanel.style.setProperty('width', '330px', 'important');
             chatPanel.style.setProperty('max-width', 'calc(100vw - 32px)', 'important');
-            chatPanel.style.setProperty('height', 'calc(100vh - 128px)', 'important');
-            chatPanel.style.setProperty('max-height', 'calc(100vh - 128px)', 'important');
+            chatPanel.style.setProperty('height', 'calc(100vh - 162px)', 'important');
+            chatPanel.style.setProperty('max-height', 'calc(100vh - 162px)', 'important');
             chatPanel.style.setProperty('z-index', '100060', 'important');
             chatPanel.style.setProperty('display', 'flex', 'important');
             chatPanel.style.setProperty('flex-direction', 'column', 'important');
