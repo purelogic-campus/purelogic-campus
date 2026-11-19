@@ -1,4 +1,4 @@
-// js/features/live.js • PURE LOGIC Live-Stream, Vorschau-Logik (PC vs. Smartphone), Ranking-Sortierung, Auto-Weiterleitung & Geschenk-Animation
+// js/features/live.js • PURE LOGIC Live-Stream, Vorschau-Logik (PC vs. Smartphone), Ranking-Sortierung, Auto-Weiterleitung, Geschenk-Animation (5s+), Geschenk-Sounds & Vertikaler PC-Chat (60% Transparenz + Collapse)
 import { _supabase } from '../config.js';
 import { state } from '../state.js';
 import { validateInputOrAlert } from './moderation.js';
@@ -14,6 +14,9 @@ let chatChannel = null;
 let broadcastInterval = null;
 let framePollInterval = null;
 let gridPollInterval = null;
+let audioCtx = null;
+let desktopChatOpacity = 0.6;
+let desktopChatCollapsed = false;
 const animatedGiftMsgIds = new Set();
 
 const campusGifts = [
@@ -34,6 +37,24 @@ const campusGifts = [
     { id: 15, name: 'Master-Admin Krone 👑', cost: 2500 }
 ];
 
+const giftSoundProfiles = {
+    1: { notes: [523.25, 659.25], type: 'sine', step: 0.11, dur: 0.22, gain: 0.14 },
+    2: { notes: [392.00, 493.88, 587.33], type: 'triangle', step: 0.09, dur: 0.18, gain: 0.14 },
+    3: { notes: [440, 554.37, 659.25, 880], type: 'sawtooth', step: 0.06, dur: 0.16, gain: 0.11 },
+    4: { notes: [349.23, 440.00, 523.25], type: 'triangle', step: 0.1, dur: 0.22, gain: 0.15 },
+    5: { notes: [587.33, 783.99], type: 'sine', step: 0.12, dur: 0.24, gain: 0.13 },
+    6: { notes: [493.88, 659.25, 783.99], type: 'square', step: 0.07, dur: 0.16, gain: 0.09 },
+    7: { notes: [659.25, 587.33, 783.99], type: 'triangle', step: 0.07, dur: 0.15, gain: 0.12 },
+    8: { notes: [783.99, 880.00, 987.77, 1046.50], type: 'sine', step: 0.06, dur: 0.14, gain: 0.12 },
+    9: { notes: [440.00, 659.25], type: 'triangle', step: 0.12, dur: 0.25, gain: 0.13 },
+    10: { notes: [523.25, 659.25, 783.99, 1046.50], type: 'triangle', step: 0.08, dur: 0.2, gain: 0.15 },
+    11: { notes: [329.63, 493.88, 659.25], type: 'sine', step: 0.1, dur: 0.24, gain: 0.14 },
+    12: { notes: [261.63, 392.00, 523.25, 783.99, 1046.50], type: 'sawtooth', step: 0.07, dur: 0.22, gain: 0.12 },
+    13: { notes: [392.00, 493.88, 587.33, 783.99], type: 'sine', step: 0.11, dur: 0.28, gain: 0.15 },
+    14: { notes: [587.33, 739.99, 880.00, 1174.66], type: 'triangle', step: 0.08, dur: 0.26, gain: 0.15 },
+    15: { notes: [523.25, 659.25, 783.99, 1046.50, 1318.51], type: 'triangle', step: 0.09, dur: 0.34, gain: 0.17 }
+};
+
 const subCategoriesMap = {
     '💬 Plaudern': ['Allgemein', 'Campus Life', 'Late Night Talk', 'Q&A / Frag mich alles', 'Kaffee & Break'],
     '🎮 Gaming': ['World of Warcraft (WoW)', 'Minecraft', 'League of Legends', 'Valorant', 'Apex Legends', 'GTA V', 'Indie Games'],
@@ -41,32 +62,218 @@ const subCategoriesMap = {
     '📚 Lernen': ['Study With Me (Pomodoro)', 'Coding & Programming', 'Mathematik & Statistik', 'Vorbereitung Klausur', 'Fremdsprachen']
 };
 
-function ensureGiftAnimationStyles() {
-    if (document.getElementById('live-gift-anim-styles')) return;
-    const style = document.createElement('style');
-    style.id = 'live-gift-anim-styles';
-    style.textContent = `
-        @keyframes liveGiftBannerPop {
-            0% { transform: translate(-50%, 24px) scale(0.75); opacity: 0; }
-            15% { transform: translate(-50%, 0) scale(1.05); opacity: 1; }
-            25% { transform: translate(-50%, 0) scale(1); opacity: 1; }
-            82% { transform: translate(-50%, -8px) scale(1); opacity: 1; }
-            100% { transform: translate(-50%, -28px) scale(0.92); opacity: 0; }
-        }
-        @keyframes liveGiftEmojiBurst {
-            0% { transform: translateY(0) scale(0.5) rotate(-10deg); opacity: 0; }
-            20% { opacity: 1; transform: translateY(-20px) scale(1.25) rotate(8deg); }
-            100% { transform: translateY(-180px) scale(1.5) rotate(-12deg); opacity: 0; }
-        }
-    `;
-    document.head.appendChild(style);
+function getAudioContext() {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return null;
+    if (!audioCtx) {
+        audioCtx = new AudioCtx();
+    }
+    if (audioCtx.state === 'suspended') {
+        audioCtx.resume().catch(() => {});
+    }
+    return audioCtx;
 }
 
-export function playLiveGiftAnimation(giftText, senderLabel = 'Jemand') {
+function findGiftByText(giftText) {
+    if (!giftText) return campusGifts[0];
+    const normalized = giftText.toLowerCase();
+    return (
+        campusGifts.find(g => normalized.includes(g.name.toLowerCase())) ||
+        campusGifts.find(g => {
+            const emoji = g.name.split(' ').pop();
+            return emoji && normalized.includes(emoji);
+        }) ||
+        campusGifts[0]
+    );
+}
+
+export function playGiftSound(giftOrId) {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+
+    const giftId = typeof giftOrId === 'object' && giftOrId !== null ? giftOrId.id : Number(giftOrId) || 1;
+    const profile = giftSoundProfiles[giftId] || giftSoundProfiles[1];
+    const now = ctx.currentTime;
+
+    profile.notes.forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gainNode = ctx.createGain();
+        osc.type = profile.type;
+        osc.frequency.setValueAtTime(freq, now + idx * profile.step);
+
+        const startAt = now + idx * profile.step;
+        const endAt = startAt + profile.dur;
+        gainNode.gain.setValueAtTime(0.0001, startAt);
+        gainNode.gain.exponentialRampToValueAtTime(profile.gain, startAt + 0.02);
+        gainNode.gain.exponentialRampToValueAtTime(0.0001, endAt);
+
+        osc.connect(gainNode);
+        gainNode.connect(ctx.destination);
+        osc.start(startAt);
+        osc.stop(endAt + 0.02);
+    });
+}
+
+function ensureGiftAndDesktopStyles() {
+    if (!document.getElementById('live-gift-anim-styles')) {
+        const style = document.createElement('style');
+        style.id = 'live-gift-anim-styles';
+        style.textContent = `
+            @keyframes liveGiftBannerPop {
+                0% { transform: translate(-50%, 28px) scale(0.75); opacity: 0; }
+                8% { transform: translate(-50%, 0) scale(1.06); opacity: 1; }
+                14% { transform: translate(-50%, 0) scale(1); opacity: 1; }
+                88% { transform: translate(-50%, -10px) scale(1); opacity: 1; }
+                100% { transform: translate(-50%, -32px) scale(0.92); opacity: 0; }
+            }
+            @keyframes liveGiftEmojiBurst {
+                0% { transform: translateY(0) scale(0.5) rotate(-10deg); opacity: 0; }
+                12% { opacity: 1; transform: translateY(-25px) scale(1.25) rotate(8deg); }
+                100% { transform: translateY(-240px) scale(1.55) rotate(-14deg); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
+    if (!document.getElementById('live-desktop-left-chat-styles')) {
+        const desktopStyle = document.createElement('style');
+        desktopStyle.id = 'live-desktop-left-chat-styles';
+        desktopStyle.textContent = `
+            @media (min-width: 768px) {
+                #live-fullscreen-modal.desktop-left-chat-active .live-modal-body,
+                #live-fullscreen-modal.desktop-left-chat-active > div > div:last-child {
+                    position: relative;
+                }
+                #live-fullscreen-modal.desktop-left-chat-active #live-chat-panel,
+                #live-fullscreen-modal.desktop-left-chat-active [id*="live-chat-panel"] {
+                    position: fixed !important;
+                    top: 76px !important;
+                    left: 20px !important;
+                    bottom: 20px !important;
+                    width: 320px !important;
+                    max-width: calc(100vw - 40px) !important;
+                    height: auto !important;
+                    max-height: calc(100vh - 96px) !important;
+                    z-index: 10050 !important;
+                    border-radius: 16px !important;
+                    border: 1px solid rgba(255, 255, 255, 0.16) !important;
+                    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65) !important;
+                    display: flex !important;
+                    flex-direction: column !important;
+                    overflow: hidden !important;
+                    transition: width 0.22s ease, opacity 0.2s ease;
+                }
+                #live-fullscreen-modal.desktop-left-chat-active.chat-is-collapsed #live-chat-panel,
+                #live-fullscreen-modal.desktop-left-chat-active.chat-is-collapsed [id*="live-chat-panel"] {
+                    width: auto !important;
+                    height: auto !important;
+                    top: 76px !important;
+                    left: 20px !important;
+                    bottom: auto !important;
+                }
+                #live-fullscreen-modal.desktop-left-chat-active.chat-is-collapsed #live-chat-messages,
+                #live-fullscreen-modal.desktop-left-chat-active.chat-is-collapsed #live-chat-input-container,
+                #live-fullscreen-modal.desktop-left-chat-active.chat-is-collapsed .live-chat-opacity-row {
+                    display: none !important;
+                }
+                #live-fullscreen-modal.desktop-left-chat-active #live-chat-messages {
+                    flex: 1 !important;
+                    height: auto !important;
+                    min-height: 168px !important;
+                    max-height: none !important;
+                    background: transparent !important;
+                }
+                #live-fullscreen-modal.desktop-left-chat-active #live-chat-input-container {
+                    background: rgba(15, 23, 42, 0.55) !important;
+                }
+            }
+        `;
+        document.head.appendChild(desktopStyle);
+    }
+}
+
+function applyDesktopChatLayout() {
+    ensureGiftAndDesktopStyles();
+    const modal = document.getElementById('live-fullscreen-modal');
+    if (!modal) return;
+
+    const chatMessagesEl = document.getElementById('live-chat-messages');
+    const chatInputContainer = document.getElementById('live-chat-input-container');
+    const chatPanel =
+        chatMessagesEl?.closest('[id*="chat"]') ||
+        chatInputContainer?.closest('[id*="chat"]') ||
+        chatMessagesEl?.parentElement;
+
+    if (chatPanel && !chatPanel.id) {
+        chatPanel.id = 'live-chat-panel';
+    }
+
+    const isDesktop = window.innerWidth >= 768;
+
+    if (isDesktop && chatPanel) {
+        modal.classList.add('desktop-left-chat-active');
+        modal.classList.toggle('chat-is-collapsed', desktopChatCollapsed);
+
+        const alpha = desktopChatOpacity;
+        chatPanel.style.backgroundColor = `rgba(15, 23, 42, ${alpha})`;
+        chatPanel.style.backdropFilter = alpha < 0.95 ? 'blur(10px)' : 'none';
+
+        let controlsBar = document.getElementById('desktop-chat-controls-bar');
+        if (!controlsBar) {
+            controlsBar = document.createElement('div');
+            controlsBar.id = 'desktop-chat-controls-bar';
+            controlsBar.style.cssText = 'display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.12); background: rgba(9, 13, 22, 0.45); flex-shrink: 0;';
+            chatPanel.prepend(controlsBar);
+        }
+
+        const pctValue = Math.round(desktopChatOpacity * 100);
+        controlsBar.innerHTML = `
+            <button type="button" onclick="toggleDesktopLiveChatCollapse()" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.18); color: #fff; font-size: 11px; font-weight: 800; padding: 4px 9px; border-radius: 8px; cursor: pointer; white-space: nowrap;">
+                ${desktopChatCollapsed ? '💬 Chat öffnen' : '➖ Einklappen'}
+            </button>
+            <div class="live-chat-opacity-row" style="display: flex; align-items: center; gap: 6px; flex: 1; justify-content: flex-end;">
+                <span style="font-size: 10px; font-weight: 700; color: #cbd5e1; white-space: nowrap;">Transparenz: <strong id="live-chat-opacity-label">${pctValue}%</strong></span>
+                <input type="range" id="live-chat-opacity-slider" min="15" max="100" step="5" value="${pctValue}" oninput="setDesktopLiveChatOpacity(this.value)" style="width: 78px; margin: 0; padding: 0; accent-color: #ec4899; cursor: pointer;">
+            </div>
+        `;
+    } else {
+        modal.classList.remove('desktop-left-chat-active', 'chat-is-collapsed');
+        const controlsBar = document.getElementById('desktop-chat-controls-bar');
+        if (controlsBar) controlsBar.remove();
+        if (chatPanel) {
+            chatPanel.style.backgroundColor = '';
+            chatPanel.style.backdropFilter = '';
+        }
+    }
+}
+
+window.toggleDesktopLiveChatCollapse = function() {
+    desktopChatCollapsed = !desktopChatCollapsed;
+    applyDesktopChatLayout();
+};
+
+window.setDesktopLiveChatOpacity = function(percentValue) {
+    const num = Math.max(15, Math.min(100, Number(percentValue) || 60));
+    desktopChatOpacity = num / 100;
+    const label = document.getElementById('live-chat-opacity-label');
+    if (label) label.textContent = `${num}%`;
+    applyDesktopChatLayout();
+};
+
+window.addEventListener('resize', () => {
+    if (activeStreamId) {
+        applyDesktopChatLayout();
+    }
+});
+
+export function playLiveGiftAnimation(giftText, senderLabel = 'Jemand', giftObj = null) {
     const playerContainer = document.getElementById('live-stream-player-container');
     if (!playerContainer) return;
 
-    ensureGiftAnimationStyles();
+    ensureGiftAndDesktopStyles();
+
+    const matchedGift = giftObj || findGiftByText(giftText);
+    playGiftSound(matchedGift);
 
     const cleanSender = senderLabel.includes('@') ? senderLabel.split('@')[0] : senderLabel;
     const emojiMatch = giftText.match(/(\p{Extended_Pictographic})/gu);
@@ -76,17 +283,19 @@ export function playLiveGiftAnimation(giftText, senderLabel = 'Jemand') {
         .replace(/\s*GESENDET!.*$/i, '')
         .trim();
 
+    const animationDurationMs = 5200;
+
     const banner = document.createElement('div');
     banner.style.cssText = `
         position: absolute;
-        bottom: 24px;
+        bottom: 28px;
         left: 50%;
         transform: translate(-50%, 0);
         z-index: 99998;
         pointer-events: none;
         background: linear-gradient(135deg, rgba(245, 158, 11, 0.95), rgba(236, 72, 153, 0.95));
         color: #fff;
-        padding: 10px 18px;
+        padding: 11px 20px;
         border-radius: 999px;
         font-size: 12px;
         font-weight: 900;
@@ -94,28 +303,28 @@ export function playLiveGiftAnimation(giftText, senderLabel = 'Jemand') {
         box-shadow: 0 10px 30px rgba(236, 72, 153, 0.55);
         border: 2px solid rgba(255, 255, 255, 0.45);
         white-space: nowrap;
-        animation: liveGiftBannerPop 2.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        animation: liveGiftBannerPop ${animationDurationMs}ms cubic-bezier(0.22, 1, 0.36, 1) forwards;
     `;
     banner.innerHTML = `${giftEmoji} <strong>${cleanSender}</strong> sendet <strong>${shortLabel || giftText}</strong> ✨`;
     playerContainer.appendChild(banner);
-    setTimeout(() => banner.remove(), 2900);
+    setTimeout(() => banner.remove(), animationDurationMs + 150);
 
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 12; i++) {
         const burst = document.createElement('div');
-        const offsetX = 18 + Math.random() * 64;
-        const delayMs = i * 110;
+        const offsetX = 15 + Math.random() * 70;
+        const delayMs = i * 320;
         burst.textContent = i % 2 === 0 ? giftEmoji : '✨';
         burst.style.cssText = `
             position: absolute;
             left: ${offsetX}%;
-            bottom: 48px;
+            bottom: 52px;
             font-size: ${24 + Math.floor(Math.random() * 14)}px;
             z-index: 99997;
             pointer-events: none;
-            animation: liveGiftEmojiBurst 1.8s ease-out ${delayMs}ms forwards;
+            animation: liveGiftEmojiBurst 2.4s ease-out ${delayMs}ms forwards;
         `;
         playerContainer.appendChild(burst);
-        setTimeout(() => burst.remove(), 1950 + delayMs);
+        setTimeout(() => burst.remove(), 2550 + delayMs);
     }
 }
 
@@ -553,6 +762,7 @@ export function setLiveFilter(element, category) {
 
 export async function openLiveFullscreen(streamId, category, location, streamTitle = '', isHost = false, hostEmail = '') {
     activeStreamId = streamId;
+    desktopChatCollapsed = false;
     const modal = document.getElementById('live-fullscreen-modal');
     if (modal) modal.classList.remove('hidden');
 
@@ -738,6 +948,8 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
         chatMessagesEl.style.cssText = 'height: 168px; min-height: 168px; max-height: 168px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; padding: 8px 10px; box-sizing: border-box;';
         chatMessagesEl.innerHTML = `<div id="chat-status-msg" style="color: var(--text-muted); text-align: center; padding: 10px; font-size: 11px;">Chat verbunden 💬</div>`;
     }
+
+    applyDesktopChatLayout();
 
     await loadExistingChatMessages(streamId, true);
 
@@ -934,6 +1146,7 @@ export async function sendLiveChatMessage() {
 }
 
 window.openGiftsGalleryModal = function(hostEmail) {
+    getAudioContext();
     let modal = document.getElementById('gifts-gallery-modal');
     if (!modal) {
         modal = document.createElement('div');
@@ -954,7 +1167,7 @@ window.openGiftsGalleryModal = function(hostEmail) {
                 <div id="gifts-grid-container" style="flex: 1; overflow-y: auto; padding: 14px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;"></div>
 
                 <div style="padding: 12px 16px; border-top: 1px solid var(--border); background: rgba(0,0,0,0.3); text-align: center;">
-                    <span style="font-size: 10px; color: var(--text-muted);">Geschenke lösen Animationen im Stream aus! ✨</span>
+                    <span style="font-size: 10px; color: var(--text-muted);">Jedes Geschenk spielt seinen eigenen Sound & Animation ab! 🔊✨</span>
                 </div>
             </div>
         `;
@@ -981,7 +1194,7 @@ function renderGiftsGrid(hostEmail) {
         card.onmouseover = () => { card.style.borderColor = 'var(--primary)'; card.style.background = 'rgba(99,102,241,0.08)'; };
         card.onmouseout = () => { card.style.borderColor = 'var(--border)'; card.style.background = 'rgba(255,255,255,0.03)'; };
         
-        card.onclick = () => sendLiveGift(gift.name, gift.cost, hostEmail);
+        card.onclick = () => sendLiveGift(gift.name, gift.cost, hostEmail, gift);
 
         card.innerHTML = `
             <div style="font-size: 28px;">${gift.name.split(' ').pop()}</div>
@@ -1062,7 +1275,8 @@ export async function subscribeToCreator(creatorEmail) {
     } catch (err) {}
 }
 
-export async function sendLiveGift(giftName, cost, hostEmail) {
+export async function sendLiveGift(giftName, cost, hostEmail, matchedGift = null) {
+    getAudioContext();
     if (!state.currentUserEmail) {
         alert('Bitte logge dich ein, um Geschenke zu senden.');
         return;
@@ -1114,7 +1328,7 @@ export async function sendLiveGift(giftName, cost, hostEmail) {
         const giftMessageText = `🎁 HAT ${giftName.toUpperCase()} (${cost} P) GESENDET! 🎉`;
         const giftMsgId = crypto.randomUUID();
         animatedGiftMsgIds.add(giftMsgId);
-        playLiveGiftAnimation(giftMessageText, state.currentUserEmail || 'Du');
+        playLiveGiftAnimation(giftMessageText, state.currentUserEmail || 'Du', matchedGift);
 
         if (activeStreamId) {
             await _supabase
@@ -1209,3 +1423,4 @@ window.subscribeToCreator = subscribeToCreator;
 window.sendScreenTapLike = sendScreenTapLike;
 window.handlePureLogicLogoClick = handlePureLogicLogoClick;
 window.playLiveGiftAnimation = playLiveGiftAnimation;
+window.playGiftSound = playGiftSound;
