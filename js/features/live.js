@@ -3,8 +3,13 @@ import { _supabase } from '../config.js';
 import { state } from '../state.js';
 import { validateInputOrAlert } from './moderation.js';
 
+const MAX_STREAM_DURATION_MS = 12 * 60 * 60 * 1000;
+const WARNING_BEFORE_END_MS = 15 * 60 * 1000;
+
 let localStream = null;
 let activeStreamId = null;
+let activeStreamExpiresAtMs = null;
+let warningShownForStreamId = null;
 let selectedMainCategory = '💬 Plaudern';
 let selectedSubCategory = 'Allgemein';
 let currentActiveFilter = 'Alle';
@@ -15,6 +20,7 @@ let streamGridChannel = null;
 let broadcastInterval = null;
 let framePollInterval = null;
 let gridPollInterval = null;
+let streamLimitCheckInterval = null;
 let audioCtx = null;
 let desktopChatOpacity = 0.6;
 let desktopChatCollapsed = false;
@@ -80,6 +86,116 @@ function isStreamEnded(stream, nowMs = Date.now()) {
         }
     }
     return false;
+}
+
+function showFifteenMinuteWarningBanner() {
+    const playerContainer = document.getElementById('live-stream-player-container') || document.body;
+    if (!playerContainer || document.getElementById('stream-15min-warning-banner')) return;
+
+    const banner = document.createElement('div');
+    banner.id = 'stream-15min-warning-banner';
+    banner.style.cssText = `
+        position: ${playerContainer === document.body ? 'fixed' : 'absolute'};
+        top: 64px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 99999;
+        max-width: 92%;
+        background: rgba(127, 29, 29, 0.96);
+        color: #fff;
+        border: 2px solid #fca5a5;
+        border-radius: 12px;
+        padding: 10px 16px;
+        font-size: 12px;
+        font-weight: 800;
+        box-shadow: 0 10px 28px rgba(0, 0, 0, 0.65);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    `;
+    banner.innerHTML = `
+        <span>⏳ Hinweis: Dein Stream wird in <strong>15 Minuten</strong> automatisch beendet (max. 12 Stunden Laufzeit).</span>
+        <button type="button" onclick="this.parentElement.remove()" style="background: rgba(255,255,255,0.18); border: none; color: #fff; border-radius: 6px; padding: 3px 8px; font-size: 11px; font-weight: 900; cursor: pointer;">OK</button>
+    `;
+    playerContainer.appendChild(banner);
+}
+
+function startHostStreamDurationWatch(streamId, expiresAtIso) {
+    if (streamLimitCheckInterval) {
+        clearInterval(streamLimitCheckInterval);
+        streamLimitCheckInterval = null;
+    }
+
+    const expMs = expiresAtIso ? new Date(expiresAtIso).getTime() : (Date.now() + MAX_STREAM_DURATION_MS);
+    if (!Number.isFinite(expMs)) return;
+
+    activeStreamExpiresAtMs = expMs;
+
+    const checkRemaining = async () => {
+        if (!activeStreamId || String(activeStreamId) !== String(streamId)) return;
+        const remainingMs = activeStreamExpiresAtMs - Date.now();
+
+        if (remainingMs <= WARNING_BEFORE_END_MS && remainingMs > 0) {
+            if (warningShownForStreamId !== String(streamId)) {
+                warningShownForStreamId = String(streamId);
+                showFifteenMinuteWarningBanner();
+            }
+        }
+
+        if (remainingMs <= 0) {
+            if (streamLimitCheckInterval) {
+                clearInterval(streamLimitCheckInterval);
+                streamLimitCheckInterval = null;
+            }
+            await runScheduledStreamTermination(String(streamId));
+        }
+    };
+
+    checkRemaining();
+    streamLimitCheckInterval = setInterval(checkRemaining, 5000);
+}
+
+async function runScheduledStreamTermination(streamIdToEnd) {
+    if (!streamIdToEnd) return;
+    if (broadcastInterval) clearInterval(broadcastInterval);
+    if (framePollInterval) clearInterval(framePollInterval);
+    if (gridPollInterval) clearInterval(gridPollInterval);
+
+    endedStreamIds.add(streamIdToEnd);
+    const warnBanner = document.getElementById('stream-15min-warning-banner');
+    if (warnBanner) warnBanner.remove();
+
+    const liveList = document.getElementById('live-streams-list');
+    const cardEl = liveList?.querySelector(`[data-stream-id="${streamIdToEnd}"]`);
+    if (cardEl) {
+        markCardAsEnded(cardEl, { id: streamIdToEnd }, {
+            followedSet: new Set(),
+            avatarMap: {},
+            isMobileDevice: (window.innerWidth <= 768) || (navigator.maxTouchPoints > 0)
+        });
+    }
+
+    try {
+        const nowIso = new Date().toISOString();
+        const { error: updErr } = await _supabase
+            .from('live_streams')
+            .update({
+                status: 'ended',
+                stream_url: 'ended',
+                expires_at: nowIso
+            })
+            .eq('id', streamIdToEnd);
+
+        if (updErr) {
+            await _supabase
+                .from('live_streams')
+                .update({ expires_at: nowIso })
+                .eq('id', streamIdToEnd);
+        }
+    } catch (err) {}
+
+    alert('Die maximale Stream-Dauer von 12 Stunden ist erreicht. Dein Stream wurde automatisch beendet.');
+    await closeLiveFullscreen();
 }
 
 function getAudioContext() {
@@ -682,7 +798,7 @@ export async function confirmAndStartLiveStream() {
 
 async function startLiveStreamBroadcast(category, location, title, streamUrl = 'active') {
     try {
-        const expiresAt = new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString();
+        const expiresAt = new Date(Date.now() + MAX_STREAM_DURATION_MS).toISOString();
 
         const { data, error } = await _supabase
             .from('live_streams')
@@ -710,9 +826,11 @@ async function startLiveStreamBroadcast(category, location, title, streamUrl = '
         }
 
         activeStreamId = data.id;
+        warningShownForStreamId = null;
         endedStreamIds.delete(String(data.id));
         loadLiveStreams();
         startCanvasBroadcasting();
+        startHostStreamDurationWatch(data.id, data.expires_at || expiresAt);
 
         if (localStream) {
             openLiveFullscreen(data.id, category, location, title, true, data.host_email);
@@ -1073,7 +1191,7 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
     try {
         const { data: streamData } = await _supabase
             .from('live_streams')
-            .select('viewers_count, likes_count, current_frame, host_email')
+            .select('viewers_count, likes_count, current_frame, host_email, expires_at')
             .eq('id', streamId)
             .single();
 
@@ -1083,6 +1201,10 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
             currentLikes = streamData.likes_count || 0;
             
             const realIsHost = Boolean(state.currentUserEmail) && Boolean(hostEmail) && state.currentUserEmail.toLowerCase() === hostEmail.toLowerCase();
+
+            if (realIsHost && streamData.expires_at) {
+                startHostStreamDurationWatch(streamId, streamData.expires_at);
+            }
 
             if (!realIsHost) {
                 currentViewers += 1;
@@ -1643,6 +1765,10 @@ export async function terminateActiveStream() {
     if (broadcastInterval) clearInterval(broadcastInterval);
     if (framePollInterval) clearInterval(framePollInterval);
     if (gridPollInterval) clearInterval(gridPollInterval);
+    if (streamLimitCheckInterval) {
+        clearInterval(streamLimitCheckInterval);
+        streamLimitCheckInterval = null;
+    }
 
     const streamIdToEnd = activeStreamId ? String(activeStreamId) : null;
     if (streamIdToEnd) {
@@ -1688,10 +1814,17 @@ export async function closeLiveFullscreen() {
     if (broadcastInterval) clearInterval(broadcastInterval);
     if (framePollInterval) clearInterval(framePollInterval);
     if (gridPollInterval) clearInterval(gridPollInterval);
+    if (streamLimitCheckInterval) {
+        clearInterval(streamLimitCheckInterval);
+        streamLimitCheckInterval = null;
+    }
     if (chatChannel) {
         _supabase.removeChannel(chatChannel);
         chatChannel = null;
     }
+
+    const warnBanner = document.getElementById('stream-15min-warning-banner');
+    if (warnBanner) warnBanner.remove();
     
     if (activeStreamId) {
         try {
@@ -1722,6 +1855,8 @@ export async function closeLiveFullscreen() {
         localStream = null;
     }
     activeStreamId = null;
+    activeStreamExpiresAtMs = null;
+    warningShownForStreamId = null;
     loadLiveStreams();
 }
 
