@@ -471,7 +471,6 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
 
     if (titleDisplay) titleDisplay.textContent = `🔴 ${streamTitle || category}`;
     
-    // Exakte Host-Prüfung über Datenbank-E-Mail und angemeldeten User
     const currentUserIsHost = isHost || (Boolean(state.currentUserEmail) && Boolean(hostEmail) && state.currentUserEmail.toLowerCase() === hostEmail.toLowerCase());
 
     if (!currentUserIsHost && localStream) {
@@ -1045,8 +1044,7 @@ export async function terminateActiveStream() {
         }
     } catch (err) {}
 
-    closeLiveFullscreen();
-    loadLiveStreams();
+    await closeLiveFullscreen();
 }
 
 export async function closeLiveFullscreen() {
