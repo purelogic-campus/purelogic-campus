@@ -1,4 +1,4 @@
-// js/features/live.js • PURE LOGIC Live-Stream, Vorschau-Logik (PC vs. Smartphone), Ranking-Sortierung, Auto-Weiterleitung, Geschenk-Animation (5s+), Geschenk-Sounds & Vertikaler PC-Chat (Links Vollhöhe, funktionierender Transparenz-Regler, Ein-/Ausklappen)
+// js/features/live.js • PURE LOGIC Live-Stream, Vorschau-Logik (PC vs. Smartphone), Ranking-Sortierung, Auto-Weiterleitung, Geschenk-Animation (5s+), Geschenk-Sounds & Vertikaler PC-Chat (Links mit Randabstand, Transparenz-Regler & Ein-/Ausklappen)
 import { _supabase } from '../config.js';
 import { state } from '../state.js';
 import { validateInputOrAlert } from './moderation.js';
@@ -148,18 +148,18 @@ function ensureGiftAndDesktopStyles() {
                     position: fixed !important;
                     top: 76px !important;
                     left: 16px !important;
-                    z-index: 100060 !important;
+                    z-index: 100075 !important;
                     align-items: center;
                     gap: 6px;
-                    background: rgba(15, 23, 42, 0.92);
+                    background: rgba(15, 23, 42, 0.94);
                     color: #fff;
-                    border: 1px solid rgba(255, 255, 255, 0.25);
+                    border: 1px solid rgba(255, 255, 255, 0.28);
                     border-radius: 12px;
                     padding: 8px 14px;
                     font-size: 12px;
                     font-weight: 900;
                     cursor: pointer;
-                    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+                    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.65);
                     backdrop-filter: blur(8px);
                 }
             }
@@ -199,6 +199,16 @@ function findDesktopChatContainer(modal) {
     return chatMessagesEl?.parentElement || chatInputContainer?.parentElement || null;
 }
 
+function syncDesktopChatBarState() {
+    const pctValue = Math.round(desktopChatOpacity * 100);
+    const label = document.getElementById('live-chat-opacity-label');
+    if (label) label.textContent = `${pctValue}%`;
+    const slider = document.getElementById('live-chat-opacity-slider');
+    if (slider && document.activeElement !== slider) {
+        slider.value = String(pctValue);
+    }
+}
+
 function applyDesktopChatLayout() {
     ensureGiftAndDesktopStyles();
     const modal = document.getElementById('live-fullscreen-modal');
@@ -225,67 +235,70 @@ function applyDesktopChatLayout() {
         modal.classList.toggle('chat-is-collapsed', desktopChatCollapsed);
 
         const alpha = desktopChatOpacity;
-        const bgRgba = `rgba(15, 23, 42, ${alpha})`;
-        const innerRgba = `rgba(15, 23, 42, ${Math.min(1, alpha + 0.08)})`;
+        const panelBg = `rgba(15, 23, 42, ${alpha})`;
+        const headerBg = `rgba(15, 23, 42, ${Math.min(1, alpha + 0.15)})`;
 
         if (desktopChatCollapsed) {
             chatPanel.style.setProperty('display', 'none', 'important');
         } else {
             chatPanel.style.setProperty('position', 'fixed', 'important');
-            chatPanel.style.setProperty('top', '0px', 'important');
-            chatPanel.style.setProperty('left', '0px', 'important');
-            chatPanel.style.setProperty('bottom', '0px', 'important');
+            chatPanel.style.setProperty('top', '16px', 'important');
+            chatPanel.style.setProperty('left', '16px', 'important');
+            chatPanel.style.setProperty('bottom', '16px', 'important');
             chatPanel.style.setProperty('right', 'auto', 'important');
             chatPanel.style.setProperty('width', '330px', 'important');
-            chatPanel.style.setProperty('max-width', '85vw', 'important');
-            chatPanel.style.setProperty('height', '100vh', 'important');
-            chatPanel.style.setProperty('max-height', '100vh', 'important');
-            chatPanel.style.setProperty('z-index', '100050', 'important');
+            chatPanel.style.setProperty('max-width', 'calc(100vw - 32px)', 'important');
+            chatPanel.style.setProperty('height', 'calc(100vh - 32px)', 'important');
+            chatPanel.style.setProperty('max-height', 'calc(100vh - 32px)', 'important');
+            chatPanel.style.setProperty('z-index', '100060', 'important');
             chatPanel.style.setProperty('display', 'flex', 'important');
             chatPanel.style.setProperty('flex-direction', 'column', 'important');
             chatPanel.style.setProperty('overflow', 'hidden', 'important');
-            chatPanel.style.setProperty('background', bgRgba, 'important');
-            chatPanel.style.setProperty('background-color', bgRgba, 'important');
-            chatPanel.style.setProperty('border-right', '1px solid rgba(255, 255, 255, 0.18)', 'important');
-            chatPanel.style.setProperty('border-radius', '0 16px 16px 0', 'important');
-            chatPanel.style.setProperty('box-shadow', '8px 0 32px rgba(0, 0, 0, 0.55)', 'important');
-            chatPanel.style.setProperty('backdrop-filter', 'blur(8px)', 'important');
+            chatPanel.style.setProperty('background', panelBg, 'important');
+            chatPanel.style.setProperty('background-color', panelBg, 'important');
+            chatPanel.style.setProperty('border', '1px solid rgba(255, 255, 255, 0.18)', 'important');
+            chatPanel.style.setProperty('border-radius', '16px', 'important');
+            chatPanel.style.setProperty('box-shadow', '0 14px 36px rgba(0, 0, 0, 0.55)', 'important');
+            chatPanel.style.setProperty('backdrop-filter', alpha < 0.98 ? 'blur(8px)' : 'none', 'important');
         }
 
         let controlsBar = document.getElementById('desktop-chat-controls-bar');
+        const pctValue = Math.round(desktopChatOpacity * 100);
+
         if (!controlsBar) {
             controlsBar = document.createElement('div');
             controlsBar.id = 'desktop-chat-controls-bar';
+            controlsBar.innerHTML = `
+                <button type="button" onclick="toggleDesktopLiveChatCollapse(true)" style="background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.24); color: #fff; font-size: 11px; font-weight: 800; padding: 5px 10px; border-radius: 8px; cursor: pointer; white-space: nowrap;">
+                    ➖ Einklappen
+                </button>
+                <div style="display: flex; align-items: center; gap: 6px; flex: 1; justify-content: flex-end;">
+                    <span style="font-size: 10px; font-weight: 700; color: #f1f5f9; white-space: nowrap;">Transparenz: <strong id="live-chat-opacity-label">${pctValue}%</strong></span>
+                    <input type="range" id="live-chat-opacity-slider" min="15" max="100" step="5" value="${pctValue}" oninput="setDesktopLiveChatOpacity(this.value)" onchange="setDesktopLiveChatOpacity(this.value)" style="width: 82px; margin: 0; padding: 0; accent-color: #ec4899; cursor: pointer;">
+                </div>
+            `;
         }
+
         if (controlsBar.parentElement !== chatPanel) {
             chatPanel.prepend(controlsBar);
         }
 
-        controlsBar.style.cssText = `display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.14); flex-shrink: 0; background: ${innerRgba};`;
-
-        const pctValue = Math.round(desktopChatOpacity * 100);
-        controlsBar.innerHTML = `
-            <button type="button" onclick="toggleDesktopLiveChatCollapse(true)" style="background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2); color: #fff; font-size: 11px; font-weight: 800; padding: 5px 10px; border-radius: 8px; cursor: pointer; white-space: nowrap;">
-                ➖ Einklappen
-            </button>
-            <div style="display: flex; align-items: center; gap: 6px; flex: 1; justify-content: flex-end;">
-                <span style="font-size: 10px; font-weight: 700; color: #e2e8f0; white-space: nowrap;">Transparenz: <strong id="live-chat-opacity-label">${pctValue}%</strong></span>
-                <input type="range" id="live-chat-opacity-slider" min="15" max="100" step="5" value="${pctValue}" oninput="setDesktopLiveChatOpacity(this.value)" onchange="setDesktopLiveChatOpacity(this.value)" style="width: 82px; margin: 0; padding: 0; accent-color: #ec4899; cursor: pointer;">
-            </div>
-        `;
+        controlsBar.style.cssText = `display: flex !important; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.14); flex-shrink: 0; position: relative; z-index: 100070; background: ${headerBg};`;
+        syncDesktopChatBarState();
 
         if (chatMessagesEl) {
             chatMessagesEl.style.setProperty('flex', '1', 'important');
             chatMessagesEl.style.setProperty('height', 'auto', 'important');
-            chatMessagesEl.style.setProperty('min-height', '168px', 'important');
+            chatMessagesEl.style.setProperty('min-height', '120px', 'important');
             chatMessagesEl.style.setProperty('max-height', 'none', 'important');
             chatMessagesEl.style.setProperty('background', 'transparent', 'important');
             chatMessagesEl.style.setProperty('background-color', 'transparent', 'important');
         }
 
         if (chatInputContainer) {
-            chatInputContainer.style.setProperty('background', innerRgba, 'important');
-            chatInputContainer.style.setProperty('background-color', innerRgba, 'important');
+            chatInputContainer.style.setProperty('background', headerBg, 'important');
+            chatInputContainer.style.setProperty('background-color', headerBg, 'important');
+            chatInputContainer.style.setProperty('flex-shrink', '0', 'important');
         }
     } else {
         modal.classList.remove('desktop-left-chat-active', 'chat-is-collapsed');
@@ -295,7 +308,7 @@ function applyDesktopChatLayout() {
             [
                 'position', 'top', 'left', 'bottom', 'right', 'width', 'max-width',
                 'height', 'max-height', 'z-index', 'display', 'flex-direction',
-                'overflow', 'background', 'background-color', 'border-right',
+                'overflow', 'background', 'background-color', 'border',
                 'border-radius', 'box-shadow', 'backdrop-filter'
             ].forEach(prop => chatPanel.style.removeProperty(prop));
         }
@@ -305,7 +318,7 @@ function applyDesktopChatLayout() {
             });
         }
         if (chatInputContainer) {
-            ['background', 'background-color'].forEach(prop => chatInputContainer.style.removeProperty(prop));
+            ['background', 'background-color', 'flex-shrink'].forEach(prop => chatInputContainer.style.removeProperty(prop));
         }
     }
 }
@@ -323,9 +336,28 @@ window.setDesktopLiveChatOpacity = function(percentValue) {
     const parsed = Number(percentValue);
     const num = Number.isFinite(parsed) ? Math.max(15, Math.min(100, parsed)) : 60;
     desktopChatOpacity = num / 100;
-    const label = document.getElementById('live-chat-opacity-label');
-    if (label) label.textContent = `${num}%`;
-    applyDesktopChatLayout();
+    syncDesktopChatBarState();
+
+    const modal = document.getElementById('live-fullscreen-modal');
+    const chatPanel = findDesktopChatContainer(modal);
+    const controlsBar = document.getElementById('desktop-chat-controls-bar');
+    const chatInputContainer = modal?.querySelector('#live-chat-input-container') || document.getElementById('live-chat-input-container');
+
+    const panelBg = `rgba(15, 23, 42, ${desktopChatOpacity})`;
+    const headerBg = `rgba(15, 23, 42, ${Math.min(1, desktopChatOpacity + 0.15)})`;
+
+    if (chatPanel && window.innerWidth >= 768) {
+        chatPanel.style.setProperty('background', panelBg, 'important');
+        chatPanel.style.setProperty('background-color', panelBg, 'important');
+        chatPanel.style.setProperty('backdrop-filter', desktopChatOpacity < 0.98 ? 'blur(8px)' : 'none', 'important');
+    }
+    if (controlsBar) {
+        controlsBar.style.background = headerBg;
+    }
+    if (chatInputContainer && window.innerWidth >= 768) {
+        chatInputContainer.style.setProperty('background', headerBg, 'important');
+        chatInputContainer.style.setProperty('background-color', headerBg, 'important');
+    }
 };
 
 window.addEventListener('resize', () => {
@@ -1018,7 +1050,7 @@ export async function openLiveFullscreen(streamId, category, location, streamTit
     }
 
     applyDesktopChatLayout();
-    setTimeout(() => applyDesktopChatLayout(), 50);
+    setTimeout(() => applyDesktopChatLayout(), 60);
 
     await loadExistingChatMessages(streamId, true);
 
