@@ -24,6 +24,12 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.75);
+}
+
 body {
   background-color: var(--bg);
   color: var(--text);
@@ -139,7 +145,11 @@ body.is-offline {
   position: relative;
 }
 
-.logo {
+button.logo {
+  background: transparent;
+  border: none;
+  padding: 2px 4px;
+  border-radius: 8px;
   font-weight: 900;
   font-size: 20px;
   background: var(--gradient-main);
@@ -213,6 +223,8 @@ body.is-offline {
   width: 230px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.8);
   z-index: 1000;
+  display: flex;
+  flex-direction: column;
 }
 
 @media (max-width: 480px) {
@@ -223,6 +235,10 @@ body.is-offline {
 }
 
 .points-dropdown-item {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
   padding: 8px 12px;
   font-size: 11px;
   font-weight: 600;
@@ -296,6 +312,8 @@ body.is-offline {
 }
 
 .uni-duell-banner {
+  display: block;
+  width: 100%;
   background: linear-gradient(135deg, #6366f1, #8b5cf6);
   color: #fff;
   font-size: 10px;
@@ -314,6 +332,8 @@ body.is-offline {
 }
 
 .match-banner {
+  display: block;
+  width: 100%;
   background: linear-gradient(135deg, #ec4899, #8b5cf6);
   color: #fff;
   font-size: 10px;
@@ -338,6 +358,21 @@ body.is-offline {
   flex-shrink: 0;
   margin-bottom: 4px;
   z-index: 10;
+}
+
+.feed-subtab-btn {
+  background: transparent;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: color 0.2s, background 0.2s;
+}
+
+.feed-subtab-btn:hover {
+  background: var(--card-hover);
 }
 
 /* AUTH GATE & CONTAINER */
@@ -408,7 +443,12 @@ body.is-offline {
 }
 
 .forgot-password {
-  display: block;
+  display: inline-block;
+  align-self: flex-end;
+  background: transparent;
+  border: none;
+  padding: 2px 4px;
+  border-radius: 6px;
   font-size: 12px;
   color: #818cf8;
   text-align: right;
@@ -748,17 +788,24 @@ input:focus, select:focus, textarea:focus {
   background: var(--card);
   display: flex;
   justify-content: center;
+  align-items: center;
   gap: 8px;
   width: 100%;
   border-top: 1px solid rgba(255,255,255,0.03);
 }
 
-.footer-links span {
+.footer-link-btn {
+  background: transparent;
+  border: none;
+  padding: 2px 4px;
+  border-radius: 6px;
+  font-size: 10px;
+  color: var(--text-muted);
   cursor: pointer;
   transition: color 0.2s;
 }
 
-.footer-links span:hover {
+.footer-link-btn:hover {
   text-decoration: underline;
   color: var(--text);
 }
@@ -870,6 +917,10 @@ input:focus, select:focus, textarea:focus {
     padding-top: 12px;
     font-size: 11px;
     text-align: center;
+  }
+
+  .footer-link-btn {
+    font-size: 11px;
   }
 
   .tab-content-wrapper {

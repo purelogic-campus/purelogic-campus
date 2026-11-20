@@ -1,4 +1,4 @@
-// js/features/feed.js - Vollständiges Campus-Feed & Medien Modul mit Engagement-Scoring & Hashtag-Suche
+// js/features/feed.js - Vollständiges Campus-Feed & Medien Modul mit Engagement-Scoring, Hashtag-Suche & Tastatur-A11y
 import { _supabase } from '../config.js';
 import { state } from '../state.js';
 import { validateInputOrAlert } from './moderation.js';
@@ -8,8 +8,33 @@ let observer = null;
 let activeCommentPostId = null;
 let activeSearchQuery = '';
 
+function escapeHtmlAttr(str) {
+    return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/'/g, '&#39;')
+        .replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+}
+
+function makeKeyboardAccessible(el, handler) {
+    if (!el || typeof handler !== 'function') return;
+    if (!el.hasAttribute('tabindex')) {
+        el.setAttribute('tabindex', '0');
+    }
+    if (!el.hasAttribute('role')) {
+        el.setAttribute('role', 'button');
+    }
+    el.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            handler(event);
+        }
+    });
+}
+
 /**
- * Hilfsfunktion: Text mit Hashtags in klickbare Links umwandeln
+ * Hilfsfunktion: Text mit Hashtags in klickbare & fokussierbare Links umwandeln
  */
 export function parseHashtagsInText(text) {
     if (!text) return '';
@@ -18,7 +43,10 @@ export function parseHashtagsInText(text) {
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;');
 
-    return safeText.replace(/#([a-zA-Z0-9_äöüÄÖÜß]+)/g, '<span class="hashtag-link" onclick="searchByHashtag(\'#$1\')" style="color: #818cf8; font-weight: 700; cursor: pointer;">#$1</span>');
+    return safeText.replace(/#([a-zA-Z0-9_äöüÄÖÜß]+)/g, (_match, tagName) => {
+        const safeTag = escapeHtmlAttr(`#${tagName}`);
+        return `<button type="button" class="hashtag-link" onclick="searchByHashtag('${safeTag}')" style="background: transparent; border: none; padding: 0 2px; border-radius: 4px; color: #818cf8; font-weight: 700; font-size: inherit; cursor: pointer; display: inline;">#${tagName}</button>`;
+    });
 }
 
 window.searchByHashtag = function(tag) {
@@ -305,7 +333,10 @@ window.likePost = async function(postId) {
             .eq('id', postId);
 
         const likeCountEl = document.getElementById(`like-count-${postId}`);
-        if (likeCountEl) likeCountEl.textContent = `${likedByList.length} ❤️`;
+        if (likeCountEl) {
+            likeCountEl.textContent = `${likedByList.length} ❤️`;
+            likeCountEl.setAttribute('aria-label', `Beitrag liken, aktuell ${likedByList.length} Likes`);
+        }
 
     } catch (err) {
         console.warn('Like-Fehler:', err);
@@ -357,12 +388,14 @@ window.openLikesModal = async function(postId) {
 
             const item = document.createElement('div');
             item.style.cssText = 'display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.04); padding: 8px; border-radius: 8px; cursor: pointer;';
-            item.onclick = () => {
+            const openUserProfile = () => {
                 modal.classList.add('hidden');
                 window.openPublicProfile(email);
             };
+            item.onclick = openUserProfile;
+            makeKeyboardAccessible(item, openUserProfile);
             item.innerHTML = `
-                <img src="${avatar}" style="width: 30px; height: 30px; border-radius: 50%; object-fit: cover; border: 1px solid var(--primary);">
+                <img src="${avatar}" style="width: 30px; height: 30px; border-radius: 50%; object-fit: cover; border: 1px solid var(--primary);" alt="Avatar von ${escapeHtmlAttr(name)}">
                 <span style="font-size: 13px; font-weight: 700; color: #fff;">${name}</span>
             `;
             listContainer.appendChild(item);
@@ -423,10 +456,12 @@ async function loadCommentsForPost(postId) {
             const commentItem = document.createElement('div');
             commentItem.style.cssText = 'display: flex; gap: 10px; background: rgba(255,255,255,0.04); padding: 10px; border-radius: 10px; align-items: flex-start;';
             commentItem.innerHTML = `
-                <img src="${authorAvatar}" style="width: 28px; height: 28px; border-radius: 50%; object-fit: cover; border: 1px solid var(--primary); cursor: pointer;" onclick="document.getElementById('comments-modal').classList.add('hidden'); window.openPublicProfile('${c.author_email}')">
+                <button type="button" onclick="document.getElementById('comments-modal').classList.add('hidden'); window.openPublicProfile('${escapeHtmlAttr(c.author_email)}')" aria-label="Profil von ${escapeHtmlAttr(authorName)} öffnen" style="background: transparent; border: none; padding: 0; border-radius: 50%; cursor: pointer; flex-shrink: 0;">
+                    <img src="${authorAvatar}" style="width: 28px; height: 28px; border-radius: 50%; object-fit: cover; border: 1px solid var(--primary); display: block;" alt="Avatar von ${escapeHtmlAttr(authorName)}">
+                </button>
                 <div style="display: flex; flex-direction: column; gap: 2px; flex: 1;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="font-size: 12px; font-weight: 800; color: #818cf8; cursor: pointer;" onclick="document.getElementById('comments-modal').classList.add('hidden'); window.openPublicProfile('${c.author_email}')">${authorName}</span>
+                        <button type="button" onclick="document.getElementById('comments-modal').classList.add('hidden'); window.openPublicProfile('${escapeHtmlAttr(c.author_email)}')" style="background: transparent; border: none; padding: 0; font-size: 12px; font-weight: 800; color: #818cf8; cursor: pointer; text-align: left;">${authorName}</button>
                         <span style="font-size: 10px; color: var(--text-muted);">${new Date(c.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
                     <p style="font-size: 12px; color: #fff; margin: 0; word-break: break-word;">${c.comment_text}</p>
@@ -437,7 +472,7 @@ async function loadCommentsForPost(postId) {
     } catch (err) {
         console.error('Fehler beim Laden der Kommentare:', err);
     }
-};
+}
 
 /**
  * Sendet einen neuen Kommentar ab (inkl. Moderations-Check)
@@ -482,7 +517,10 @@ window.submitNewComment = async function() {
             .eq('post_id', activeCommentPostId);
 
         const commentCountEl = document.getElementById(`comment-count-${activeCommentPostId}`);
-        if (commentCountEl) commentCountEl.textContent = `${count || 0} 💬`;
+        if (commentCountEl) {
+            commentCountEl.textContent = `${count || 0} 💬`;
+            commentCountEl.setAttribute('aria-label', `Kommentare öffnen, aktuell ${count || 0} Kommentare`);
+        }
 
     } catch (err) {
         alert('Fehler beim Senden des Kommentars: ' + err.message);
@@ -501,12 +539,12 @@ function createCommentsModal() {
         <div style="background: var(--card); border: 1px solid var(--border); width: 90%; max-width: 450px; height: 80vh; border-radius: 16px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
             <div style="padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
                 <h3 style="font-size: 15px; font-weight: 900; color: #fff; margin: 0;">Beitrag Kommentare 💬</h3>
-                <button onclick="document.getElementById('comments-modal').classList.add('hidden')" style="background: none; border: none; color: var(--text-muted); font-size: 18px; cursor: pointer;">✕</button>
+                <button type="button" onclick="document.getElementById('comments-modal').classList.add('hidden')" aria-label="Kommentare schließen" style="background: none; border: none; color: var(--text-muted); font-size: 18px; cursor: pointer;">✕</button>
             </div>
             <div id="comments-list-container" style="flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px;"></div>
             <div style="padding: 12px 16px; border-top: 1px solid var(--border); display: flex; gap: 8px; background: rgba(0,0,0,0.2);">
-                <input type="text" id="new-comment-input" placeholder="Schreibe einen Kommentar..." style="flex: 1; background: rgba(255,255,255,0.06); border: 1px solid var(--border); padding: 10px 14px; border-radius: 25px; color: #fff; font-size: 12px; outline: none;">
-                <button onclick="window.submitNewComment()" class="btn" style="width: auto; padding: 8px 16px; font-size: 12px; font-weight: 800; background: var(--gradient-main);">Senden</button>
+                <input type="text" id="new-comment-input" placeholder="Schreibe einen Kommentar..." aria-label="Kommentar eingeben" style="flex: 1; background: rgba(255,255,255,0.06); border: 1px solid var(--border); padding: 10px 14px; border-radius: 25px; color: #fff; font-size: 12px; outline: none; margin: 0;">
+                <button type="button" onclick="window.submitNewComment()" class="btn" style="width: auto; padding: 8px 16px; font-size: 12px; font-weight: 800; background: var(--gradient-main); margin: 0;">Senden</button>
             </div>
         </div>
     `;
@@ -526,7 +564,7 @@ function createInfoModal() {
         <div style="background: var(--card); border: 1px solid var(--border); width: 90%; max-width: 380px; max-height: 70vh; border-radius: 16px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
             <div style="padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
                 <h3 id="dynamic-modal-title" style="font-size: 15px; font-weight: 900; color: #fff; margin: 0;">Info</h3>
-                <button onclick="document.getElementById('dynamic-info-modal').classList.add('hidden')" style="background: none; border: none; color: var(--text-muted); font-size: 18px; cursor: pointer;">✕</button>
+                <button type="button" onclick="document.getElementById('dynamic-info-modal').classList.add('hidden')" aria-label="Info schließen" style="background: none; border: none; color: var(--text-muted); font-size: 18px; cursor: pointer;">✕</button>
             </div>
             <div id="dynamic-modal-content" style="flex: 1; overflow-y: auto; padding: 16px;"></div>
         </div>
@@ -639,7 +677,6 @@ export async function loadCampusFeed(filter = 'foryou') {
 
     let processedPosts = posts;
 
-    // Optionaler Hashtag- oder Suchfilter
     if (activeSearchQuery) {
         processedPosts = processedPosts.filter(p => {
             const caption = (p.caption || '').toLowerCase();
@@ -659,7 +696,7 @@ export async function loadCampusFeed(filter = 'foryou') {
     }
 
     if (processedPosts.length === 0) {
-        feedList.innerHTML = `<p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;">Keine Beiträge für "${activeSearchQuery}" gefunden.</p>`;
+        feedList.innerHTML = `<p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;">Keine Beiträge für "${escapeHtmlAttr(activeSearchQuery)}" gefunden.</p>`;
         return;
     }
 
@@ -674,13 +711,15 @@ export async function loadCampusFeed(filter = 'foryou') {
         if (post.media_type === 'video') {
             mediaHtml = `<video src="${post.media_url}" muted playsinline loop class="reel-media" style="object-fit: contain; width: 100%; height: 100%;"></video>`;
         } else if (post.media_url) {
-            mediaHtml = `<img src="${post.media_url}" class="reel-media" style="object-fit: contain; width: 100%; height: 100%;" alt="Post">`;
+            mediaHtml = `<img src="${post.media_url}" class="reel-media" style="object-fit: contain; width: 100%; height: 100%;" alt="Beitragsbild">`;
         }
 
         const rawCaption = (post.caption && !post.caption.includes('${post.caption}')) ? post.caption : '';
         const parsedCaption = parseHashtagsInText(rawCaption);
 
         const authorEmail = post.author_email || 'student@uni.at';
+        const safeAuthorEmail = escapeHtmlAttr(authorEmail);
+        const safePostId = escapeHtmlAttr(post.id);
         const viewsCount = post.views || 0;
         
         const likedByList = Array.isArray(post.liked_by) ? post.liked_by : [];
@@ -713,14 +752,16 @@ export async function loadCampusFeed(filter = 'foryou') {
             console.warn('Konnte Autor-Profil nicht laden:', e);
         }
 
+        const safeAuthorName = escapeHtmlAttr(authorName);
+
         item.innerHTML = `
             ${mediaHtml}
             <div style="position: absolute; top: 14px; left: 14px; right: 14px; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; z-index: 10; pointer-events: none;">
                 <div style="pointer-events: auto; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; max-width: 100%;">
-                    <div onclick="window.openPublicProfile('${authorEmail}')" style="display: flex; align-items: center; gap: 8px; background: rgba(19, 27, 46, 0.85); border: 1px solid rgba(129, 140, 248, 0.4); padding: 5px 12px; border-radius: 30px; cursor: pointer; backdrop-filter: blur(6px); box-shadow: 0 4px 12px rgba(0,0,0,0.4); flex-shrink: 0;">
-                        <img src="${authorAvatar}" style="width: 26px; height: 26px; border-radius: 50%; object-fit: cover; border: 1px solid var(--primary);" onerror="this.src='https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'">
+                    <button type="button" onclick="window.openPublicProfile('${safeAuthorEmail}')" aria-label="Profil von ${safeAuthorName} öffnen" style="display: flex; align-items: center; gap: 8px; background: rgba(19, 27, 46, 0.85); border: 1px solid rgba(129, 140, 248, 0.4); padding: 5px 12px; border-radius: 30px; cursor: pointer; backdrop-filter: blur(6px); box-shadow: 0 4px 12px rgba(0,0,0,0.4); flex-shrink: 0;">
+                        <img src="${authorAvatar}" style="width: 26px; height: 26px; border-radius: 50%; object-fit: cover; border: 1px solid var(--primary);" onerror="this.src='https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'" alt="Avatar von ${safeAuthorName}">
                         <span style="font-size: 12px; font-weight: 800; color: #fff;">${authorName}</span>
-                    </div>
+                    </button>
 
                     ${parsedCaption ? `
                     <div style="font-size: 12px; color: #fff; font-weight: 600; background: rgba(19, 27, 46, 0.85); border: 1px solid rgba(255, 255, 255, 0.15); padding: 6px 12px; border-radius: 20px; backdrop-filter: blur(6px); box-shadow: 0 4px 12px rgba(0,0,0,0.4); word-break: break-word; max-width: 100%;">
@@ -734,13 +775,13 @@ export async function loadCampusFeed(filter = 'foryou') {
                         👁️ ${viewsCount}
                     </span>
 
-                    <span id="comment-count-${post.id}" onclick="window.openCommentsModal('${post.id}')" style="cursor: pointer; background: rgba(99, 102, 241, 0.25); border: 1px solid rgba(99, 102, 241, 0.45); color: #818cf8; padding: 3px 10px; border-radius: 16px; backdrop-filter: blur(6px); box-shadow: 0 2px 8px rgba(0,0,0,0.3);">
+                    <button type="button" id="comment-count-${safePostId}" onclick="window.openCommentsModal('${safePostId}')" aria-label="Kommentare öffnen, aktuell ${commentCount} Kommentare" style="cursor: pointer; background: rgba(99, 102, 241, 0.25); border: 1px solid rgba(99, 102, 241, 0.45); color: #818cf8; padding: 3px 10px; border-radius: 16px; backdrop-filter: blur(6px); box-shadow: 0 2px 8px rgba(0,0,0,0.3); font-size: 11px; font-weight: 700;">
                         ${commentCount} 💬
-                    </span>
+                    </button>
 
-                    <span id="like-count-${post.id}" onclick="window.likePost('${post.id}')" oncontextmenu="event.preventDefault(); window.openLikesModal('${post.id}');" style="cursor: pointer; background: rgba(236, 72, 153, 0.25); border: 1px solid rgba(236, 72, 153, 0.45); color: #ec4899; padding: 3px 10px; border-radius: 16px; backdrop-filter: blur(6px); box-shadow: 0 2px 8px rgba(0,0,0,0.3);" title="Klicken zum Liken | Rechtsklick für Liker-Liste">
+                    <button type="button" id="like-count-${safePostId}" onclick="window.likePost('${safePostId}')" oncontextmenu="event.preventDefault(); window.openLikesModal('${safePostId}');" aria-label="Beitrag liken, aktuell ${likesCount} Likes" style="cursor: pointer; background: rgba(236, 72, 153, 0.25); border: 1px solid rgba(236, 72, 153, 0.45); color: #ec4899; padding: 3px 10px; border-radius: 16px; backdrop-filter: blur(6px); box-shadow: 0 2px 8px rgba(0,0,0,0.3); font-size: 11px; font-weight: 700;" title="Klicken zum Liken | Rechtsklick für Liker-Liste">
                         ${likesCount} ❤️
-                    </span>
+                    </button>
                 </div>
             </div>
         `;
@@ -780,11 +821,12 @@ export async function loadMyProfilePosts() {
         if (post.media_type === 'video') {
             item.innerHTML = `<video src="${post.media_url}" muted playsinline style="width: 100%; height: 90px; object-fit: contain; background: #000;"></video>`;
         } else {
-            item.innerHTML = `<img src="${post.media_url}" style="width: 100%; height: 90px; object-fit: contain; background: #000;" alt="Post">`;
+            item.innerHTML = `<img src="${post.media_url}" style="width: 100%; height: 90px; object-fit: contain; background: #000;" alt="Eigener Beitrag">`;
         }
         
         const views = post.views || 0;
         const likes = Array.isArray(post.liked_by) ? post.liked_by.length : 0;
+        const safePostId = escapeHtmlAttr(post.id);
         
         let commentsCount = 0;
         try {
@@ -796,10 +838,10 @@ export async function loadMyProfilePosts() {
         } catch (e) {}
 
         item.innerHTML += `
-            <div style="padding: 6px; font-size: 9px; color: var(--text-muted); display: flex; justify-content: space-between;">
+            <div style="padding: 6px; font-size: 9px; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center;">
                 <span>👁️ ${views}</span>
-                <span style="cursor: pointer; color: #818cf8;" onclick="window.openCommentsModal('${post.id}')">💬 ${commentsCount}</span>
-                <span style="cursor: pointer; color: #ec4899;" onclick="window.openLikesModal('${post.id}')">❤️ ${likes}</span>
+                <button type="button" style="background: transparent; border: none; padding: 0; font-size: 9px; cursor: pointer; color: #818cf8;" onclick="window.openCommentsModal('${safePostId}')">💬 ${commentsCount}</button>
+                <button type="button" style="background: transparent; border: none; padding: 0; font-size: 9px; cursor: pointer; color: #ec4899;" onclick="window.openLikesModal('${safePostId}')">❤️ ${likes}</button>
             </div>
         `;
         
@@ -836,6 +878,8 @@ window.openPublicProfile = async function(email) {
         fullname.parentNode.appendChild(followBtnContainer);
     }
 
+    const safeTargetEmail = escapeHtmlAttr(email);
+
     if (followBtnContainer && state.currentUserEmail && state.currentUserEmail !== email) {
         const { data: existingFollow } = await _supabase
             .from('follows')
@@ -846,7 +890,7 @@ window.openPublicProfile = async function(email) {
 
         const isFollowing = !!existingFollow;
         followBtnContainer.innerHTML = `
-            <button onclick="window.toggleFollowUser('${email}')" class="btn" style="padding: 6px 14px; font-size: 11px; font-weight: 800; background: ${isFollowing ? 'var(--card)' : 'var(--gradient-main)'}; border: ${isFollowing ? '1px solid var(--border)' : 'none'}; color: ${isFollowing ? 'var(--text)' : '#fff'}; width: auto; margin-top: 0;">
+            <button type="button" onclick="window.toggleFollowUser('${safeTargetEmail}')" class="btn" style="padding: 6px 14px; font-size: 11px; font-weight: 800; background: ${isFollowing ? 'var(--card)' : 'var(--gradient-main)'}; border: ${isFollowing ? '1px solid var(--border)' : 'none'}; color: ${isFollowing ? 'var(--text)' : '#fff'}; width: auto; margin-top: 0;">
                 ${isFollowing ? '✓ Gefolgt' : '+ Folgen'}
             </button>
         `;
@@ -894,18 +938,20 @@ window.openPublicProfile = async function(email) {
             } else {
                 postsGrid.innerHTML = '';
                 userPosts.forEach(post => {
-                    const postItem = document.createElement('div');
-                    postItem.style.cssText = 'background: #000; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; height: 90px; cursor: pointer;';
-                    postItem.onclick = () => {
+                    const postBtn = document.createElement('button');
+                    postBtn.type = 'button';
+                    postBtn.style.cssText = 'background: #000; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; height: 90px; padding: 0; cursor: pointer; display: block; width: 100%;';
+                    postBtn.setAttribute('aria-label', 'Beitrag und Kommentare ansehen');
+                    postBtn.onclick = () => {
                         document.getElementById('public-profile-modal').classList.add('hidden');
                         window.openCommentsModal(post.id);
                     };
                     if (post.media_type === 'video') {
-                        postItem.innerHTML = `<video src="${post.media_url}" muted style="width: 100%; height: 100%; object-fit: cover;"></video>`;
+                        postBtn.innerHTML = `<video src="${post.media_url}" muted style="width: 100%; height: 100%; object-fit: cover;"></video>`;
                     } else {
-                        postItem.innerHTML = `<img src="${post.media_url}" style="width: 100%; height: 100%; object-fit: cover;" alt="Post">`;
+                        postBtn.innerHTML = `<img src="${post.media_url}" style="width: 100%; height: 100%; object-fit: cover;" alt="Beitragsbild">`;
                     }
-                    postsGrid.appendChild(postItem);
+                    postsGrid.appendChild(postBtn);
                 });
             }
         }
@@ -972,17 +1018,35 @@ window.closePublicProfileModal = function() {
  */
 export function setReelFilter(filterType) {
     state.currentReelFilter = filterType;
-    document.querySelectorAll('.feed-filter-bar span').forEach(s => s.style.color = 'var(--text-muted)');
+    document.querySelectorAll('.feed-filter-bar .feed-subtab-btn').forEach(btn => {
+        btn.classList.remove('active');
+        btn.setAttribute('aria-selected', 'false');
+        if (btn.id !== 'subtab-live') {
+            btn.style.color = 'var(--text-muted)';
+        }
+    });
     
     if (filterType === 'foryou') {
         const el = document.getElementById('subtab-foryou');
-        if (el) el.style.color = 'var(--primary)';
+        if (el) {
+            el.classList.add('active');
+            el.setAttribute('aria-selected', 'true');
+            el.style.color = 'var(--primary)';
+        }
     } else if (filterType === 'discover') {
         const el = document.getElementById('subtab-discover');
-        if (el) el.style.color = 'var(--primary)';
+        if (el) {
+            el.classList.add('active');
+            el.setAttribute('aria-selected', 'true');
+            el.style.color = 'var(--primary)';
+        }
     } else if (filterType === 'following') {
         const el = document.getElementById('subtab-following');
-        if (el) el.style.color = 'var(--primary)';
+        if (el) {
+            el.classList.add('active');
+            el.setAttribute('aria-selected', 'true');
+            el.style.color = 'var(--primary)';
+        }
     }
     
     loadCampusFeed(filterType);
