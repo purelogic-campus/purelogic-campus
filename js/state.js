@@ -1,7 +1,7 @@
-// js/state.js - Zentrales App-State-Management & Theme-Persistenz (4 Modes, Standard: dark)
+// js/state.js - Zentrales App-State-Management & Theme-Persistenz (4 Modes: dark, light-dark, soft-light, light)
 
 export const THEME_STORAGE_KEY = 'pure_logic_theme';
-export const THEME_MODES = ['dark', 'light-dark', 'strong-light', 'light'];
+export const THEME_MODES = ['dark', 'light-dark', 'soft-light', 'light'];
 
 const THEME_META = {
     'dark': {
@@ -13,14 +13,14 @@ const THEME_META = {
     'light-dark': {
         icon: '🌒',
         label: 'Light Dark',
-        statusColor: '#182235',
+        statusColor: '#121b2e',
         isLight: false
     },
-    'strong-light': {
-        icon: '🔆',
-        label: 'Strong Light',
-        statusColor: '#ffffff',
-        isLight: true
+    'soft-light': {
+        icon: '🌤️',
+        label: 'Soft Light',
+        statusColor: '#1e2d4a',
+        isLight: false
     },
     'light': {
         icon: '☀️',
@@ -31,14 +31,17 @@ const THEME_META = {
 };
 
 function normalizeTheme(theme) {
+    if (theme === 'strong-light') {
+        return 'soft-light';
+    }
     return THEME_MODES.includes(theme) ? theme : 'dark';
 }
 
 function getInitialTheme() {
     try {
         const saved = localStorage.getItem(THEME_STORAGE_KEY);
-        if (saved && THEME_MODES.includes(saved)) {
-            return saved;
+        if (saved) {
+            return normalizeTheme(saved);
         }
     } catch (e) {
         console.warn('Theme konnte nicht aus localStorage gelesen werden:', e);
@@ -82,11 +85,11 @@ export function setThemeMode(theme, persist = true) {
     state.currentTheme = normalized;
 
     document.documentElement.setAttribute('data-theme', normalized);
-    document.documentElement.classList.remove('theme-dark', 'theme-light-dark', 'theme-strong-light', 'theme-light');
+    document.documentElement.classList.remove('theme-dark', 'theme-light-dark', 'theme-soft-light', 'theme-strong-light', 'theme-light');
     document.documentElement.classList.add(`theme-${normalized}`);
 
     if (document.body) {
-        document.body.classList.remove('theme-dark', 'theme-light-dark', 'theme-strong-light', 'theme-light', 'light-mode');
+        document.body.classList.remove('theme-dark', 'theme-light-dark', 'theme-soft-light', 'theme-strong-light', 'theme-light', 'light-mode');
         document.body.classList.add(`theme-${normalized}`);
         if (meta.isLight) {
             document.body.classList.add('light-mode');
