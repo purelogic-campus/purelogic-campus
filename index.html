@@ -13,19 +13,18 @@
   <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/icon-512.png">
 
-  <!-- Sofortiges Theme-Setup vor dem ersten Rendern (Standard: dark, 4 Modes: dark, light-dark, soft-light, light) -->
+  <!-- Sofortiges Theme-Setup vor dem ersten Rendern (Standard: dark, 4 Modes) -->
   <script>
     (function () {
       try {
-        var allowed = ['dark', 'light-dark', 'soft-light', 'light'];
+        var allowed = ['dark', 'light-dark', 'strong-light', 'light'];
         var saved = localStorage.getItem('pure_logic_theme');
-        if (saved === 'strong-light') saved = 'soft-light';
         var theme = allowed.indexOf(saved) !== -1 ? saved : 'dark';
         document.documentElement.setAttribute('data-theme', theme);
         document.documentElement.classList.add('theme-' + theme);
         if (document.body) {
           document.body.classList.add('theme-' + theme);
-          if (theme === 'light') {
+          if (theme === 'light' || theme === 'strong-light') {
             document.body.classList.add('light-mode');
           }
         }
@@ -65,7 +64,7 @@
         </div>
       </div>
 
-      <button type="button" class="theme-toggle-btn" id="theme-toggle-btn" onclick="toggleTheme()" aria-label="Design-Modus wechseln (Dark, Light Dark, Soft Light, Light)" title="Design-Modus wechseln">
+      <button type="button" class="theme-toggle-btn" id="theme-toggle-btn" onclick="toggleTheme()" aria-label="Design-Modus wechseln (Dark, Light Dark, Strong Light, Light)" title="Design-Modus wechseln">
         <span class="theme-toggle-icon" id="theme-toggle-icon" aria-hidden="true">🌑</span>
         <span class="theme-toggle-label" id="theme-toggle-label">Dark</span>
       </button>
@@ -106,7 +105,7 @@
     <div class="container-box" style="max-width: 420px; width: 100%;">
       <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 4px;">
         <h2 style="font-size: 22px; font-weight: 800;">Hey there 👋</h2>
-        <button type="button" class="theme-toggle-btn auth-theme-toggle" id="auth-theme-toggle-btn" onclick="toggleTheme()" aria-label="Design-Modus wechseln (Dark, Light Dark, Soft Light, Light)" title="Design-Modus wechseln">
+        <button type="button" class="theme-toggle-btn auth-theme-toggle" id="auth-theme-toggle-btn" onclick="toggleTheme()" aria-label="Design-Modus wechseln (Dark, Light Dark, Strong Light, Light)" title="Design-Modus wechseln">
           <span class="theme-toggle-icon" id="auth-theme-toggle-icon" aria-hidden="true">🌑</span>
           <span class="theme-toggle-label" id="auth-theme-toggle-label">Dark</span>
         </button>

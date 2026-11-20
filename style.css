@@ -245,6 +245,12 @@ body.light-mode .offline-fallback-title {
   position: relative;
 }
 
+.brand-banner-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
 button.logo {
   background: transparent;
   border: none;
@@ -257,6 +263,7 @@ button.logo {
   -webkit-text-fill-color: transparent;
   cursor: pointer;
   letter-spacing: -0.5px;
+  line-height: 1.15;
 }
 
 .header-right {
@@ -264,6 +271,48 @@ button.logo {
   align-items: center;
   gap: 8px;
   position: relative;
+}
+
+/* Smartphone-Layout: PURE LOGIC Banner über volle Breite zentriert, Leiste direkt darunter */
+@media (max-width: 767px) {
+  .header {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 0;
+    gap: 0;
+  }
+
+  .brand-banner-bar {
+    width: 100%;
+    justify-content: center;
+    padding: 8px 12px;
+    background: var(--surface-subtle);
+    border-bottom: 1px solid var(--border);
+  }
+
+  button.logo {
+    width: 100%;
+    text-align: center;
+    font-size: 20px;
+    padding: 2px 6px;
+  }
+
+  .header-right {
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 10px;
+    position: static;
+  }
+
+  .points-dropdown {
+    top: 84px !important;
+    right: 10px !important;
+    left: auto !important;
+    width: 220px;
+  }
 }
 
 .theme-toggle-btn {
@@ -373,13 +422,6 @@ body.theme-light .points-badge.admin-badge {
   flex-direction: column;
 }
 
-@media (max-width: 480px) {
-  .points-dropdown {
-    right: -20px;
-    width: 210px;
-  }
-}
-
 .points-dropdown-item {
   width: 100%;
   text-align: left;
@@ -447,78 +489,76 @@ body.theme-light .points-badge.admin-badge {
 }
 
 /* ==========================================================================
-   OBERE BALKEN & FEED SUB-NAVIGATION
+   FEED SUB-NAVIGATION (inkl. Wiener Uni-Duell & Match Mittwoch)
    ========================================================================== */
-.banner-container {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 6px 10px;
-  flex-shrink: 0;
-}
-
-.uni-duell-banner {
-  display: block;
-  width: 100%;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
-  color: #fff;
-  font-size: 10px;
-  font-weight: 800;
-  text-align: center;
-  padding: 6px 10px;
-  border-radius: 10px;
-  cursor: pointer;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 3px 10px rgba(99, 102, 241, 0.3);
-  transition: transform 0.2s;
-}
-
-.uni-duell-banner:hover, .match-banner:hover {
-  transform: translateY(-1px);
-}
-
-.match-banner {
-  display: block;
-  width: 100%;
-  background: linear-gradient(135deg, #ec4899, #8b5cf6);
-  color: #fff;
-  font-size: 10px;
-  font-weight: 800;
-  text-align: center;
-  padding: 6px 10px;
-  border-radius: 10px;
-  cursor: pointer;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 3px 10px rgba(236, 72, 153, 0.3);
-  transition: transform 0.2s;
-}
-
 .feed-filter-bar {
   display: flex;
-  justify-content: center;
-  gap: 16px;
-  padding: 8px 12px;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
   background: var(--card);
   border-bottom: 1px solid var(--border);
   width: 100%;
   flex-shrink: 0;
   margin-bottom: 4px;
   z-index: 10;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.feed-filter-bar::-webkit-scrollbar {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .feed-filter-bar {
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
 }
 
 .feed-subtab-btn {
-  background: transparent;
-  border: none;
-  padding: 4px 8px;
-  border-radius: 8px;
-  font-size: 12px;
+  background: var(--surface-subtle);
+  border: 1px solid var(--border);
+  padding: 6px 10px;
+  border-radius: 10px;
+  font-size: 11px;
   font-weight: 800;
   cursor: pointer;
-  transition: color 0.2s, background 0.2s;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: color 0.2s, background 0.2s, border-color 0.2s, transform 0.15s;
 }
 
 .feed-subtab-btn:hover {
   background: var(--card-hover);
+  transform: translateY(-1px);
+}
+
+.feed-subtab-duell {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.22), rgba(139, 92, 246, 0.22));
+  border-color: rgba(129, 140, 248, 0.55);
+  color: #a5b4fc;
+}
+
+body.theme-light .feed-subtab-duell {
+  color: #3730a3;
+  background: rgba(79, 70, 229, 0.12);
+  border-color: rgba(79, 70, 229, 0.35);
+}
+
+.feed-subtab-match {
+  background: linear-gradient(135deg, rgba(236, 72, 153, 0.22), rgba(139, 92, 246, 0.22));
+  border-color: rgba(244, 114, 182, 0.55);
+  color: #f9a8d4;
+}
+
+body.theme-light .feed-subtab-match {
+  color: #9d174d;
+  background: rgba(219, 39, 119, 0.12);
+  border-color: rgba(219, 39, 119, 0.35);
 }
 
 /* AUTH GATE & CONTAINER */
