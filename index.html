@@ -13,16 +13,20 @@
   <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/icon-512.png">
 
-  <!-- Sofortiges Theme-Setup vor dem ersten Rendern (verhindert Aufblitzen) -->
+  <!-- Sofortiges Theme-Setup vor dem ersten Rendern (Standard: dark, 4 Modes) -->
   <script>
     (function () {
       try {
+        var allowed = ['dark', 'light-dark', 'strong-light', 'light'];
         var saved = localStorage.getItem('pure_logic_theme');
-        var prefersLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
-        var theme = (saved === 'light' || saved === 'dark') ? saved : (prefersLight ? 'light' : 'dark');
+        var theme = allowed.indexOf(saved) !== -1 ? saved : 'dark';
         document.documentElement.setAttribute('data-theme', theme);
-        if (theme === 'light') {
-          document.body && document.body.classList.add('light-mode');
+        document.documentElement.classList.add('theme-' + theme);
+        if (document.body) {
+          document.body.classList.add('theme-' + theme);
+          if (theme === 'light' || theme === 'strong-light') {
+            document.body.classList.add('light-mode');
+          }
         }
       } catch (e) {}
     })();
@@ -60,9 +64,9 @@
         </div>
       </div>
 
-      <button type="button" class="theme-toggle-btn" id="theme-toggle-btn" onclick="toggleTheme()" aria-label="Zwischen Dark-Mode und Light-Mode wechseln" aria-pressed="false" title="Design-Modus wechseln">
-        <span class="theme-toggle-icon" id="theme-toggle-icon" aria-hidden="true">☀️</span>
-        <span class="theme-toggle-label" id="theme-toggle-label">Light</span>
+      <button type="button" class="theme-toggle-btn" id="theme-toggle-btn" onclick="toggleTheme()" aria-label="Design-Modus wechseln (Dark, Light Dark, Strong Light, Light)" title="Design-Modus wechseln">
+        <span class="theme-toggle-icon" id="theme-toggle-icon" aria-hidden="true">🌑</span>
+        <span class="theme-toggle-label" id="theme-toggle-label">Dark</span>
       </button>
 
       <button type="button" class="header-profile-btn hidden" id="header-profile-btn" onclick="switchTab('profile')">
@@ -101,9 +105,9 @@
     <div class="container-box" style="max-width: 420px; width: 100%;">
       <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 4px;">
         <h2 style="font-size: 22px; font-weight: 800;">Hey there 👋</h2>
-        <button type="button" class="theme-toggle-btn auth-theme-toggle" id="auth-theme-toggle-btn" onclick="toggleTheme()" aria-label="Zwischen Dark-Mode und Light-Mode wechseln" aria-pressed="false" title="Design-Modus wechseln">
-          <span class="theme-toggle-icon" id="auth-theme-toggle-icon" aria-hidden="true">☀️</span>
-          <span class="theme-toggle-label" id="auth-theme-toggle-label">Light</span>
+        <button type="button" class="theme-toggle-btn auth-theme-toggle" id="auth-theme-toggle-btn" onclick="toggleTheme()" aria-label="Design-Modus wechseln (Dark, Light Dark, Strong Light, Light)" title="Design-Modus wechseln">
+          <span class="theme-toggle-icon" id="auth-theme-toggle-icon" aria-hidden="true">🌑</span>
+          <span class="theme-toggle-label" id="auth-theme-toggle-label">Dark</span>
         </button>
       </div>
       <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 14px;">Logge dich in dein Campus-Konto ein:</p>

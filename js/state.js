@@ -1,19 +1,47 @@
-// js/state.js - Zentrales App-State-Management & Theme-Persistenz (Dark / Light)
+// js/state.js - Zentrales App-State-Management & Theme-Persistenz (4 Modes, Standard: dark)
 
 export const THEME_STORAGE_KEY = 'pure_logic_theme';
+export const THEME_MODES = ['dark', 'light-dark', 'strong-light', 'light'];
+
+const THEME_META = {
+    'dark': {
+        icon: '🌑',
+        label: 'Dark',
+        statusColor: '#1a0512',
+        isLight: false
+    },
+    'light-dark': {
+        icon: '🌒',
+        label: 'Light Dark',
+        statusColor: '#182235',
+        isLight: false
+    },
+    'strong-light': {
+        icon: '🔆',
+        label: 'Strong Light',
+        statusColor: '#ffffff',
+        isLight: true
+    },
+    'light': {
+        icon: '☀️',
+        label: 'Light',
+        statusColor: '#eef2f6',
+        isLight: true
+    }
+};
+
+function normalizeTheme(theme) {
+    return THEME_MODES.includes(theme) ? theme : 'dark';
+}
 
 function getInitialTheme() {
     try {
         const saved = localStorage.getItem(THEME_STORAGE_KEY);
-        if (saved === 'light' || saved === 'dark') {
+        if (saved && THEME_MODES.includes(saved)) {
             return saved;
         }
     } catch (e) {
         console.warn('Theme konnte nicht aus localStorage gelesen werden:', e);
-    }
-
-    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
-        return 'light';
     }
     return 'dark';
 }
@@ -48,32 +76,42 @@ export const state = {
     liveSignalingUnsubscribe: null
 };
 
-export function applyTheme(theme, persist = true) {
-    const normalized = theme === 'light' ? 'light' : 'dark';
+export function setThemeMode(theme, persist = true) {
+    const normalized = normalizeTheme(theme);
+    const meta = THEME_META[normalized];
     state.currentTheme = normalized;
 
     document.documentElement.setAttribute('data-theme', normalized);
-    document.body.classList.toggle('light-mode', normalized === 'light');
+    document.documentElement.classList.remove('theme-dark', 'theme-light-dark', 'theme-strong-light', 'theme-light');
+    document.documentElement.classList.add(`theme-${normalized}`);
+
+    if (document.body) {
+        document.body.classList.remove('theme-dark', 'theme-light-dark', 'theme-strong-light', 'theme-light', 'light-mode');
+        document.body.classList.add(`theme-${normalized}`);
+        if (meta.isLight) {
+            document.body.classList.add('light-mode');
+        }
+    }
 
     const metaTheme = document.querySelector('meta[name="theme-color"]');
     if (metaTheme) {
-        metaTheme.setAttribute('content', normalized === 'light' ? '#ffffff' : '#1a0512');
+        metaTheme.setAttribute('content', meta.statusColor);
     }
 
-    const isLight = normalized === 'light';
-    const nextIcon = isLight ? '🌙' : '☀️';
-    const nextLabel = isLight ? 'Dark' : 'Light';
+    const currentIndex = THEME_MODES.indexOf(normalized);
+    const nextTheme = THEME_MODES[(currentIndex + 1) % THEME_MODES.length];
+    const nextMeta = THEME_META[nextTheme];
 
     document.querySelectorAll('.theme-toggle-btn').forEach((btn) => {
-        btn.setAttribute('aria-pressed', String(isLight));
+        btn.setAttribute('data-theme-mode', normalized);
         btn.setAttribute(
             'title',
-            isLight ? 'Zum Dark-Mode wechseln' : 'Zum Light-Mode wechseln'
+            `Aktuell: ${meta.label} • Nächster Mode: ${nextMeta.label}`
         );
         const iconEl = btn.querySelector('.theme-toggle-icon');
         const labelEl = btn.querySelector('.theme-toggle-label');
-        if (iconEl) iconEl.textContent = nextIcon;
-        if (labelEl) labelEl.textContent = nextLabel;
+        if (iconEl) iconEl.textContent = meta.icon;
+        if (labelEl) labelEl.textContent = meta.label;
     });
 
     if (persist) {
@@ -83,15 +121,22 @@ export function applyTheme(theme, persist = true) {
             console.warn('Theme konnte nicht in localStorage gespeichert werden:', e);
         }
     }
+
+    return normalized;
 }
 
-export function toggleTheme() {
-    const nextTheme = state.currentTheme === 'light' ? 'dark' : 'light';
-    applyTheme(nextTheme, true);
-    return nextTheme;
+export function cycleTheme() {
+    const idx = THEME_MODES.indexOf(normalizeTheme(state.currentTheme));
+    const nextTheme = THEME_MODES[(idx + 1) % THEME_MODES.length];
+    return setThemeMode(nextTheme, true);
 }
 
-// Initiales Theme anwenden und global bereitstellen
-applyTheme(state.currentTheme, false);
-window.toggleTheme = toggleTheme;
+// Rückwärtskompatibilität für bestehende Aufrufe
+export const applyTheme = setThemeMode;
+export const toggleTheme = cycleTheme;
+
+setThemeMode(state.currentTheme, false);
+window.setThemeMode = setThemeMode;
+window.cycleTheme = cycleTheme;
 window.applyTheme = applyTheme;
+window.toggleTheme = toggleTheme;
