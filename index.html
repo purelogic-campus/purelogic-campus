@@ -13,6 +13,21 @@
   <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/icon-512.png">
 
+  <!-- Sofortiges Theme-Setup vor dem ersten Rendern (verhindert Aufblitzen) -->
+  <script>
+    (function () {
+      try {
+        var saved = localStorage.getItem('pure_logic_theme');
+        var prefersLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+        var theme = (saved === 'light' || saved === 'dark') ? saved : (prefersLight ? 'light' : 'dark');
+        document.documentElement.setAttribute('data-theme', theme);
+        if (theme === 'light') {
+          document.body && document.body.classList.add('light-mode');
+        }
+      } catch (e) {}
+    })();
+  </script>
+
   <!-- Externe Bibliotheken (Supabase, Leaflet Karten, jsPDF) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -26,7 +41,7 @@
 <!-- Hauptcontainer der App-Karte -->
 <div class="app-card">
   
-  <!-- Header Bereich mit Logo, Punktestand, Profil und Sprachauswahl -->
+  <!-- Header Bereich mit Logo, Punktestand, Profil, Theme-Switch und Sprachauswahl -->
   <div class="header">
     <button type="button" class="logo" onclick="switchTab('reels')" title="Zur Startseite" aria-label="PURE LOGIC Startseite">PURE LOGIC</button>
     
@@ -44,6 +59,11 @@
           <button type="button" class="points-dropdown-item hidden" id="install-app-dropdown-btn" onclick="installPWA()" style="background: rgba(99, 102, 241, 0.15); color: #818cf8;">📲 App auf Gerät installieren</button>
         </div>
       </div>
+
+      <button type="button" class="theme-toggle-btn" id="theme-toggle-btn" onclick="toggleTheme()" aria-label="Zwischen Dark-Mode und Light-Mode wechseln" aria-pressed="false" title="Design-Modus wechseln">
+        <span class="theme-toggle-icon" id="theme-toggle-icon" aria-hidden="true">☀️</span>
+        <span class="theme-toggle-label" id="theme-toggle-label">Light</span>
+      </button>
 
       <button type="button" class="header-profile-btn hidden" id="header-profile-btn" onclick="switchTab('profile')">
         <img id="header-avatar-preview" class="header-avatar-sm" src="" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'24\' height=\'24\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%2394a3b8\' stroke-width=\'2\'><path d=\'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2\'></path><circle cx=\'12\' cy=\'7\' r=\'4\'></circle></svg>'" alt="Profil">
@@ -79,7 +99,13 @@
   <!-- Auth Gate / Login-Bereich -->
   <div id="auth-gate" class="tab-content auth-gate-container">
     <div class="container-box" style="max-width: 420px; width: 100%;">
-      <h2 style="margin-bottom: 4px; font-size: 22px; font-weight: 800;">Hey there 👋</h2>
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 4px;">
+        <h2 style="font-size: 22px; font-weight: 800;">Hey there 👋</h2>
+        <button type="button" class="theme-toggle-btn auth-theme-toggle" id="auth-theme-toggle-btn" onclick="toggleTheme()" aria-label="Zwischen Dark-Mode und Light-Mode wechseln" aria-pressed="false" title="Design-Modus wechseln">
+          <span class="theme-toggle-icon" id="auth-theme-toggle-icon" aria-hidden="true">☀️</span>
+          <span class="theme-toggle-label" id="auth-theme-toggle-label">Light</span>
+        </button>
+      </div>
       <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 14px;">Logge dich in dein Campus-Konto ein:</p>
       
       <div id="auth-msg" class="msg-box hidden"></div>
@@ -165,12 +191,12 @@
           <div style="font-size: 11px; font-weight: 700; color: #cbd5e1; margin-bottom: 6px;">💾 Notiz auf Gerät speichern:</div>
           <div style="display: flex; gap: 6px; margin-bottom: 6px;">
             <input type="text" id="lecture-file-name" placeholder="Dateiname (z.B. Vorlesung_Mathe)" style="margin: 0; flex: 2; font-size: 11px; padding: 8px 10px;">
-            <input type="date" id="lecture-file-date" style="margin: 0; flex: 1; font-size: 11px; padding: 8px 10px; background: var(--card); color: white; border: 1px solid var(--border); border-radius: 12px;">
+            <input type="date" id="lecture-file-date" style="margin: 0; flex: 1; font-size: 11px; padding: 8px 10px; background: var(--card); color: var(--text); border: 1px solid var(--border); border-radius: 12px;">
           </div>
           
           <div style="display: flex; gap: 6px; margin-bottom: 6px; align-items: center;">
             <label for="lecture-file-format" style="font-size: 11px; font-weight: 600; color: var(--text-muted); white-space: nowrap;">Format:</label>
-            <select id="lecture-file-format" style="margin: 0; font-size: 11px; padding: 8px 10px; background: var(--card); color: white; border: 1px solid var(--border); border-radius: 12px;">
+            <select id="lecture-file-format" style="margin: 0; font-size: 11px; padding: 8px 10px; background: var(--card); color: var(--text); border: 1px solid var(--border); border-radius: 12px;">
               <option value="txt">.txt (Textdatei)</option>
               <option value="pdf">.pdf (Dokument)</option>
             </select>
