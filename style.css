@@ -231,12 +231,13 @@ body.light-mode .offline-fallback-title {
   transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
-/* Header */
+/* Header: PURE LOGIC Banner über ganze Breite zentriert, Leiste direkt darunter */
 .header {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px 16px;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 0;
+  gap: 0;
   background: var(--header-bg);
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--border);
@@ -246,15 +247,21 @@ body.light-mode .offline-fallback-title {
 }
 
 .brand-banner-bar {
+  width: 100%;
   display: flex;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: center;
+  padding: 8px 14px;
+  background: var(--surface-subtle);
+  border-bottom: 1px solid var(--border);
 }
 
 button.logo {
+  width: 100%;
+  text-align: center;
   background: transparent;
   border: none;
-  padding: 2px 4px;
+  padding: 2px 6px;
   border-radius: 8px;
   font-weight: 900;
   font-size: 20px;
@@ -267,52 +274,14 @@ button.logo {
 }
 
 .header-right {
+  width: 100%;
   display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   align-items: center;
   gap: 8px;
-  position: relative;
-}
-
-/* Smartphone-Layout: PURE LOGIC Banner über volle Breite zentriert, Leiste direkt darunter */
-@media (max-width: 767px) {
-  .header {
-    flex-direction: column;
-    align-items: stretch;
-    padding: 0;
-    gap: 0;
-  }
-
-  .brand-banner-bar {
-    width: 100%;
-    justify-content: center;
-    padding: 8px 12px;
-    background: var(--surface-subtle);
-    border-bottom: 1px solid var(--border);
-  }
-
-  button.logo {
-    width: 100%;
-    text-align: center;
-    font-size: 20px;
-    padding: 2px 6px;
-  }
-
-  .header-right {
-    width: 100%;
-    flex-wrap: wrap;
-    justify-content: center;
-    align-items: center;
-    gap: 6px;
-    padding: 7px 10px;
-    position: static;
-  }
-
-  .points-dropdown {
-    top: 84px !important;
-    right: 10px !important;
-    left: auto !important;
-    width: 220px;
-  }
+  padding: 7px 14px;
+  position: static;
 }
 
 .theme-toggle-btn {
@@ -405,11 +374,11 @@ body.theme-light .points-badge.admin-badge {
   background: rgba(99, 102, 241, 0.3);
 }
 
-/* Dropdown - Perfekt eingepasst für Smartphones und Desktop */
+/* Dropdown - unterhalb der zweiten Header-Leiste ausgerichtet */
 .points-dropdown {
   position: absolute;
-  top: 45px;
-  right: 0;
+  top: 84px;
+  right: 14px;
   left: auto;
   background: var(--card);
   border: 1px solid var(--border);
