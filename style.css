@@ -231,7 +231,7 @@ body.light-mode .offline-fallback-title {
   transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
-/* Header: PURE LOGIC Banner über ganze Breite zentriert, Leiste direkt darunter */
+/* Header: PURE LOGIC Banner oben zentriert, Leiste direkt darunter */
 .header {
   display: flex;
   flex-direction: column;
@@ -446,15 +446,92 @@ body.theme-light .points-badge.admin-badge {
   white-space: nowrap;
 }
 
-.language-select {
+/* Sprachumschalter: immer rechts oben neben Logout, mit Landesflagge + Kürzel */
+.lang-switcher-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   background: var(--card);
-  color: var(--text);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 5px;
+  border-radius: 10px;
+  padding: 4px 7px;
   font-size: 11px;
-  font-weight: 600;
-  outline: none;
+  font-weight: 800;
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.lang-switcher-wrap:hover {
+  background: var(--card-hover);
+  border-color: var(--primary);
+}
+
+.lang-flag-badge {
+  font-size: 12px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+}
+
+.lang-code-badge {
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.3px;
+  color: var(--text);
+  line-height: 1;
+}
+
+.language-select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  border: none;
+  background: transparent;
+  font-size: 12px;
+  z-index: 2;
+}
+
+@media (max-width: 767px) {
+  .header-right {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+  }
+
+  #header-right-container > :not(#lang-switcher-wrap) {
+    grid-column: 1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 6px;
+  }
+
+  .lang-switcher-wrap {
+    grid-column: 2;
+    justify-self: end;
+    align-self: center;
+    padding: 4px 6px;
+    gap: 3px;
+  }
+}
+
+@media (min-width: 768px) {
+  .header-right {
+    justify-content: flex-end;
+    padding: 7px 14px;
+  }
 }
 
 /* ==========================================================================
@@ -596,16 +673,15 @@ body.theme-light .feed-subtab-match {
   border-color: rgba(219, 39, 119, 0.35);
 }
 
-/* AUTH GATE & CONTAINER */
+/* AUTH GATE & CONTAINER: Header oben bleibt sichtbar, Sprachwähler rechts oben erreichbar */
 .auth-gate-container {
   display: flex;
   justify-content: center;
   align-items: center;
+  flex: 1;
   width: 100%;
   height: 100%;
-  position: absolute;
-  top: 0;
-  left: 0;
+  position: relative;
   background: var(--bg);
   z-index: 100;
   padding: 20px;

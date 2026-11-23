@@ -39,14 +39,14 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-  <link rel="stylesheet" href="style.css?v=4" />
+  <link rel="stylesheet" href="style.css?v=5" />
 </head>
 <body>
 
 <!-- Hauptcontainer der App-Karte -->
 <div class="app-card">
   
-  <!-- Header Bereich: PURE LOGIC Banner oben zentriert, Leiste direkt darunter -->
+  <!-- Header Bereich: PURE LOGIC Banner oben zentriert, Leiste direkt darunter + Sprachwähler rechts oben -->
   <div class="header" id="app-header">
     <div class="brand-banner-bar">
       <button type="button" class="logo" onclick="switchTab('reels')" title="Zur Startseite" aria-label="PURE LOGIC Startseite">PURE LOGIC</button>
@@ -76,20 +76,25 @@
         <img id="header-avatar-preview" class="header-avatar-sm" src="" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'24\' height=\'24\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%2394a3b8\' stroke-width=\'2\'><path d=\'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2\'></path><circle cx=\'12\' cy=\'7\' r=\'4\'></circle></svg>'" alt="Profil">
         <span class="header-profile-text">Profil</span>
       </button>
+
       <button type="button" class="btn-logout hidden" id="logout-btn" onclick="resetUser()" title="Abmelden">🚪 Logout</button>
 
-      <select id="languageSelect" class="language-select" aria-label="Sprache auswählen" onchange="changeLanguage(this.value)">
-        <option value="de" selected>🇩🇪 DE</option>
-        <option value="en">🇬🇧 EN</option>
-        <option value="it">🇮🇹 IT</option>
-        <option value="bks">🇭🇷 BKS</option>
-        <option value="tr">🇹🇷 TR</option>
-        <option value="es">🇪🇸 ES</option>
-        <option value="fr">🇫🇷 FR</option>
-        <option value="pl">🇵🇱 PL</option>
-        <option value="hu">🇭🇺 HU</option>
-        <option value="uk">🇺🇦 UK</option>
-      </select>
+      <div class="lang-switcher-wrap" id="lang-switcher-wrap" title="Sprache auswählen">
+        <span class="lang-flag-badge" id="lang-flag-badge" aria-hidden="true">🇩🇪</span>
+        <select id="languageSelect" class="language-select" aria-label="Sprache auswählen" onchange="handleLanguageChange(this.value)">
+          <option value="de" data-flag="🇩🇪" data-code="DE" selected>🇩🇪 DE</option>
+          <option value="en" data-flag="🇬🇧" data-code="EN">🇬🇧 EN</option>
+          <option value="it" data-flag="🇮🇹" data-code="IT">🇮🇹 IT</option>
+          <option value="bks" data-flag="🇭🇷" data-code="BKS">🇭🇷 BKS</option>
+          <option value="tr" data-flag="🇹🇷" data-code="TR">🇹🇷 TR</option>
+          <option value="es" data-flag="🇪🇸" data-code="ES">🇪🇸 ES</option>
+          <option value="fr" data-flag="🇫🇷" data-code="FR">🇫🇷 FR</option>
+          <option value="pl" data-flag="🇵🇱" data-code="PL">🇵🇱 PL</option>
+          <option value="hu" data-flag="🇭🇺" data-code="HU">🇭🇺 HU</option>
+          <option value="uk" data-flag="🇺🇦" data-code="UK">🇺🇦 UK</option>
+        </select>
+        <span class="lang-code-badge" id="lang-code-badge">DE</span>
+      </div>
     </div>
   </div>
 
@@ -718,25 +723,81 @@
 </div>
 
 <!-- Modul-Skripte Einbindung -->
-<script type="module" src="js/config.js?v=4"></script>
-<script type="module" src="js/state.js?v=4"></script>
-<script type="module" src="js/i18n.js?v=4"></script>
-<script type="module" src="js/auth.js?v=4"></script>
-<script type="module" src="js/features/notifications.js?v=4"></script>
-<script type="module" src="js/features/lecture.js?v=4"></script>
-<script type="module" src="js/features/quiz.js?v=4"></script>
-<script type="module" src="js/features/profguide.js?v=4"></script>
-<script type="module" src="js/features/live.js?v=4"></script>
-<script type="module" src="js/features/crush.js?v=4"></script>
-<script type="module" src="js/features/feed.js?v=4"></script>
-<script type="module" src="js/features/dm.js?v=4"></script>
-<script type="module" src="js/features/board.js?v=4"></script>
-<script type="module" src="js/features/ranking.js?v=4"></script>
+<script type="module" src="js/config.js?v=5"></script>
+<script type="module" src="js/state.js?v=5"></script>
+<script type="module" src="js/i18n.js?v=5"></script>
+<script type="module" src="js/auth.js?v=5"></script>
+<script type="module" src="js/features/notifications.js?v=5"></script>
+<script type="module" src="js/features/lecture.js?v=5"></script>
+<script type="module" src="js/features/quiz.js?v=5"></script>
+<script type="module" src="js/features/profguide.js?v=5"></script>
+<script type="module" src="js/features/live.js?v=5"></script>
+<script type="module" src="js/features/crush.js?v=5"></script>
+<script type="module" src="js/features/feed.js?v=5"></script>
+<script type="module" src="js/features/dm.js?v=5"></script>
+<script type="module" src="js/features/board.js?v=5"></script>
+<script type="module" src="js/features/ranking.js?v=5"></script>
 
-<!-- Inline-Logik für Fehlermeldungen, Bug-Reports & Feed-Special-Leiste -->
+<!-- Inline-Logik für Sprachwähler rechts oben, Feed-Special-Leiste & Bug-Reports -->
 <script type="module">
-  import { _supabase } from './js/config.js?v=4';
-  import { state } from './js/state.js?v=4';
+  import { _supabase } from './js/config.js?v=5';
+  import { state } from './js/state.js?v=5';
+
+  const LANG_META = {
+    de: { flag: '🇩🇪', code: 'DE' },
+    en: { flag: '🇬🇧', code: 'EN' },
+    it: { flag: '🇮🇹', code: 'IT' },
+    bks: { flag: '🇭🇷', code: 'BKS' },
+    tr: { flag: '🇹🇷', code: 'TR' },
+    es: { flag: '🇪🇸', code: 'ES' },
+    fr: { flag: '🇫🇷', code: 'FR' },
+    pl: { flag: '🇵🇱', code: 'PL' },
+    hu: { flag: '🇭🇺', code: 'HU' },
+    uk: { flag: '🇺🇦', code: 'UK' }
+  };
+
+  function updateLanguageBadge(lang) {
+    const sel = document.getElementById('languageSelect');
+    const flagEl = document.getElementById('lang-flag-badge');
+    const codeEl = document.getElementById('lang-code-badge');
+    const key = (lang || (sel && sel.value) || 'de').toLowerCase();
+    const meta = LANG_META[key] || LANG_META.de;
+
+    if (sel && sel.value !== key && LANG_META[key]) {
+      sel.value = key;
+    }
+    if (flagEl) flagEl.textContent = meta.flag;
+    if (codeEl) codeEl.textContent = meta.code;
+  }
+
+  function placeLanguageSwitcherRightOfLogout() {
+    const headerRight = document.getElementById('header-right-container');
+    const logoutBtn = document.getElementById('logout-btn');
+    const wrap = document.getElementById('lang-switcher-wrap');
+    if (!headerRight || !wrap) return;
+
+    if (logoutBtn && logoutBtn.parentElement === headerRight) {
+      if (logoutBtn.nextElementSibling !== wrap) {
+        logoutBtn.insertAdjacentElement('afterend', wrap);
+      }
+    } else if (wrap.parentElement !== headerRight) {
+      headerRight.appendChild(wrap);
+    }
+
+    const savedLang = localStorage.getItem('pure_logic_lang') || localStorage.getItem('lang') || 'de';
+    updateLanguageBadge(savedLang);
+  }
+
+  window.handleLanguageChange = function(lang) {
+    try {
+      localStorage.setItem('pure_logic_lang', lang);
+      localStorage.setItem('lang', lang);
+    } catch (e) {}
+    updateLanguageBadge(lang);
+    if (typeof window.changeLanguage === 'function') {
+      window.changeLanguage(lang);
+    }
+  };
 
   function syncFeedSpecialButtons() {
     const bar = document.getElementById('feed-filter-bar');
@@ -790,7 +851,6 @@
       if (matchBtn.parentElement !== specialsRow) specialsRow.appendChild(matchBtn);
     }
 
-    // Entferne alte obere Banner-Streifen falls ein Modul sie nachträglich einfügt
     document.querySelectorAll('button, div, a').forEach(el => {
       if (el.id === 'subtab-uni-duell' || el.id === 'subtab-match-mittwoch') return;
       const txt = (el.textContent || '').trim();
@@ -803,11 +863,22 @@
     });
   }
 
-  document.addEventListener('DOMContentLoaded', syncFeedSpecialButtons);
-  window.addEventListener('load', () => {
+  document.addEventListener('DOMContentLoaded', () => {
+    placeLanguageSwitcherRightOfLogout();
     syncFeedSpecialButtons();
-    setTimeout(syncFeedSpecialButtons, 250);
-    setTimeout(syncFeedSpecialButtons, 1000);
+  });
+
+  window.addEventListener('load', () => {
+    placeLanguageSwitcherRightOfLogout();
+    syncFeedSpecialButtons();
+    setTimeout(() => {
+      placeLanguageSwitcherRightOfLogout();
+      syncFeedSpecialButtons();
+    }, 300);
+    setTimeout(() => {
+      placeLanguageSwitcherRightOfLogout();
+      syncFeedSpecialButtons();
+    }, 1000);
   });
 
   window.openReportModal = function() {
@@ -901,6 +972,6 @@
 </script>
 
 <!-- Zentrales Hauptskript -->
-<script type="module" src="js/main.js?v=4"></script>
+<script type="module" src="js/main.js?v=5"></script>
 </body>
 </html>
