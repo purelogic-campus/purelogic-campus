@@ -458,13 +458,16 @@ body.theme-light .points-badge.admin-badge {
 }
 
 /* ==========================================================================
-   FEED SUB-NAVIGATION (inkl. Wiener Uni-Duell & Match Mittwoch)
+   FEED SUB-NAVIGATION:
+   - Smartphone (< 768px): Zeile 1 = Wiener Uni-Duell & Match Mittwoch,
+                           Zeile 2 = Für dich, Entdecken, Gefolgt, LIVE
+   - Desktop (>= 768px):  1 Zeile = Wiener Uni-Duell | Für dich | Entdecken | Gefolgt | LIVE | Match Mittwoch
    ========================================================================== */
 .feed-filter-bar {
   display: flex;
-  justify-content: flex-start;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
   padding: 8px 10px;
   background: var(--card);
   border-bottom: 1px solid var(--border);
@@ -472,19 +475,83 @@ body.theme-light .points-badge.admin-badge {
   flex-shrink: 0;
   margin-bottom: 4px;
   z-index: 10;
+}
+
+.feed-specials-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.feed-specials-row .feed-subtab-btn {
+  flex: 1;
+  text-align: center;
+  justify-content: center;
+}
+
+.feed-tabs-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
   overflow-x: auto;
   scrollbar-width: none;
 }
 
-.feed-filter-bar::-webkit-scrollbar {
+.feed-tabs-row::-webkit-scrollbar {
   display: none;
+}
+
+.feed-tabs-row .feed-subtab-btn {
+  flex: 1;
+  text-align: center;
 }
 
 @media (min-width: 768px) {
   .feed-filter-bar {
+    flex-direction: row;
     justify-content: center;
-    gap: 12px;
+    align-items: center;
+    gap: 10px;
     flex-wrap: wrap;
+  }
+
+  .feed-specials-row,
+  .feed-tabs-row {
+    display: contents;
+  }
+
+  #subtab-uni-duell {
+    order: 1;
+    flex: 0 0 auto;
+  }
+
+  #subtab-foryou {
+    order: 2;
+    flex: 0 0 auto;
+  }
+
+  #subtab-discover {
+    order: 3;
+    flex: 0 0 auto;
+  }
+
+  #subtab-following {
+    order: 4;
+    flex: 0 0 auto;
+  }
+
+  #subtab-live {
+    order: 5;
+    flex: 0 0 auto;
+  }
+
+  #subtab-match-mittwoch {
+    order: 6;
+    flex: 0 0 auto;
   }
 }
 
@@ -497,7 +564,6 @@ body.theme-light .points-badge.admin-badge {
   font-weight: 800;
   cursor: pointer;
   white-space: nowrap;
-  flex-shrink: 0;
   transition: color 0.2s, background 0.2s, border-color 0.2s, transform 0.15s;
 }
 
