@@ -1,37 +1,56 @@
-const CACHE_NAME = 'pure-logic-v1.4.4';
+const CACHE_NAME = 'pure-logic-v1.4.6';
 
-// Definition aller statischen Assets mit relativen Pfaden für GitHub Pages Subfolder
+// Definition aller statischen Assets inkl. aller 10 Länderflaggen mit relativen Pfaden
 const STATIC_ASSETS = [
   './',
   './index.html',
-  './style.css?v=2',
+  './style.css?v=6',
   './manifest.json',
-  './js/config.js?v=2',
-  './js/state.js?v=2',
-  './js/i18n.js?v=2',
-  './js/auth.js?v=2',
-  './js/network.js?v=2',
-  './js/main.js?v=2',
-  './js/features/notifications.js?v=2',
-  './js/features/lecture.js?v=2',
-  './js/features/quiz.js?v=2',
-  './js/features/profguide.js?v=2',
-  './js/features/live.js?v=2',
-  './js/features/crush.js?v=2',
-  './js/features/feed.js?v=2',
-  './js/features/dm.js?v=2',
-  './js/features/board.js?v=2',
-  './js/features/ranking.js?v=2'
+  './icons/flags/bks.svg',
+  './icons/flags/de.svg',
+  './icons/flags/en.svg',
+  './icons/flags/es.svg',
+  './icons/flags/fr.svg',
+  './icons/flags/hu.svg',
+  './icons/flags/it.svg',
+  './icons/flags/pl.svg',
+  './icons/flags/tr.svg',
+  './icons/flags/uk.svg',
+  './js/config.js?v=6',
+  './js/state.js?v=6',
+  './js/i18n.js?v=6',
+  './js/auth.js?v=6',
+  './js/network.js?v=6',
+  './js/main.js?v=6',
+  './js/features/notifications.js?v=6',
+  './js/features/lecture.js?v=6',
+  './js/features/quiz.js?v=6',
+  './js/features/profguide.js?v=6',
+  './js/features/live.js?v=6',
+  './js/features/crush.js?v=6',
+  './js/features/feed.js?v=6',
+  './js/features/dm.js?v=6',
+  './js/features/board.js?v=6',
+  './js/features/ranking.js?v=6'
 ];
 
-// Installation: Grundgerüst und Assets cachen
+// Installation: Grundgerüst, Assets und Länderflaggen cachen
 self.addEventListener('install', (event) => {
   self.skipWaiting();
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(STATIC_ASSETS).catch((err) => {
-        console.warn('SW Pre-Cache Hinweis:', err);
-      });
+    caches.open(CACHE_NAME).then(async (cache) => {
+      await Promise.all(
+        STATIC_ASSETS.map(async (assetUrl) => {
+          try {
+            const response = await fetch(assetUrl, { cache: 'no-cache' });
+            if (response && response.ok) {
+              await cache.put(assetUrl, response);
+            }
+          } catch (err) {
+            console.warn('SW Pre-Cache Hinweis für Asset:', assetUrl, err);
+          }
+        })
+      );
     })
   );
 });
