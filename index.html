@@ -80,20 +80,54 @@
       <button type="button" class="btn-logout hidden" id="logout-btn" onclick="resetUser()" title="Abmelden">🚪 Logout</button>
 
       <div class="lang-switcher-wrap" id="lang-switcher-wrap" title="Sprache auswählen">
-        <img id="lang-flag-img" class="lang-flag-img" src="icons/flags/de.svg" alt="DE" onerror="this.style.display='none'">
-        <select id="languageSelect" class="language-select" aria-label="Sprache auswählen" onchange="handleLanguageChange(this.value)">
-          <option value="de" data-icon="icons/flags/de.svg" data-code="DE" selected>DE</option>
-          <option value="en" data-icon="icons/flags/en.svg" data-code="EN">EN</option>
-          <option value="it" data-icon="icons/flags/it.svg" data-code="IT">IT</option>
-          <option value="bks" data-icon="icons/flags/bks.svg" data-code="BKS">BKS</option>
-          <option value="tr" data-icon="icons/flags/tr.svg" data-code="TR">TR</option>
-          <option value="es" data-icon="icons/flags/es.svg" data-code="ES">ES</option>
-          <option value="fr" data-icon="icons/flags/fr.svg" data-code="FR">FR</option>
-          <option value="pl" data-icon="icons/flags/pl.svg" data-code="PL">PL</option>
-          <option value="hu" data-icon="icons/flags/hu.svg" data-code="HU">HU</option>
-          <option value="uk" data-icon="icons/flags/uk.svg" data-code="UK">UK</option>
-        </select>
-        <span class="lang-code-badge" id="lang-code-badge">DE</span>
+        <button type="button" class="lang-current-btn" id="lang-current-btn" aria-haspopup="listbox" aria-expanded="false" onclick="toggleLanguageMenu(event)">
+          <img id="lang-flag-img" class="lang-flag-img" src="icons/flags/de.svg" alt="DE" onerror="this.style.display='none'">
+          <span class="lang-code-badge" id="lang-code-badge">DE</span>
+          <span class="lang-caret" aria-hidden="true">▾</span>
+        </button>
+
+        <div class="lang-dropdown-list hidden" id="lang-dropdown-list" role="listbox" aria-label="Sprache auswählen">
+          <button type="button" class="lang-option-item active" data-lang="de" onclick="selectLanguageOption('de')">
+            <img class="lang-flag-img" src="icons/flags/de.svg" alt="DE">
+            <span class="lang-option-code">DE</span>
+          </button>
+          <button type="button" class="lang-option-item" data-lang="en" onclick="selectLanguageOption('en')">
+            <img class="lang-flag-img" src="icons/flags/en.svg" alt="EN">
+            <span class="lang-option-code">EN</span>
+          </button>
+          <button type="button" class="lang-option-item" data-lang="it" onclick="selectLanguageOption('it')">
+            <img class="lang-flag-img" src="icons/flags/it.svg" alt="IT">
+            <span class="lang-option-code">IT</span>
+          </button>
+          <button type="button" class="lang-option-item" data-lang="bks" onclick="selectLanguageOption('bks')">
+            <img class="lang-flag-img" src="icons/flags/bks.svg" alt="BKS">
+            <span class="lang-option-code">BKS</span>
+          </button>
+          <button type="button" class="lang-option-item" data-lang="tr" onclick="selectLanguageOption('tr')">
+            <img class="lang-flag-img" src="icons/flags/tr.svg" alt="TR">
+            <span class="lang-option-code">TR</span>
+          </button>
+          <button type="button" class="lang-option-item" data-lang="es" onclick="selectLanguageOption('es')">
+            <img class="lang-flag-img" src="icons/flags/es.svg" alt="ES">
+            <span class="lang-option-code">ES</span>
+          </button>
+          <button type="button" class="lang-option-item" data-lang="fr" onclick="selectLanguageOption('fr')">
+            <img class="lang-flag-img" src="icons/flags/fr.svg" alt="FR">
+            <span class="lang-option-code">FR</span>
+          </button>
+          <button type="button" class="lang-option-item" data-lang="pl" onclick="selectLanguageOption('pl')">
+            <img class="lang-flag-img" src="icons/flags/pl.svg" alt="PL">
+            <span class="lang-option-code">PL</span>
+          </button>
+          <button type="button" class="lang-option-item" data-lang="hu" onclick="selectLanguageOption('hu')">
+            <img class="lang-flag-img" src="icons/flags/hu.svg" alt="HU">
+            <span class="lang-option-code">HU</span>
+          </button>
+          <button type="button" class="lang-option-item" data-lang="uk" onclick="selectLanguageOption('uk')">
+            <img class="lang-flag-img" src="icons/flags/uk.svg" alt="UK">
+            <span class="lang-option-code">UK</span>
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -738,7 +772,7 @@
 <script type="module" src="js/features/board.js?v=6"></script>
 <script type="module" src="js/features/ranking.js?v=6"></script>
 
-<!-- Inline-Logik für Sprachwähler rechts oben, Flaggen-Dateien, Feed-Special-Leiste & Bug-Reports -->
+<!-- Inline-Logik für Custom-Sprachmenü rechts oben, Flaggen-Dateien, Feed-Special-Leiste & Bug-Reports -->
 <script type="module">
   import { _supabase } from './js/config.js?v=6';
   import { state } from './js/state.js?v=6';
@@ -757,15 +791,11 @@
   };
 
   function updateLanguageBadge(lang) {
-    const sel = document.getElementById('languageSelect');
     const flagImg = document.getElementById('lang-flag-img');
     const codeEl = document.getElementById('lang-code-badge');
-    const key = (lang || (sel && sel.value) || 'de').toLowerCase();
+    const key = (lang || 'de').toLowerCase();
     const meta = LANG_META[key] || LANG_META.de;
 
-    if (sel && sel.value !== key && LANG_META[key]) {
-      sel.value = key;
-    }
     if (flagImg) {
       flagImg.style.display = 'inline-block';
       flagImg.src = meta.icon;
@@ -774,7 +804,56 @@
     if (codeEl) {
       codeEl.textContent = meta.code;
     }
+
+    document.querySelectorAll('.lang-option-item').forEach(item => {
+      item.classList.toggle('active', item.getAttribute('data-lang') === key);
+    });
   }
+
+  window.toggleLanguageMenu = function(event) {
+    if (event) event.stopPropagation();
+    const list = document.getElementById('lang-dropdown-list');
+    const btn = document.getElementById('lang-current-btn');
+    if (!list) return;
+    const isHidden = list.classList.contains('hidden');
+    list.classList.toggle('hidden', !isHidden);
+    if (btn) btn.setAttribute('aria-expanded', String(isHidden));
+  };
+
+  window.selectLanguageOption = function(lang) {
+    const key = (lang || 'de').toLowerCase();
+    try {
+      localStorage.setItem('pure_logic_lang', key);
+      localStorage.setItem('lang', key);
+    } catch (e) {}
+
+    updateLanguageBadge(key);
+
+    const list = document.getElementById('lang-dropdown-list');
+    const btn = document.getElementById('lang-current-btn');
+    if (list) list.classList.add('hidden');
+    if (btn) btn.setAttribute('aria-expanded', 'false');
+
+    if (typeof window.changeLanguage === 'function') {
+      window.changeLanguage(key);
+    } else if (typeof window.handleLanguageChange === 'function') {
+      window.handleLanguageChange(key);
+    }
+  };
+
+  window.handleLanguageChange = function(lang) {
+    window.selectLanguageOption(lang);
+  };
+
+  document.addEventListener('click', (event) => {
+    const wrap = document.getElementById('lang-switcher-wrap');
+    const list = document.getElementById('lang-dropdown-list');
+    const btn = document.getElementById('lang-current-btn');
+    if (wrap && list && !wrap.contains(event.target)) {
+      list.classList.add('hidden');
+      if (btn) btn.setAttribute('aria-expanded', 'false');
+    }
+  });
 
   function placeLanguageSwitcherRightOfLogout() {
     const headerRight = document.getElementById('header-right-container');
@@ -793,17 +872,6 @@
     const savedLang = localStorage.getItem('pure_logic_lang') || localStorage.getItem('lang') || 'de';
     updateLanguageBadge(savedLang);
   }
-
-  window.handleLanguageChange = function(lang) {
-    try {
-      localStorage.setItem('pure_logic_lang', lang);
-      localStorage.setItem('lang', lang);
-    } catch (e) {}
-    updateLanguageBadge(lang);
-    if (typeof window.changeLanguage === 'function') {
-      window.changeLanguage(lang);
-    }
-  };
 
   function syncFeedSpecialButtons() {
     const bar = document.getElementById('feed-filter-bar');
