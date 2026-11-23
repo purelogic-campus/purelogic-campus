@@ -1343,6 +1343,165 @@ input:focus, select:focus, textarea:focus {
 }
 
 /* ==========================================================================
+   ERWEITERTE CAMPUS-KOMPONENTEN (Karten, Badges, Live, Duell, Crush & Modals)
+   ========================================================================== */
+.section-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.campus-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px 14px;
+  box-shadow: var(--shadow-card);
+  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+}
+
+.campus-card:hover {
+  border-color: var(--primary);
+}
+
+.campus-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.campus-card-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.campus-card-meta {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.campus-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  background: var(--surface-subtle);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.campus-badge.success {
+  background: rgba(16, 185, 129, 0.16);
+  border-color: rgba(16, 185, 129, 0.45);
+  color: var(--success);
+}
+
+.campus-badge.warning {
+  background: rgba(245, 158, 11, 0.16);
+  border-color: rgba(245, 158, 11, 0.45);
+  color: var(--admin);
+}
+
+.campus-badge.danger {
+  background: rgba(239, 68, 68, 0.16);
+  border-color: rgba(239, 68, 68, 0.45);
+  color: var(--danger);
+}
+
+.campus-badge.accent {
+  background: rgba(236, 72, 153, 0.16);
+  border-color: rgba(236, 72, 153, 0.45);
+  color: var(--accent);
+}
+
+.live-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 900;
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.55);
+  color: #fca5a5;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+body.theme-light .live-status-pill {
+  color: #991b1b;
+  background: rgba(220, 38, 38, 0.12);
+}
+
+.live-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--danger);
+  animation: liveDotPulse 1.4s infinite ease-in-out;
+}
+
+@keyframes liveDotPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.35); opacity: 0.55; }
+}
+
+.duell-progress-track {
+  width: 100%;
+  height: 10px;
+  background: var(--surface-subtle);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+  display: flex;
+  margin: 8px 0;
+}
+
+.duell-progress-bar-a {
+  height: 100%;
+  background: var(--primary);
+  transition: width 0.3s ease;
+}
+
+.duell-progress-bar-b {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.3s ease;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 9500;
+}
+
+.modal-panel {
+  width: 100%;
+  max-width: 480px;
+  max-height: 85vh;
+  overflow-y: auto;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 18px;
+  box-shadow: var(--shadow-auth);
+}
+
+/* ==========================================================================
    MATCH MITTWOCH AUTOMATISCHES THEME (Liebes- & Herzchen-Design)
    ========================================================================== */
 body.match-mittwoch-active {
@@ -1383,4 +1542,29 @@ body.match-mittwoch-active {
     0% { opacity: 0.9; }
     50% { opacity: 1; filter: brightness(1.15); }
     100% { opacity: 0.9; }
+}
+
+.match-heart-float {
+    position: fixed;
+    bottom: -24px;
+    font-size: 16px;
+    pointer-events: none;
+    z-index: 99990;
+    opacity: 0.85;
+    animation: matchHeartRise 4.5s linear forwards;
+}
+
+@keyframes matchHeartRise {
+    0% {
+        transform: translateY(0) scale(0.85) rotate(0deg);
+        opacity: 0.9;
+    }
+    50% {
+        transform: translateY(-50vh) scale(1.1) rotate(12deg);
+        opacity: 0.8;
+    }
+    100% {
+        transform: translateY(-105vh) scale(0.95) rotate(-10deg);
+        opacity: 0;
+    }
 }
