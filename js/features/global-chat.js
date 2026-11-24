@@ -1,4 +1,4 @@
-// js/features/global-chat.js - Campus-Chat mit klappbaren Uni-Dropdowns, Smiley-Picker & bis zu 5 Bildern pro Nachricht
+// js/features/global-chat.js - Campus-Chat mit Mobile-Uni-Dropdown unter Allgemein, Smiley-Picker & bis zu 5 Bildern
 import { _supabase } from '../config.js';
 import { state } from '../state.js';
 import { validateInputOrAlert } from './moderation.js';
@@ -6,10 +6,12 @@ import { validateInputOrAlert } from './moderation.js';
 const CHANNEL_PREFIX_REGEX = /^\[channel:([^\]]+)\]\s*/i;
 const ATTACHMENTS_MARKER_REGEX = /\n?\[attachments:(\[[\s\S]*?\])\]\s*$/i;
 const DEFAULT_CHANNEL_KEY = 'general:all';
+const DEFAULT_CATEGORY_ID = 'plaudern';
 const CHAT_TABLE = 'global_messages';
 const STORAGE_BUCKET = 'media';
 const MAX_IMAGES_PER_MESSAGE = 5;
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+const MOBILE_BREAKPOINT_PX = 768;
 
 const QUICK_SMILEYS = [
     '😊', '😂', '🤣', '😍', '🥰', '😎', '🤩', '🥳',
@@ -44,8 +46,14 @@ let cachedAllMessages = [];
 // Ausgewählte Bilder (max. 5) vor dem Absenden: { id, file, previewUrl, name }
 let pendingImageDrafts = [];
 
-// Standardmäßig alle Uni-Dropdowns eingeklappt; beim Klick auf eine Uni klappt nur diese auf/zu
+// Desktop: klappbare Uni-Akkordeons; Mobile: Dropdown-Status unter Allgemein
 const expandedUniversities = new Set();
+let mobileUnisDropdownOpen = false;
+let mobileSelectedUniId = '';
+
+function isMobileViewport() {
+    return typeof window !== 'undefined' && window.innerWidth <= MOBILE_BREAKPOINT_PX;
+}
 
 function escapeHtml(str) {
     return String(str || '')
@@ -84,7 +92,7 @@ function getChannelMeta(channelKey) {
 
     const parts = key.split(':');
     const uniId = parts[0] || '';
-    const catId = parts[1] || 'plaudern';
+    const catId = parts[1] || DEFAULT_CATEGORY_ID;
 
     const uni = UNIVERSITIES.find(u => u.id === uniId) || {
         id: uniId,
@@ -518,7 +526,6 @@ function enhanceInputRowWithSmileyAndImages(inputArea) {
     inputArea.style.flexWrap = 'wrap';
     inputArea.style.gap = '6px';
 
-    // Vorschau-Leiste für ausgewählte Bilder (bis zu 5) direkt über der Eingabezeile
     const previewBar = document.createElement('div');
     previewBar.id = 'global-chat-attachments-bar';
     previewBar.style.cssText = [
@@ -535,7 +542,6 @@ function enhanceInputRowWithSmileyAndImages(inputArea) {
     ].join(';');
     inputArea.insertBefore(previewBar, inputArea.firstChild);
 
-    // Smiley-Picker-Popover
     const picker = document.createElement('div');
     picker.id = 'global-smiley-picker';
     picker.style.cssText = [
@@ -577,7 +583,6 @@ function enhanceInputRowWithSmileyAndImages(inputArea) {
     });
     inputArea.appendChild(picker);
 
-    // Verstecktes Multi-Image-Input (max. 5 Bilder)
     const fileInput = document.createElement('input');
     fileInput.type = 'file';
     fileInput.id = 'global-chat-image-input';
@@ -589,7 +594,6 @@ function enhanceInputRowWithSmileyAndImages(inputArea) {
     });
     inputArea.appendChild(fileInput);
 
-    // Smiley-Button in der Nachrichtenzeile
     const smileyBtn = document.createElement('button');
     smileyBtn.type = 'button';
     smileyBtn.id = 'global-smiley-btn';
@@ -612,7 +616,6 @@ function enhanceInputRowWithSmileyAndImages(inputArea) {
     ].join(';');
     smileyBtn.addEventListener('click', toggleSmileyPicker);
 
-    // Bilder-Button (bis zu 5 Bilder) in der Nachrichtenzeile
     const imageBtn = document.createElement('button');
     imageBtn.type = 'button';
     imageBtn.id = 'global-image-btn';
@@ -647,7 +650,7 @@ function enhanceInputRowWithSmileyAndImages(inputArea) {
         inputArea.insertBefore(smileyBtn, textInput);
         inputArea.insertBefore(imageBtn, textInput);
         textInput.style.flex = '1';
-        textInput.style.minWidth = '140px';
+        textInput.style.minWidth = '120px';
     } else {
         inputArea.appendChild(smileyBtn);
         inputArea.appendChild(imageBtn);
@@ -660,147 +663,198 @@ function enhanceInputRowWithSmileyAndImages(inputArea) {
     });
 }
 
-function ensureGlobalChatLayout() {
-    const globalTab = document.getElementById('tab-global');
-    if (!globalTab) return null;
-
-    const chatContainer = globalTab.querySelector('.chat-container');
-    const messagesList = document.getElementById('global-chat-list');
-    const inputArea = globalTab.querySelector('.chat-input-area');
-    if (!chatContainer || !messagesList || !inputArea) return null;
-
-    enhanceInputRowWithSmileyAndImages(inputArea);
-
-    chatContainer.style.padding = '12px';
-    chatContainer.style.display = 'flex';
-    chatContainer.style.flexDirection = 'column';
-    chatContainer.style.overflow = 'hidden';
-
-    let shell = document.getElementById('global-chat-shell');
-    let sidebarList = document.getElementById('global-channels-list');
-
-    if (!shell) {
-        shell = document.createElement('div');
-        shell.id = 'global-chat-shell';
-        shell.style.cssText = [
-            'display: grid',
-            'grid-template-columns: minmax(225px, 300px) minmax(0, 1fr)',
-            'gap: 12px',
-            'flex: 1',
-            'min-height: 0',
-            'overflow: hidden'
-        ].join(';');
-
-        const sidebar = document.createElement('div');
-        sidebar.id = 'global-channels-sidebar';
-        sidebar.style.cssText = [
-            'display: flex',
-            'flex-direction: column',
-            'background: rgba(255, 255, 255, 0.02)',
-            'border: 1px solid var(--border)',
-            'border-radius: 12px',
-            'overflow: hidden',
-            'min-height: 0'
-        ].join(';');
-
-        sidebar.innerHTML = `
-            <div style="padding: 10px 12px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 6px; flex-shrink: 0;">
-                <span style="font-size: 12px; font-weight: 800; color: #fff;">🧭 Campus-Kanäle</span>
-                <button type="button" onclick="window.loadGlobalMessages(false)" aria-label="Chat aktualisieren" style="background: rgba(255,255,255,0.06); border: 1px solid var(--border); color: var(--text-muted); border-radius: 8px; padding: 3px 8px; font-size: 10px; font-weight: 700; cursor: pointer;">↻</button>
-            </div>
-            <div id="global-channels-list" style="flex: 1; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 8px;"></div>
-        `;
-
-        const threadPane = document.createElement('div');
-        threadPane.id = 'global-thread-pane';
-        threadPane.style.cssText = [
-            'display: flex',
-            'flex-direction: column',
-            'min-width: 0',
-            'min-height: 0',
-            'overflow: hidden'
-        ].join(';');
-
-        const channelHeader = document.createElement('div');
-        channelHeader.id = 'global-active-channel-header';
-        channelHeader.style.cssText = [
-            'display: flex',
-            'align-items: center',
-            'justify-content: space-between',
-            'gap: 10px',
-            'padding: 10px 14px',
-            'margin-bottom: 8px',
-            'background: rgba(255, 255, 255, 0.03)',
-            'border: 1px solid var(--border)',
-            'border-radius: 12px',
-            'flex-shrink: 0'
-        ].join(';');
-        channelHeader.innerHTML = `
-            <div style="min-width: 0;">
-                <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px;">Aktiver Kanal</div>
-                <div id="global-active-channel-title" style="font-size: 14px; font-weight: 800; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">🌐 Allgemein (Alle Unis)</div>
-                <div id="global-active-channel-sub" style="font-size: 11px; color: #818cf8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Offener Raum für Studierende aller Universitäten</div>
-            </div>
-        `;
-
-        threadPane.appendChild(channelHeader);
-        if (messagesList.parentElement === chatContainer) {
-            threadPane.appendChild(messagesList);
-        }
-        if (inputArea.parentElement === chatContainer) {
-            threadPane.appendChild(inputArea);
-        }
-
-        shell.appendChild(sidebar);
-        shell.appendChild(threadPane);
-        chatContainer.appendChild(shell);
-
-        sidebarList = document.getElementById('global-channels-list');
+function syncMobileStateFromActiveChannel() {
+    const key = String(activeChannelKey || DEFAULT_CHANNEL_KEY).toLowerCase();
+    if (key === DEFAULT_CHANNEL_KEY) {
+        mobileSelectedUniId = '';
+        return;
     }
-
-    const applyResponsiveColumns = () => {
-        if (!shell) return;
-        if (window.innerWidth <= 720) {
-            shell.style.gridTemplateColumns = '1fr';
-            shell.style.gridTemplateRows = 'minmax(135px, 190px) minmax(0, 1fr)';
-        } else {
-            shell.style.gridTemplateColumns = 'minmax(225px, 300px) minmax(0, 1fr)';
-            shell.style.gridTemplateRows = '1fr';
-        }
-    };
-
-    if (!shell.dataset.resizeBound) {
-        shell.dataset.resizeBound = '1';
-        window.addEventListener('resize', applyResponsiveColumns);
-    }
-    applyResponsiveColumns();
-
-    if (sidebarList) {
-        buildChannelsSidebar(sidebarList);
-    }
-
-    updateActiveChannelHeader();
-    return { shell, sidebarList };
-}
-
-function toggleUniversityDropdown(uniId) {
-    if (!uniId) return;
-    if (expandedUniversities.has(uniId)) {
-        expandedUniversities.delete(uniId);
-    } else {
-        expandedUniversities.add(uniId);
-    }
-    const sidebarList = document.getElementById('global-channels-list');
-    if (sidebarList) {
-        buildChannelsSidebar(sidebarList);
+    const parts = key.split(':');
+    if (parts[0] && parts[0] !== 'general') {
+        mobileSelectedUniId = parts[0];
     }
 }
 
-function buildChannelsSidebar(sidebarList) {
+function buildMobileChannelsBar(sidebarList) {
+    syncMobileStateFromActiveChannel();
+    const counts = getChannelCountsMap();
+    const isGeneralActive = activeChannelKey === DEFAULT_CHANNEL_KEY;
+    const generalCount = counts.get(DEFAULT_CHANNEL_KEY) || 0;
+
+    const currentParts = activeChannelKey.split(':');
+    const currentCatId = currentParts.length === 2 && currentParts[0] !== 'general'
+        ? currentParts[1]
+        : DEFAULT_CATEGORY_ID;
+
+    const selectedUniObj = UNIVERSITIES.find(u => u.id === mobileSelectedUniId) || null;
+    const selectedUniLabel = selectedUniObj ? selectedUniObj.short : 'Unis';
+
     sidebarList.innerHTML = '';
+
+    // Zeile 1: Links "🌐 Allgemein", rechts das Dropdown für alle Unis
+    const topRow = document.createElement('div');
+    topRow.style.cssText = [
+        'display: grid',
+        'grid-template-columns: 1fr 1fr',
+        'gap: 6px',
+        'width: 100%'
+    ].join(';');
+
+    const generalBtn = document.createElement('button');
+    generalBtn.type = 'button';
+    generalBtn.dataset.channelKey = DEFAULT_CHANNEL_KEY;
+    generalBtn.style.cssText = [
+        'padding: 7px 10px',
+        'border-radius: 9px',
+        'cursor: pointer',
+        'font-size: 11px',
+        'font-weight: 800',
+        'display: flex',
+        'align-items: center',
+        'justify-content: space-between',
+        'gap: 4px',
+        'white-space: nowrap',
+        'overflow: hidden',
+        'text-overflow: ellipsis',
+        isGeneralActive
+            ? 'background: rgba(99, 102, 241, 0.25); border: 1px solid rgba(129, 140, 248, 0.75); color: #fff;'
+            : 'background: rgba(255, 255, 255, 0.04); border: 1px solid var(--border); color: var(--text);'
+    ].join(';');
+    generalBtn.innerHTML = `
+        <span>🌐 Allgemein</span>
+        ${generalCount > 0 ? `<span style="font-size: 9px; padding: 1px 5px; border-radius: 999px; background: rgba(129, 140, 248, 0.24); color: #c7d2fe;">${generalCount}</span>` : ''}
+    `;
+    generalBtn.addEventListener('click', () => {
+        mobileUnisDropdownOpen = false;
+        mobileSelectedUniId = '';
+        selectGlobalChannel(DEFAULT_CHANNEL_KEY);
+    });
+
+    const unisDropdownBtn = document.createElement('button');
+    unisDropdownBtn.type = 'button';
+    unisDropdownBtn.setAttribute('aria-expanded', String(mobileUnisDropdownOpen));
+    unisDropdownBtn.style.cssText = [
+        'padding: 7px 10px',
+        'border-radius: 9px',
+        'cursor: pointer',
+        'font-size: 11px',
+        'font-weight: 800',
+        'display: flex',
+        'align-items: center',
+        'justify-content: space-between',
+        'gap: 4px',
+        'white-space: nowrap',
+        'overflow: hidden',
+        'text-overflow: ellipsis',
+        !isGeneralActive
+            ? 'background: rgba(99, 102, 241, 0.22); border: 1px solid rgba(129, 140, 248, 0.65); color: #fff;'
+            : 'background: rgba(255, 255, 255, 0.04); border: 1px solid var(--border); color: #a5b4fc;'
+    ].join(';');
+    unisDropdownBtn.innerHTML = `
+        <span style="overflow: hidden; text-overflow: ellipsis;">🎓 ${escapeHtml(selectedUniLabel)}</span>
+        <span style="font-size: 10px; flex-shrink: 0;">${mobileUnisDropdownOpen ? '▴' : '▾'}</span>
+    `;
+    unisDropdownBtn.addEventListener('click', () => {
+        mobileUnisDropdownOpen = !mobileUnisDropdownOpen;
+        buildChannelsSidebar(sidebarList);
+    });
+
+    topRow.appendChild(generalBtn);
+    topRow.appendChild(unisDropdownBtn);
+    sidebarList.appendChild(topRow);
+
+    // Aufklappbare Uni-Liste unter Allgemein (nur sichtbar wenn geöffnet)
+    if (mobileUnisDropdownOpen) {
+        const uniMenu = document.createElement('div');
+        uniMenu.style.cssText = [
+            'display: grid',
+            'grid-template-columns: repeat(2, minmax(0, 1fr))',
+            'gap: 5px',
+            'padding: 6px',
+            'border-radius: 10px',
+            'background: rgba(15, 20, 36, 0.92)',
+            'border: 1px solid rgba(129, 140, 248, 0.4)'
+        ].join(';');
+
+        UNIVERSITIES.forEach(uni => {
+            let uniTotalCount = 0;
+            CAMPUS_CATEGORIES.forEach(cat => {
+                uniTotalCount += counts.get(`${uni.id}:${cat.id}`) || 0;
+            });
+            const isPicked = mobileSelectedUniId === uni.id;
+
+            const uBtn = document.createElement('button');
+            uBtn.type = 'button';
+            uBtn.style.cssText = [
+                'padding: 6px 8px',
+                'border-radius: 8px',
+                'cursor: pointer',
+                'font-size: 10px',
+                'font-weight: 800',
+                'display: flex',
+                'align-items: center',
+                'justify-content: space-between',
+                'gap: 4px',
+                'text-align: left',
+                isPicked
+                    ? 'background: rgba(99, 102, 241, 0.28); border: 1px solid rgba(129, 140, 248, 0.8); color: #fff;'
+                    : 'background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border); color: var(--text);'
+            ].join(';');
+            uBtn.innerHTML = `
+                <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(uni.short)}</span>
+                ${uniTotalCount > 0 ? `<span style="font-size: 9px; opacity: 0.85;">${uniTotalCount}</span>` : ''}
+            `;
+            uBtn.addEventListener('click', () => {
+                mobileSelectedUniId = uni.id;
+                mobileUnisDropdownOpen = false;
+                selectGlobalChannel(`${uni.id}:${currentCatId}`);
+            });
+            uniMenu.appendChild(uBtn);
+        });
+
+        sidebarList.appendChild(uniMenu);
+    }
+
+    // Wenn eine Uni gewählt ist, kompakte Bereichs-Pills (Plaudern, Lernen, Brett, Events) anzeigen
+    if (selectedUniObj) {
+        const catRow = document.createElement('div');
+        catRow.style.cssText = [
+            'display: flex',
+            'gap: 5px',
+            'overflow-x: auto',
+            'padding-bottom: 2px'
+        ].join(';');
+
+        CAMPUS_CATEGORIES.forEach(cat => {
+            const key = `${selectedUniObj.id}:${cat.id}`;
+            const isCatActive = activeChannelKey === key;
+            const cBtn = document.createElement('button');
+            cBtn.type = 'button';
+            cBtn.dataset.channelKey = key;
+            cBtn.style.cssText = [
+                'padding: 5px 8px',
+                'border-radius: 8px',
+                'cursor: pointer',
+                'font-size: 10px',
+                'font-weight: 700',
+                'white-space: nowrap',
+                'flex-shrink: 0',
+                isCatActive
+                    ? 'background: rgba(99, 102, 241, 0.26); border: 1px solid rgba(129, 140, 248, 0.75); color: #fff;'
+                    : 'background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border); color: var(--text);'
+            ].join(';');
+            cBtn.textContent = cat.label;
+            cBtn.addEventListener('click', () => selectGlobalChannel(key));
+            catRow.appendChild(cBtn);
+        });
+
+        sidebarList.appendChild(catRow);
+    }
+}
+
+function buildDesktopChannelsSidebar(sidebarList) {
     const counts = getChannelCountsMap();
 
-    // 1. Allgemein-Punkt für Studierende aller Unis
     const generalCount = counts.get(DEFAULT_CHANNEL_KEY) || 0;
     const generalBtn = document.createElement('button');
     generalBtn.type = 'button';
@@ -827,7 +881,6 @@ function buildChannelsSidebar(sidebarList) {
     generalBtn.addEventListener('click', () => selectGlobalChannel(DEFAULT_CHANNEL_KEY));
     sidebarList.appendChild(generalBtn);
 
-    // 2. Je Universität ein klappbares Dropdown-Menü mit den 4 Campus-Bereichen
     UNIVERSITIES.forEach(uni => {
         const isOpen = expandedUniversities.has(uni.id);
         const hasActiveChild = activeChannelKey.startsWith(`${uni.id}:`);
@@ -924,6 +977,184 @@ function buildChannelsSidebar(sidebarList) {
     highlightActiveChannelButtons();
 }
 
+function buildChannelsSidebar(sidebarList) {
+    if (!sidebarList) return;
+    sidebarList.innerHTML = '';
+
+    if (isMobileViewport()) {
+        sidebarList.style.overflowY = 'visible';
+        sidebarList.style.padding = '6px 8px';
+        sidebarList.style.gap = '6px';
+        buildMobileChannelsBar(sidebarList);
+    } else {
+        sidebarList.style.overflowY = 'auto';
+        sidebarList.style.padding = '8px';
+        sidebarList.style.gap = '8px';
+        buildDesktopChannelsSidebar(sidebarList);
+    }
+}
+
+function applyResponsiveLayout(shell, sidebar, channelHeader) {
+    if (!shell || !sidebar) return;
+    const mobile = isMobileViewport();
+
+    if (mobile) {
+        shell.style.gridTemplateColumns = '1fr';
+        shell.style.gridTemplateRows = 'auto minmax(0, 1fr)';
+        shell.style.gap = '8px';
+
+        sidebar.style.maxHeight = 'none';
+        const headerBar = sidebar.firstElementChild;
+        if (headerBar && headerBar.tagName === 'DIV') {
+            headerBar.style.display = 'none';
+        }
+        if (channelHeader) {
+            channelHeader.style.padding = '7px 10px';
+            channelHeader.style.marginBottom = '6px';
+        }
+    } else {
+        shell.style.gridTemplateColumns = 'minmax(225px, 300px) minmax(0, 1fr)';
+        shell.style.gridTemplateRows = '1fr';
+        shell.style.gap = '12px';
+
+        const headerBar = sidebar.firstElementChild;
+        if (headerBar && headerBar.tagName === 'DIV') {
+            headerBar.style.display = 'flex';
+        }
+        if (channelHeader) {
+            channelHeader.style.padding = '10px 14px';
+            channelHeader.style.marginBottom = '8px';
+        }
+    }
+}
+
+function ensureGlobalChatLayout() {
+    const globalTab = document.getElementById('tab-global');
+    if (!globalTab) return null;
+
+    const chatContainer = globalTab.querySelector('.chat-container');
+    const messagesList = document.getElementById('global-chat-list');
+    const inputArea = globalTab.querySelector('.chat-input-area');
+    if (!chatContainer || !messagesList || !inputArea) return null;
+
+    enhanceInputRowWithSmileyAndImages(inputArea);
+
+    chatContainer.style.padding = '10px';
+    chatContainer.style.display = 'flex';
+    chatContainer.style.flexDirection = 'column';
+    chatContainer.style.overflow = 'hidden';
+
+    let shell = document.getElementById('global-chat-shell');
+    let sidebar = document.getElementById('global-channels-sidebar');
+    let sidebarList = document.getElementById('global-channels-list');
+    let channelHeader = document.getElementById('global-active-channel-header');
+
+    if (!shell) {
+        shell = document.createElement('div');
+        shell.id = 'global-chat-shell';
+        shell.style.cssText = [
+            'display: grid',
+            'grid-template-columns: minmax(225px, 300px) minmax(0, 1fr)',
+            'gap: 12px',
+            'flex: 1',
+            'min-height: 0',
+            'overflow: hidden'
+        ].join(';');
+
+        sidebar = document.createElement('div');
+        sidebar.id = 'global-channels-sidebar';
+        sidebar.style.cssText = [
+            'display: flex',
+            'flex-direction: column',
+            'background: rgba(255, 255, 255, 0.02)',
+            'border: 1px solid var(--border)',
+            'border-radius: 12px',
+            'overflow: hidden',
+            'min-height: 0'
+        ].join(';');
+
+        sidebar.innerHTML = `
+            <div style="padding: 10px 12px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 6px; flex-shrink: 0;">
+                <span style="font-size: 12px; font-weight: 800; color: #fff;">🧭 Campus-Kanäle</span>
+                <button type="button" onclick="window.loadGlobalMessages(false)" aria-label="Chat aktualisieren" style="background: rgba(255,255,255,0.06); border: 1px solid var(--border); color: var(--text-muted); border-radius: 8px; padding: 3px 8px; font-size: 10px; font-weight: 700; cursor: pointer;">↻</button>
+            </div>
+            <div id="global-channels-list" style="flex: 1; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 8px;"></div>
+        `;
+
+        const threadPane = document.createElement('div');
+        threadPane.id = 'global-thread-pane';
+        threadPane.style.cssText = [
+            'display: flex',
+            'flex-direction: column',
+            'min-width: 0',
+            'min-height: 0',
+            'overflow: hidden'
+        ].join(';');
+
+        channelHeader = document.createElement('div');
+        channelHeader.id = 'global-active-channel-header';
+        channelHeader.style.cssText = [
+            'display: flex',
+            'align-items: center',
+            'justify-content: space-between',
+            'gap: 10px',
+            'padding: 10px 14px',
+            'margin-bottom: 8px',
+            'background: rgba(255, 255, 255, 0.03)',
+            'border: 1px solid var(--border)',
+            'border-radius: 12px',
+            'flex-shrink: 0'
+        ].join(';');
+        channelHeader.innerHTML = `
+            <div style="min-width: 0;">
+                <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px;">Aktiver Kanal</div>
+                <div id="global-active-channel-title" style="font-size: 14px; font-weight: 800; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">🌐 Allgemein (Alle Unis)</div>
+                <div id="global-active-channel-sub" style="font-size: 11px; color: #818cf8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Offener Raum für Studierende aller Universitäten</div>
+            </div>
+        `;
+
+        threadPane.appendChild(channelHeader);
+        if (messagesList.parentElement === chatContainer) {
+            threadPane.appendChild(messagesList);
+        }
+        if (inputArea.parentElement === chatContainer) {
+            threadPane.appendChild(inputArea);
+        }
+
+        shell.appendChild(sidebar);
+        shell.appendChild(threadPane);
+        chatContainer.appendChild(shell);
+
+        sidebarList = document.getElementById('global-channels-list');
+    }
+
+    if (!shell.dataset.resizeBound) {
+        shell.dataset.resizeBound = '1';
+        window.addEventListener('resize', () => {
+            applyResponsiveLayout(shell, sidebar, channelHeader);
+            buildChannelsSidebar(document.getElementById('global-channels-list'));
+        });
+    }
+
+    applyResponsiveLayout(shell, sidebar, channelHeader);
+    buildChannelsSidebar(sidebarList);
+    updateActiveChannelHeader();
+    return { shell, sidebarList };
+}
+
+function toggleUniversityDropdown(uniId) {
+    if (!uniId) return;
+    if (expandedUniversities.has(uniId)) {
+        expandedUniversities.delete(uniId);
+    } else {
+        expandedUniversities.add(uniId);
+    }
+    const sidebarList = document.getElementById('global-channels-list');
+    if (sidebarList) {
+        buildChannelsSidebar(sidebarList);
+    }
+}
+
 function highlightActiveChannelButtons() {
     const sidebarList = document.getElementById('global-channels-list');
     if (!sidebarList) return;
@@ -960,6 +1191,9 @@ export async function selectGlobalChannel(channelKey) {
     const parts = activeChannelKey.split(':');
     if (parts.length === 2 && parts[0] !== 'general') {
         expandedUniversities.add(parts[0]);
+        mobileSelectedUniId = parts[0];
+    } else {
+        mobileSelectedUniId = '';
     }
     ensureGlobalChatLayout();
     highlightActiveChannelButtons();
@@ -995,7 +1229,7 @@ function renderMessageAttachments(item, attachments) {
     if (!Array.isArray(attachments) || attachments.length === 0) return;
 
     const gallery = document.createElement('div');
-    const cols = attachments.length === 1 ? 1 : attachments.length === 2 ? 2 : 2;
+    const cols = attachments.length === 1 ? 1 : 2;
     gallery.style.cssText = [
         'display: grid',
         `grid-template-columns: repeat(${cols}, minmax(0, 1fr))`,
