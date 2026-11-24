@@ -5,7 +5,7 @@ import { validateInputOrAlert } from './moderation.js';
 
 const CHANNEL_PREFIX_REGEX = /^\[channel:([^\]]+)\]\s*/i;
 const DEFAULT_CHANNEL_KEY = 'general:all';
-const CANDIDATE_TABLES = ['global_messages', 'messages', 'chat_messages'];
+const CHAT_TABLE = 'global_messages';
 
 const UNIVERSITIES = [
     { id: 'uni-wien', label: 'Universität Wien', short: 'Uni Wien' },
@@ -24,11 +24,11 @@ const CAMPUS_CATEGORIES = [
 ];
 
 let activeChannelKey = DEFAULT_CHANNEL_KEY;
-let activeChatTable = null;
 let globalChatChannel = null;
 let supportsChannelColumn = true;
 let isSendingGlobalMsg = false;
 let isLoadingGlobalMsgs = false;
+let cachedAllMessages = [];
 
 // Standardmäßig alle Uni-Dropdowns eingeklappt; beim Klick auf eine Uni klappt nur diese auf/zu
 const expandedUniversities = new Set();
@@ -114,32 +114,30 @@ function decodeMessageRow(row) {
     };
 }
 
-async function fetchMessagesFromTable(tableName) {
+function getChannelCountsMap() {
+    const counts = new Map();
+    (cachedAllMessages || []).forEach(msg => {
+        if (!msg?.channelKey) return;
+        counts.set(msg.channelKey, (counts.get(msg.channelKey) || 0) + 1);
+    });
+    return counts;
+}
+
+async function fetchGlobalRowsWithRetry() {
     let attempt = 0;
     while (attempt < 2) {
         attempt += 1;
         const { data, error } = await _supabase
-            .from(tableName)
+            .from(CHAT_TABLE)
             .select('*')
             .order('created_at', { ascending: true })
-            .limit(250);
+            .limit(400);
 
         if (!error) {
             return Array.isArray(data) ? data : [];
         }
 
-        // Falls created_at als Spalte nicht existiert, ohne Order abfragen
         const errMsg = String(error.message || '').toLowerCase();
-        if (errMsg.includes('created_at') || errMsg.includes('column')) {
-            const fallbackRes = await _supabase
-                .from(tableName)
-                .select('*')
-                .limit(250);
-            if (!fallbackRes.error) {
-                return Array.isArray(fallbackRes.data) ? fallbackRes.data : [];
-            }
-        }
-
         const isFetchErr = errMsg.includes('failed to fetch');
         if (!isFetchErr || attempt >= 2) {
             throw error;
@@ -147,26 +145,6 @@ async function fetchMessagesFromTable(tableName) {
         await new Promise(resolve => setTimeout(resolve, 350));
     }
     return [];
-}
-
-async function resolveChatTableAndMessages() {
-    if (activeChatTable) {
-        const rows = await fetchMessagesFromTable(activeChatTable);
-        return { table: activeChatTable, rows };
-    }
-
-    let lastError = null;
-    for (const candidate of CANDIDATE_TABLES) {
-        try {
-            const rows = await fetchMessagesFromTable(candidate);
-            activeChatTable = candidate;
-            return { table: candidate, rows };
-        } catch (err) {
-            lastError = err;
-        }
-    }
-
-    throw lastError || new Error('Keine Chat-Tabelle gefunden.');
 }
 
 function ensureGlobalChatLayout() {
@@ -305,8 +283,10 @@ function toggleUniversityDropdown(uniId) {
 
 function buildChannelsSidebar(sidebarList) {
     sidebarList.innerHTML = '';
+    const counts = getChannelCountsMap();
 
     // 1. Allgemein-Punkt für Studierende aller Unis
+    const generalCount = counts.get(DEFAULT_CHANNEL_KEY) || 0;
     const generalBtn = document.createElement('button');
     generalBtn.type = 'button';
     generalBtn.dataset.channelKey = DEFAULT_CHANNEL_KEY;
@@ -323,7 +303,10 @@ function buildChannelsSidebar(sidebarList) {
         'transition: background 0.15s ease, border-color 0.15s ease'
     ].join(';');
     generalBtn.innerHTML = `
-        <span style="font-size: 12px; font-weight: 800; color: #fff;">🌐 Allgemein</span>
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px;">
+            <span style="font-size: 12px; font-weight: 800; color: #fff;">🌐 Allgemein</span>
+            ${generalCount > 0 ? `<span style="font-size: 10px; font-weight: 800; padding: 1px 6px; border-radius: 999px; background: rgba(129, 140, 248, 0.22); color: #c7d2fe;">${generalCount}</span>` : ''}
+        </div>
         <span style="font-size: 10px; color: var(--text-muted);">Alle Studierenden · Alle Unis</span>
     `;
     generalBtn.addEventListener('click', () => selectGlobalChannel(DEFAULT_CHANNEL_KEY));
@@ -333,6 +316,11 @@ function buildChannelsSidebar(sidebarList) {
     UNIVERSITIES.forEach(uni => {
         const isOpen = expandedUniversities.has(uni.id);
         const hasActiveChild = activeChannelKey.startsWith(`${uni.id}:`);
+
+        let uniTotalCount = 0;
+        CAMPUS_CATEGORIES.forEach(cat => {
+            uniTotalCount += counts.get(`${uni.id}:${cat.id}`) || 0;
+        });
 
         const groupBox = document.createElement('div');
         groupBox.style.cssText = [
@@ -367,7 +355,10 @@ function buildChannelsSidebar(sidebarList) {
         ].join(';');
         uniHeaderBtn.innerHTML = `
             <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">🎓 ${escapeHtml(uni.label)}</span>
-            <span style="font-size: 10px; opacity: 0.85; flex-shrink: 0;">${isOpen ? '▾' : '▸'}</span>
+            <span style="display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0;">
+                ${uniTotalCount > 0 ? `<span style="font-size: 9px; font-weight: 800; padding: 1px 5px; border-radius: 999px; background: rgba(129, 140, 248, 0.16); color: #a5b4fc;">${uniTotalCount}</span>` : ''}
+                <span style="font-size: 10px; opacity: 0.85;">${isOpen ? '▾' : '▸'}</span>
+            </span>
         `;
         uniHeaderBtn.addEventListener('click', () => toggleUniversityDropdown(uni.id));
         groupBox.appendChild(uniHeaderBtn);
@@ -383,6 +374,7 @@ function buildChannelsSidebar(sidebarList) {
 
             CAMPUS_CATEGORIES.forEach(cat => {
                 const key = `${uni.id}:${cat.id}`;
+                const catCount = counts.get(key) || 0;
                 const catBtn = document.createElement('button');
                 catBtn.type = 'button';
                 catBtn.dataset.channelKey = key;
@@ -394,9 +386,16 @@ function buildChannelsSidebar(sidebarList) {
                     'cursor: pointer',
                     'font-size: 11px',
                     'font-weight: 700',
+                    'display: flex',
+                    'justify-content: space-between',
+                    'align-items: center',
+                    'gap: 6px',
                     'transition: background 0.15s ease, border-color 0.15s ease'
                 ].join(';');
-                catBtn.textContent = cat.label;
+                catBtn.innerHTML = `
+                    <span>${escapeHtml(cat.label)}</span>
+                    ${catCount > 0 ? `<span style="font-size: 9px; font-weight: 800; opacity: 0.85;">${catCount}</span>` : ''}
+                `;
                 catBtn.addEventListener('click', () => selectGlobalChannel(key));
                 subMenu.appendChild(catBtn);
             });
@@ -435,8 +434,10 @@ function updateActiveChannelHeader() {
     const meta = getChannelMeta(activeChannelKey);
     const titleEl = document.getElementById('global-active-channel-title');
     const subEl = document.getElementById('global-active-channel-sub');
+    const inputEl = document.getElementById('global-chat-input');
     if (titleEl) titleEl.textContent = meta.title;
     if (subEl) subEl.textContent = meta.subtitle;
+    if (inputEl) inputEl.placeholder = `Nachricht in ${meta.title}...`;
 }
 
 export async function selectGlobalChannel(channelKey) {
@@ -453,17 +454,19 @@ export async function selectGlobalChannel(channelKey) {
 
 function ensureGlobalChatRealtime() {
     if (globalChatChannel) return;
-    const tableName = activeChatTable || 'global_messages';
 
     try {
         globalChatChannel = _supabase
-            .channel(`pl-campus-channels-chat-${tableName}`)
+            .channel('pl-campus-channels-chat')
             .on(
                 'postgres_changes',
-                { event: 'INSERT', schema: 'public', table: tableName },
+                { event: 'INSERT', schema: 'public', table: CHAT_TABLE },
                 (payload) => {
                     const decoded = decodeMessageRow(payload?.new);
                     if (!decoded) return;
+                    cachedAllMessages = [...cachedAllMessages, decoded];
+                    const sidebarList = document.getElementById('global-channels-list');
+                    if (sidebarList) buildChannelsSidebar(sidebarList);
                     if (decoded.channelKey === activeChannelKey) {
                         loadGlobalMessages(true);
                     }
@@ -473,9 +476,51 @@ function ensureGlobalChatRealtime() {
     } catch (_err) {}
 }
 
+function renderFilteredMessages(listEl, currentEmail, meta) {
+    const filtered = (cachedAllMessages || []).filter(item => item && item.channelKey === activeChannelKey);
+
+    if (filtered.length === 0) {
+        listEl.innerHTML = `<p style="color: var(--text-muted); font-size: 12px; text-align: center; padding: 20px;">Noch keine Nachrichten in <strong>${escapeHtml(meta.title)}</strong>. Schreib als Erste/r! 💬</p>`;
+        return;
+    }
+
+    listEl.innerHTML = '';
+    filtered.forEach(msg => {
+        const isMe = currentEmail && msg.senderEmail === currentEmail;
+        const senderLabel = msg.senderName || (msg.senderEmail ? msg.senderEmail.split('@')[0] : 'Student');
+
+        const item = document.createElement('div');
+        item.className = 'campus-chat-msg';
+        item.style.cssText = [
+            'max-width: 82%',
+            'padding: 12px 16px',
+            'border-radius: 14px',
+            'font-size: 13px',
+            'line-height: 1.45',
+            'word-break: break-word',
+            'margin-bottom: 8px',
+            `align-self: ${isMe ? 'flex-end' : 'flex-start'}`,
+            `background: ${isMe ? 'var(--primary)' : 'var(--card)'}`,
+            'color: #fff',
+            `border: 1px solid ${isMe ? 'transparent' : 'var(--border)'}`
+        ].join(';');
+
+        const timeStr = formatMessageTime(msg.createdAt);
+        item.innerHTML = `
+            <div style="font-size: 10px; font-weight: 800; opacity: 0.85; margin-bottom: 4px; color: ${isMe ? '#fff' : '#818cf8'};">${escapeHtml(senderLabel)}</div>
+            <div>${escapeHtml(msg.text)}</div>
+            <div style="font-size: 9px; opacity: 0.7; text-align: right; margin-top: 6px;">${escapeHtml(timeStr)}</div>
+        `;
+        listEl.appendChild(item);
+    });
+
+    listEl.scrollTop = listEl.scrollHeight;
+}
+
 export async function loadGlobalMessages(silent = false) {
     if (isLoadingGlobalMsgs) return;
     ensureGlobalChatLayout();
+    ensureGlobalChatRealtime();
 
     const listEl = document.getElementById('global-chat-list');
     if (!listEl) return;
@@ -490,49 +535,15 @@ export async function loadGlobalMessages(silent = false) {
 
     isLoadingGlobalMsgs = true;
     try {
-        const { rows } = await resolveChatTableAndMessages();
-        ensureGlobalChatRealtime();
+        const rows = await fetchGlobalRowsWithRetry();
+        cachedAllMessages = rows.map(decodeMessageRow).filter(Boolean);
 
-        const filtered = rows
-            .map(decodeMessageRow)
-            .filter(item => item && item.channelKey === activeChannelKey);
-
-        if (filtered.length === 0) {
-            listEl.innerHTML = `<p style="color: var(--text-muted); font-size: 12px; text-align: center; padding: 20px;">Noch keine Nachrichten in <strong>${escapeHtml(meta.title)}</strong>. Schreib als Erste/r! 💬</p>`;
-            return;
+        const sidebarList = document.getElementById('global-channels-list');
+        if (sidebarList) {
+            buildChannelsSidebar(sidebarList);
         }
 
-        listEl.innerHTML = '';
-        filtered.forEach(msg => {
-            const isMe = currentEmail && msg.senderEmail === currentEmail;
-            const senderLabel = msg.senderName || (msg.senderEmail ? msg.senderEmail.split('@')[0] : 'Student');
-
-            const item = document.createElement('div');
-            item.className = 'campus-chat-msg';
-            item.style.cssText = [
-                'max-width: 82%',
-                'padding: 12px 16px',
-                'border-radius: 14px',
-                'font-size: 13px',
-                'line-height: 1.45',
-                'word-break: break-word',
-                'margin-bottom: 8px',
-                `align-self: ${isMe ? 'flex-end' : 'flex-start'}`,
-                `background: ${isMe ? 'var(--primary)' : 'var(--card)'}`,
-                'color: #fff',
-                `border: 1px solid ${isMe ? 'transparent' : 'var(--border)'}`
-            ].join(';');
-
-            const timeStr = formatMessageTime(msg.createdAt);
-            item.innerHTML = `
-                <div style="font-size: 10px; font-weight: 800; opacity: 0.85; margin-bottom: 4px; color: ${isMe ? '#fff' : '#818cf8'};">${escapeHtml(senderLabel)}</div>
-                <div>${escapeHtml(msg.text)}</div>
-                <div style="font-size: 9px; opacity: 0.7; text-align: right; margin-top: 6px;">${escapeHtml(timeStr)}</div>
-            `;
-            listEl.appendChild(item);
-        });
-
-        listEl.scrollTop = listEl.scrollHeight;
+        renderFilteredMessages(listEl, currentEmail, meta);
     } catch (err) {
         console.error('Fehler beim Laden des Campus-Chats:', err);
         if (!hasExisting) {
@@ -571,7 +582,6 @@ export async function sendGlobalMessage() {
 
     isSendingGlobalMsg = true;
     try {
-        const targetTable = activeChatTable || 'global_messages';
         const basePayload = {
             id: crypto.randomUUID(),
             sender_email: currentEmail,
@@ -586,7 +596,7 @@ export async function sendGlobalMessage() {
                 message_text: text
             };
             const { error } = await _supabase
-                .from(targetTable)
+                .from(CHAT_TABLE)
                 .insert([withColPayload]);
 
             if (error) {
@@ -601,7 +611,7 @@ export async function sendGlobalMessage() {
 
         if (!supportsChannelColumn) {
             const { error: fallbackError } = await _supabase
-                .from(targetTable)
+                .from(CHAT_TABLE)
                 .insert([basePayload]);
 
             if (fallbackError) throw fallbackError;
