@@ -1,4 +1,4 @@
-// js/features/dm.js - Direct Messaging (DM) Modul mit Konversationsliste, Ungelesen-Zähler, Lesebestätigung, Smiley-Picker & bis zu 5 Bildern
+// js/features/dm.js - Direct Messaging (DM) Modul mit Konversationsliste, Ungelesen-Zähler, Lesebestätigung, Smiley-Picker, bis zu 5 Bildern & Bottom-Bar nur auf Smartphone ausgeblendet
 import { _supabase } from '../config.js';
 import { state } from '../state.js';
 import { validateInputOrAlert } from './moderation.js';
@@ -11,6 +11,7 @@ const DM_ATTACHMENTS_MARKER_REGEX = /\n?\[attachments:(\[[\s\S]*?\])\]\s*$/i;
 const STORAGE_BUCKET = 'media';
 const MAX_IMAGES_PER_MESSAGE = 5;
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+const MOBILE_BREAKPOINT_PX = 768;
 
 const QUICK_SMILEYS = [
     '😊', '😂', '🤣', '😍', '🥰', '😎', '🤩', '🥳',
@@ -32,6 +33,38 @@ let pendingDmImageDrafts = [];
 
 // Cache für bereits aufgelöste Anzeigenamen, damit kein Flackern zwischen Prefix und Profilname entsteht
 const resolvedProfileNames = new Map();
+
+function isMobileViewport() {
+    return typeof window !== 'undefined' && window.innerWidth <= MOBILE_BREAKPOINT_PX;
+}
+
+function setBottomBarHiddenForMobileInbox(hideBottomBar) {
+    const navBar = document.getElementById('bottom-nav-bar');
+    const controlsWrapper = navBar ? navBar.closest('.bottom-controls-wrapper') : document.querySelector('.bottom-controls-wrapper');
+    const target = controlsWrapper || navBar;
+    if (!target) return;
+
+    if (!target.dataset.origDisplay) {
+        target.dataset.origDisplay = target.style.display || '';
+    }
+
+    const shouldHide = Boolean(hideBottomBar && isMobileViewport());
+    if (shouldHide) {
+        target.style.setProperty('display', 'none', 'important');
+    } else if (target.dataset.origDisplay) {
+        target.style.display = target.dataset.origDisplay;
+    } else {
+        target.style.removeProperty('display');
+    }
+}
+
+function syncBottomBarVisibility() {
+    const globalTab = document.getElementById('tab-global');
+    const inboxTab = document.getElementById('tab-inbox');
+    const isGlobalOpen = Boolean(globalTab && !globalTab.classList.contains('hidden'));
+    const isInboxOpen = Boolean(inboxTab && !inboxTab.classList.contains('hidden'));
+    setBottomBarHiddenForMobileInbox(isGlobalOpen || isInboxOpen);
+}
 
 function escapeHtml(str) {
     return String(str || '')
@@ -441,7 +474,6 @@ function enhanceDmInputRowWithSmileyAndImages(inputArea) {
     inputArea.style.flexWrap = 'wrap';
     inputArea.style.gap = '6px';
 
-    // Vorschau-Leiste für ausgewählte Bilder (bis zu 5) direkt über der Eingabezeile
     const previewBar = document.createElement('div');
     previewBar.id = 'dm-chat-attachments-bar';
     previewBar.style.cssText = [
@@ -458,7 +490,6 @@ function enhanceDmInputRowWithSmileyAndImages(inputArea) {
     ].join(';');
     inputArea.insertBefore(previewBar, inputArea.firstChild);
 
-    // Smiley-Picker-Popover
     const picker = document.createElement('div');
     picker.id = 'dm-smiley-picker';
     picker.style.cssText = [
@@ -500,7 +531,6 @@ function enhanceDmInputRowWithSmileyAndImages(inputArea) {
     });
     inputArea.appendChild(picker);
 
-    // Verstecktes Multi-Image-Input (max. 5 Bilder)
     const fileInput = document.createElement('input');
     fileInput.type = 'file';
     fileInput.id = 'dm-chat-image-input';
@@ -512,7 +542,6 @@ function enhanceDmInputRowWithSmileyAndImages(inputArea) {
     });
     inputArea.appendChild(fileInput);
 
-    // Smiley-Button in der Nachrichtenzeile
     const smileyBtn = document.createElement('button');
     smileyBtn.type = 'button';
     smileyBtn.id = 'dm-smiley-btn';
@@ -535,7 +564,6 @@ function enhanceDmInputRowWithSmileyAndImages(inputArea) {
     ].join(';');
     smileyBtn.addEventListener('click', toggleDmSmileyPicker);
 
-    // Bilder-Button (bis zu 5 Bilder) in der Nachrichtenzeile
     const imageBtn = document.createElement('button');
     imageBtn.type = 'button';
     imageBtn.id = 'dm-image-btn';
@@ -570,7 +598,7 @@ function enhanceDmInputRowWithSmileyAndImages(inputArea) {
         inputArea.insertBefore(smileyBtn, textInput);
         inputArea.insertBefore(imageBtn, textInput);
         textInput.style.flex = '1';
-        textInput.style.minWidth = '140px';
+        textInput.style.minWidth = '120px';
     } else {
         inputArea.appendChild(smileyBtn);
         inputArea.appendChild(imageBtn);
@@ -669,6 +697,8 @@ export async function markConversationAsRead(partnerEmail, referenceIsoDate = nu
 }
 
 function ensureInboxLayout() {
+    syncBottomBarVisibility();
+
     const inboxTab = document.getElementById('tab-inbox');
     if (!inboxTab) return null;
 
@@ -781,11 +811,12 @@ function ensureInboxLayout() {
         if (!shell) return;
         if (window.innerWidth <= 720) {
             shell.style.gridTemplateColumns = '1fr';
-            shell.style.gridTemplateRows = 'minmax(115px, 165px) minmax(0, 1fr)';
+            shell.style.gridTemplateRows = 'minmax(110px, 155px) minmax(0, 1fr)';
         } else {
             shell.style.gridTemplateColumns = 'minmax(210px, 280px) minmax(0, 1fr)';
             shell.style.gridTemplateRows = '1fr';
         }
+        syncBottomBarVisibility();
     };
 
     if (!shell.dataset.resizeBound) {
@@ -1202,11 +1233,14 @@ export function openDirectMessageWith(recipientEmail) {
     }
 
     activeRecipientEmail = normalizedRecipient;
+    setBottomBarHiddenForMobileInbox(true);
     ensureInboxLayout();
 
     if (typeof window.switchTab === 'function') {
         window.switchTab('inbox');
     }
+
+    setBottomBarHiddenForMobileInbox(true);
 
     const recipientInput = document.getElementById('dm-recipient');
     if (recipientInput) {
@@ -1525,6 +1559,15 @@ export async function sendDirectMessage() {
 document.addEventListener('DOMContentLoaded', () => {
     ensureInboxLayout();
     updateActivePartnerHeader('');
+    syncBottomBarVisibility();
+
+    document.addEventListener('click', () => {
+        setTimeout(syncBottomBarVisibility, 20);
+    });
+
+    window.addEventListener('resize', () => {
+        syncBottomBarVisibility();
+    });
 
     const recipientInput = document.getElementById('dm-recipient');
     if (recipientInput) {
@@ -1536,6 +1579,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const inboxBtn = document.getElementById('btn-tab-inbox');
     if (inboxBtn) {
         inboxBtn.addEventListener('click', () => {
+            setBottomBarHiddenForMobileInbox(true);
             setTimeout(() => {
                 ensureInboxLayout();
                 loadConversationsList(true);

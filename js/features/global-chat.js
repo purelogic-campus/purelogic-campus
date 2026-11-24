@@ -1,4 +1,4 @@
-// js/features/global-chat.js - Campus-Chat mit Mobile-Uni-Dropdown unter Allgemein, Smiley-Picker, bis zu 5 Bildern & ausgeblendeter Bottom-Bar
+// js/features/global-chat.js - Campus-Chat mit Mobile-Uni-Dropdown unter Allgemein, Smiley-Picker, bis zu 5 Bildern & Bottom-Bar nur auf Smartphone ausgeblendet
 import { _supabase } from '../config.js';
 import { state } from '../state.js';
 import { validateInputOrAlert } from './moderation.js';
@@ -51,7 +51,11 @@ const expandedUniversities = new Set();
 let mobileUnisDropdownOpen = false;
 let mobileSelectedUniId = '';
 
-function setBottomBarHiddenForTab(hideBottomBar) {
+function isMobileViewport() {
+    return typeof window !== 'undefined' && window.innerWidth <= MOBILE_BREAKPOINT_PX;
+}
+
+function setBottomBarHiddenForMobileChat(hideBottomBar) {
     const navBar = document.getElementById('bottom-nav-bar');
     const controlsWrapper = navBar ? navBar.closest('.bottom-controls-wrapper') : document.querySelector('.bottom-controls-wrapper');
     const target = controlsWrapper || navBar;
@@ -61,7 +65,8 @@ function setBottomBarHiddenForTab(hideBottomBar) {
         target.dataset.origDisplay = target.style.display || '';
     }
 
-    if (hideBottomBar) {
+    const shouldHide = Boolean(hideBottomBar && isMobileViewport());
+    if (shouldHide) {
         target.style.setProperty('display', 'none', 'important');
     } else if (target.dataset.origDisplay) {
         target.style.display = target.dataset.origDisplay;
@@ -75,11 +80,7 @@ function syncBottomBarVisibility() {
     const inboxTab = document.getElementById('tab-inbox');
     const isGlobalOpen = Boolean(globalTab && !globalTab.classList.contains('hidden'));
     const isInboxOpen = Boolean(inboxTab && !inboxTab.classList.contains('hidden'));
-    setBottomBarHiddenForTab(isGlobalOpen || isInboxOpen);
-}
-
-function isMobileViewport() {
-    return typeof window !== 'undefined' && window.innerWidth <= MOBILE_BREAKPOINT_PX;
+    setBottomBarHiddenForMobileChat(isGlobalOpen || isInboxOpen);
 }
 
 function escapeHtml(str) {
@@ -1160,6 +1161,7 @@ function ensureGlobalChatLayout() {
         window.addEventListener('resize', () => {
             applyResponsiveLayout(shell, sidebar, channelHeader);
             buildChannelsSidebar(document.getElementById('global-channels-list'));
+            syncBottomBarVisibility();
         });
     }
 
@@ -1475,10 +1477,14 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(syncBottomBarVisibility, 20);
     });
 
+    window.addEventListener('resize', () => {
+        syncBottomBarVisibility();
+    });
+
     const globalTabBtn = document.getElementById('btn-tab-global');
     if (globalTabBtn) {
         globalTabBtn.addEventListener('click', () => {
-            setBottomBarHiddenForTab(true);
+            setBottomBarHiddenForMobileChat(true);
             setTimeout(() => {
                 ensureGlobalChatLayout();
                 loadGlobalMessages(false);
