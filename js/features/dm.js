@@ -11,6 +11,9 @@ let activeRecipientEmail = null;
 let dmRealtimeChannel = null;
 let dmRealtimeEmail = '';
 let supportsDbReadColumn = true;
+let isSendingDm = false;
+let isLoadingConversations = false;
+let isLoadingMessages = false;
 
 function escapeHtml(str) {
     return String(str || '')
@@ -97,22 +100,25 @@ function setLocalPartnerReadIso(senderEmail, recipientEmail, isoString) {
     } catch (_err) {}
 }
 
+function setLocalReadTimestamp(currentEmail, partnerEmail, referenceIsoDate = null) {
+    const mapObj = getReadTimestampsMap(currentEmail);
+    const prevTs = parseTimestamp(mapObj[partnerEmail]);
+    const refTs = parseTimestamp(referenceIsoDate);
+    const nextTs = Math.max(Date.now(), prevTs, refTs);
+    const nextIso = new Date(nextTs).toISOString();
+
+    mapObj[partnerEmail] = nextIso;
+    saveReadTimestampsMap(currentEmail, mapObj);
+    setLocalPartnerReadIso(partnerEmail, currentEmail, nextIso);
+    return nextIso;
+}
+
 export async function markConversationAsRead(partnerEmail, referenceIsoDate = null) {
     const currentEmail = String(state.currentUserEmail || '').trim().toLowerCase();
     const partner = String(partnerEmail || '').trim().toLowerCase();
     if (!currentEmail || !partner) return;
 
-    const mapObj = getReadTimestampsMap(currentEmail);
-    const prevTs = parseTimestamp(mapObj[partner]);
-    const refTs = parseTimestamp(referenceIsoDate);
-    const nextTs = Math.max(Date.now(), prevTs, refTs);
-    const nextIso = new Date(nextTs).toISOString();
-
-    mapObj[partner] = nextIso;
-    saveReadTimestampsMap(currentEmail, mapObj);
-
-    // Speichert für den Absender (partner), dass der aktuelle Nutzer (currentEmail) dessen Nachrichten gelesen hat
-    setLocalPartnerReadIso(partner, currentEmail, nextIso);
+    const nextIso = setLocalReadTimestamp(currentEmail, partner, referenceIsoDate);
 
     if (!supportsDbReadColumn) return;
 
@@ -173,7 +179,7 @@ function ensureInboxLayout() {
         sidebar.innerHTML = `
             <div style="padding: 10px 12px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 6px; flex-shrink: 0;">
                 <span style="font-size: 12px; font-weight: 800; color: #fff;">💬 Konversationen</span>
-                <button type="button" onclick="window.loadConversationsList()" aria-label="Konversationen aktualisieren" style="background: rgba(255,255,255,0.06); border: 1px solid var(--border); color: var(--text-muted); border-radius: 8px; padding: 3px 8px; font-size: 10px; font-weight: 700; cursor: pointer;">↻</button>
+                <button type="button" onclick="window.loadConversationsList(false)" aria-label="Konversationen aktualisieren" style="background: rgba(255,255,255,0.06); border: 1px solid var(--border); color: var(--text-muted); border-radius: 8px; padding: 3px 8px; font-size: 10px; font-weight: 700; cursor: pointer;">↻</button>
             </div>
             <div id="dm-conversations-list" style="flex: 1; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 6px;">
                 <p style="color: var(--text-muted); font-size: 11px; text-align: center; padding: 14px;">Lade Chats...</p>
@@ -295,7 +301,9 @@ async function updateActivePartnerHeader(partnerEmail) {
 
     emailEl.textContent = normalizedPartner;
     const fallbackName = normalizedPartner.split('@')[0];
-    nameEl.textContent = fallbackName;
+    if (emailEl.dataset.resolvedEmail !== normalizedPartner) {
+        nameEl.textContent = fallbackName;
+    }
 
     const profilesMap = await fetchProfilesMap([normalizedPartner]);
     const profile = profilesMap.get(normalizedPartner);
@@ -303,6 +311,7 @@ async function updateActivePartnerHeader(partnerEmail) {
         const displayName = profile.full_name || profile.username || fallbackName;
         const handleSuffix = profile.username ? ` (@${profile.username.replace(/^@+/, '')})` : '';
         nameEl.textContent = `${displayName}${handleSuffix}`;
+        emailEl.dataset.resolvedEmail = normalizedPartner;
     }
 }
 
@@ -355,10 +364,127 @@ function resolveMessageReadAt(msg, currentEmail) {
     return '';
 }
 
+function renderConversationsView(convList, currentEmail, messages, selectedPartner, isInboxVisible) {
+    const readMap = getReadTimestampsMap(currentEmail);
+    const conversationsMap = new Map();
+
+    (messages || []).forEach(msg => {
+        const sender = String(msg.sender_email || '').trim().toLowerCase();
+        const recipient = String(msg.recipient_email || '').trim().toLowerCase();
+        if (!sender || !recipient) return;
+
+        const partnerEmail = sender === currentEmail ? recipient : sender;
+        if (!partnerEmail || partnerEmail === currentEmail) return;
+
+        if (!conversationsMap.has(partnerEmail)) {
+            conversationsMap.set(partnerEmail, {
+                partnerEmail,
+                lastMessage: msg.message_text || '',
+                lastTime: msg.created_at || '',
+                lastSender: sender,
+                unreadCount: 0
+            });
+        }
+
+        const convEntry = conversationsMap.get(partnerEmail);
+        const isIncoming = sender === partnerEmail && recipient === currentEmail;
+        const isCurrentlyOpen = isInboxVisible && selectedPartner === partnerEmail;
+
+        if (isIncoming && !isCurrentlyOpen) {
+            const msgTs = parseTimestamp(msg.created_at);
+            const lastReadTs = parseTimestamp(readMap[partnerEmail]);
+            if (msgTs > lastReadTs) {
+                convEntry.unreadCount += 1;
+            }
+        }
+    });
+
+    if (selectedPartner && selectedPartner !== currentEmail && !conversationsMap.has(selectedPartner)) {
+        conversationsMap.set(selectedPartner, {
+            partnerEmail: selectedPartner,
+            lastMessage: 'Neue Konversation starten',
+            lastTime: '',
+            lastSender: '',
+            unreadCount: 0
+        });
+    }
+
+    const conversations = [...conversationsMap.values()];
+    const totalUnread = conversations.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
+    updateInboxTabBadge(totalUnread);
+
+    if (conversations.length === 0) {
+        convList.innerHTML = '<p style="color: var(--text-muted); font-size: 11px; text-align: center; padding: 14px;">Noch keine Konversationen vorhanden. Trage rechts eine E-Mail ein, um zu starten.</p>';
+        return conversations;
+    }
+
+    convList.innerHTML = '';
+    conversations.forEach(conv => {
+        const displayName = conv.partnerEmail.split('@')[0];
+        const isSelected = selectedPartner === conv.partnerEmail;
+        const timeLabel = formatMessageTime(conv.lastTime);
+        const prefix = conv.lastSender === currentEmail ? 'Du: ' : '';
+        const previewText = `${prefix}${conv.lastMessage || ''}`;
+        const hasUnread = conv.unreadCount > 0;
+        const unreadLabel = conv.unreadCount > 99 ? '99+' : String(conv.unreadCount);
+
+        const itemBtn = document.createElement('button');
+        itemBtn.type = 'button';
+        itemBtn.dataset.partnerEmail = conv.partnerEmail;
+        itemBtn.setAttribute('aria-pressed', String(isSelected));
+        itemBtn.style.cssText = [
+            'width: 100%',
+            'text-align: left',
+            'padding: 9px 10px',
+            'border-radius: 10px',
+            'cursor: pointer',
+            'display: flex',
+            'flex-direction: column',
+            'gap: 3px',
+            'transition: background 0.15s ease, border-color 0.15s ease',
+            isSelected
+                ? 'background: rgba(99, 102, 241, 0.22); border: 1px solid rgba(129, 140, 248, 0.65); color: #fff;'
+                : hasUnread
+                    ? 'background: rgba(236, 72, 153, 0.10); border: 1px solid rgba(236, 72, 153, 0.45); color: var(--text);'
+                    : 'background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border); color: var(--text);'
+        ].join(';');
+
+        itemBtn.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px;">
+                <span class="conv-display-name" style="font-size: 12px; font-weight: 800; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(displayName)}</span>
+                <div style="display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0;">
+                    ${hasUnread ? `<span aria-label="${escapeHtml(unreadLabel)} ungelesene Nachrichten" style="display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: #ec4899; color: #fff; font-size: 10px; font-weight: 900; line-height: 1;">${escapeHtml(unreadLabel)}</span>` : ''}
+                    <span style="font-size: 9px; color: ${hasUnread ? '#f472b6' : 'var(--text-muted)'}; font-weight: ${hasUnread ? '700' : '400'};">${escapeHtml(timeLabel)}</span>
+                </div>
+            </div>
+            <div style="font-size: 10px; color: #818cf8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(conv.partnerEmail)}</div>
+            <div style="font-size: 11px; color: ${hasUnread ? '#f8fafc' : 'var(--text-muted)'}; font-weight: ${hasUnread ? '700' : '400'}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(previewText)}</div>
+        `;
+
+        itemBtn.addEventListener('click', async () => {
+            activeRecipientEmail = conv.partnerEmail;
+            const recipientInput = document.getElementById('dm-recipient');
+            if (recipientInput) {
+                recipientInput.value = conv.partnerEmail;
+            }
+            setLocalReadTimestamp(currentEmail, conv.partnerEmail, conv.lastTime);
+            await updateActivePartnerHeader(conv.partnerEmail);
+            await loadConversationsList(true);
+            await loadDirectMessages(true);
+            markConversationAsRead(conv.partnerEmail, conv.lastTime);
+        });
+
+        convList.appendChild(itemBtn);
+    });
+
+    return conversations;
+}
+
 /**
  * Lädt alle Konversationen des aktuellen Nutzers inklusive Ungelesen-Zähler
  */
-export async function loadConversationsList() {
+export async function loadConversationsList(silent = false) {
+    if (isLoadingConversations) return;
     const layout = ensureInboxLayout();
     const convList = layout?.convList || document.getElementById('dm-conversations-list');
     if (!convList) return;
@@ -370,8 +496,12 @@ export async function loadConversationsList() {
         return;
     }
 
-    convList.innerHTML = '<p style="color: var(--text-muted); font-size: 11px; text-align: center; padding: 14px;">Lade Konversationen...</p>';
+    const hasExistingItems = convList.querySelectorAll('button').length > 0;
+    if (!silent && !hasExistingItems) {
+        convList.innerHTML = '<p style="color: var(--text-muted); font-size: 11px; text-align: center; padding: 14px;">Lade Konversationen...</p>';
+    }
 
+    isLoadingConversations = true;
     try {
         const { data: messages, error } = await _supabase
             .from('direct_messages')
@@ -382,130 +512,35 @@ export async function loadConversationsList() {
 
         if (error) throw error;
 
-        const readMap = getReadTimestampsMap(currentEmail);
         const activeFromInput = String(document.getElementById('dm-recipient')?.value || '').trim().toLowerCase();
         const selectedPartner = activeFromInput || activeRecipientEmail || '';
         const inboxTab = document.getElementById('tab-inbox');
         const isInboxVisible = Boolean(inboxTab && !inboxTab.classList.contains('hidden'));
 
         if (isInboxVisible && selectedPartner) {
-            await markConversationAsRead(selectedPartner);
+            setLocalReadTimestamp(currentEmail, selectedPartner);
         }
 
-        const conversationsMap = new Map();
+        const conversations = renderConversationsView(convList, currentEmail, messages || [], selectedPartner, isInboxVisible);
 
-        (messages || []).forEach(msg => {
-            const sender = String(msg.sender_email || '').trim().toLowerCase();
-            const recipient = String(msg.recipient_email || '').trim().toLowerCase();
-            if (!sender || !recipient) return;
-
-            const partnerEmail = sender === currentEmail ? recipient : sender;
-            if (!partnerEmail || partnerEmail === currentEmail) return;
-
-            if (!conversationsMap.has(partnerEmail)) {
-                conversationsMap.set(partnerEmail, {
-                    partnerEmail,
-                    lastMessage: msg.message_text || '',
-                    lastTime: msg.created_at || '',
-                    lastSender: sender,
-                    unreadCount: 0
-                });
-            }
-
-            const convEntry = conversationsMap.get(partnerEmail);
-            const isIncoming = sender === partnerEmail && recipient === currentEmail;
-            const isCurrentlyOpen = isInboxVisible && selectedPartner === partnerEmail;
-
-            if (isIncoming && !isCurrentlyOpen) {
-                const msgTs = parseTimestamp(msg.created_at);
-                const lastReadTs = parseTimestamp(readMap[partnerEmail]);
-                if (msgTs > lastReadTs) {
-                    convEntry.unreadCount += 1;
+        if (Array.isArray(conversations) && conversations.length > 0) {
+            const profilesMap = await fetchProfilesMap(conversations.map(c => c.partnerEmail));
+            convList.querySelectorAll('button[data-partner-email]').forEach(btn => {
+                const pEmail = btn.getAttribute('data-partner-email');
+                const profile = profilesMap.get(pEmail);
+                const nameSpan = btn.querySelector('.conv-display-name');
+                if (profile && nameSpan) {
+                    nameSpan.textContent = profile.full_name || profile.username || pEmail.split('@')[0];
                 }
-            }
-        });
-
-        if (selectedPartner && selectedPartner !== currentEmail && !conversationsMap.has(selectedPartner)) {
-            conversationsMap.set(selectedPartner, {
-                partnerEmail: selectedPartner,
-                lastMessage: 'Neue Konversation starten',
-                lastTime: '',
-                lastSender: '',
-                unreadCount: 0
             });
         }
-
-        const conversations = [...conversationsMap.values()];
-        const totalUnread = conversations.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
-        updateInboxTabBadge(totalUnread);
-
-        if (conversations.length === 0) {
-            convList.innerHTML = '<p style="color: var(--text-muted); font-size: 11px; text-align: center; padding: 14px;">Noch keine Konversationen vorhanden. Trage rechts eine E-Mail ein, um zu starten.</p>';
-            return;
-        }
-
-        const profilesMap = await fetchProfilesMap(conversations.map(c => c.partnerEmail));
-
-        convList.innerHTML = '';
-        conversations.forEach(conv => {
-            const profile = profilesMap.get(conv.partnerEmail);
-            const displayName = profile?.full_name || profile?.username || conv.partnerEmail.split('@')[0];
-            const isSelected = selectedPartner === conv.partnerEmail;
-            const timeLabel = formatMessageTime(conv.lastTime);
-            const prefix = conv.lastSender === currentEmail ? 'Du: ' : '';
-            const previewText = `${prefix}${conv.lastMessage || ''}`;
-            const hasUnread = conv.unreadCount > 0;
-            const unreadLabel = conv.unreadCount > 99 ? '99+' : String(conv.unreadCount);
-
-            const itemBtn = document.createElement('button');
-            itemBtn.type = 'button';
-            itemBtn.setAttribute('aria-pressed', String(isSelected));
-            itemBtn.style.cssText = [
-                'width: 100%',
-                'text-align: left',
-                'padding: 9px 10px',
-                'border-radius: 10px',
-                'cursor: pointer',
-                'display: flex',
-                'flex-direction: column',
-                'gap: 3px',
-                'transition: background 0.15s ease, border-color 0.15s ease',
-                isSelected
-                    ? 'background: rgba(99, 102, 241, 0.22); border: 1px solid rgba(129, 140, 248, 0.65); color: #fff;'
-                    : hasUnread
-                        ? 'background: rgba(236, 72, 153, 0.10); border: 1px solid rgba(236, 72, 153, 0.45); color: var(--text);'
-                        : 'background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border); color: var(--text);'
-            ].join(';');
-
-            itemBtn.innerHTML = `
-                <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px;">
-                    <span style="font-size: 12px; font-weight: 800; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(displayName)}</span>
-                    <div style="display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0;">
-                        ${hasUnread ? `<span aria-label="${escapeHtml(unreadLabel)} ungelesene Nachrichten" style="display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: #ec4899; color: #fff; font-size: 10px; font-weight: 900; line-height: 1;">${escapeHtml(unreadLabel)}</span>` : ''}
-                        <span style="font-size: 9px; color: ${hasUnread ? '#f472b6' : 'var(--text-muted)'}; font-weight: ${hasUnread ? '700' : '400'};">${escapeHtml(timeLabel)}</span>
-                    </div>
-                </div>
-                <div style="font-size: 10px; color: #818cf8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(conv.partnerEmail)}</div>
-                <div style="font-size: 11px; color: ${hasUnread ? '#f8fafc' : 'var(--text-muted)'}; font-weight: ${hasUnread ? '700' : '400'}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(previewText)}</div>
-            `;
-
-            itemBtn.addEventListener('click', async () => {
-                activeRecipientEmail = conv.partnerEmail;
-                const recipientInput = document.getElementById('dm-recipient');
-                if (recipientInput) {
-                    recipientInput.value = conv.partnerEmail;
-                }
-                await markConversationAsRead(conv.partnerEmail, conv.lastTime);
-                await updateActivePartnerHeader(conv.partnerEmail);
-                await loadConversationsList();
-                await loadDirectMessages();
-            });
-
-            convList.appendChild(itemBtn);
-        });
     } catch (err) {
         console.error('Fehler beim Laden der Konversationen:', err);
-        convList.innerHTML = '<p style="color: #ef4444; font-size: 11px; text-align: center; padding: 14px;">Konversationen konnten nicht geladen werden.</p>';
+        if (!hasExistingItems) {
+            convList.innerHTML = '<p style="color: #ef4444; font-size: 11px; text-align: center; padding: 14px;">Konversationen konnten nicht geladen werden.</p>';
+        }
+    } finally {
+        isLoadingConversations = false;
     }
 }
 
@@ -549,13 +584,13 @@ function ensureDmRealtimeSubscription() {
                     const isOpenWithPartner = Boolean(isInboxVisible && currentTarget && (sender === currentTarget || recipient === currentTarget));
 
                     if (isOpenWithPartner && partner && sender === partner) {
-                        await markConversationAsRead(partner, row.created_at);
+                        setLocalReadTimestamp(currentEmail, partner, row.created_at);
                     }
 
                     await updateActivePartnerHeader(currentTarget || activeRecipientEmail || '');
-                    await loadConversationsList();
+                    await loadConversationsList(true);
                     if (isOpenWithPartner) {
-                        await loadDirectMessages();
+                        await loadDirectMessages(true);
                     }
                 }
             )
@@ -583,7 +618,6 @@ export function openDirectMessageWith(recipientEmail) {
     activeRecipientEmail = normalizedRecipient;
     ensureInboxLayout();
 
-    // Zum Postfach-Tab wechseln
     if (typeof window.switchTab === 'function') {
         window.switchTab('inbox');
     }
@@ -593,17 +627,18 @@ export function openDirectMessageWith(recipientEmail) {
         recipientInput.value = normalizedRecipient;
     }
 
+    setLocalReadTimestamp(normalizedCurrent, normalizedRecipient);
     updateActivePartnerHeader(normalizedRecipient);
-    markConversationAsRead(normalizedRecipient).then(() => {
-        loadConversationsList();
-        loadDirectMessages();
-    });
+    loadConversationsList(true);
+    loadDirectMessages(false);
+    markConversationAsRead(normalizedRecipient);
 }
 
 /**
  * Lädt die Direktnachrichten zwischen dem aktuellen Nutzer und dem Empfänger
  */
-export async function loadDirectMessages() {
+export async function loadDirectMessages(silent = false) {
+    if (isLoadingMessages) return;
     ensureInboxLayout();
     ensureDmRealtimeSubscription();
 
@@ -616,26 +651,26 @@ export async function loadDirectMessages() {
     const recipientEmail = recipientInput.value.trim().toLowerCase();
     activeRecipientEmail = recipientEmail;
 
-    await updateActivePartnerHeader(recipientEmail);
+    updateActivePartnerHeader(recipientEmail);
 
     if (!currentEmail) {
         chatList.innerHTML = '<p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;">Bitte logge dich ein.</p>';
         return;
     }
 
-    if (recipientEmail) {
-        await markConversationAsRead(recipientEmail);
-    }
-
-    await loadConversationsList();
-
     if (!recipientEmail) {
         chatList.innerHTML = '<p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;">Wähle links eine Konversation aus oder gib oben eine E-Mail ein.</p>';
         return;
     }
 
-    chatList.innerHTML = '<p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;">Lade Nachrichten...</p>';
+    setLocalReadTimestamp(currentEmail, recipientEmail);
 
+    const hasExistingMessages = chatList.querySelectorAll('div').length > 0 && !chatList.textContent.includes('Lade Nachrichten...');
+    if (!silent && !hasExistingMessages) {
+        chatList.innerHTML = '<p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;">Lade Nachrichten...</p>';
+    }
+
+    isLoadingMessages = true;
     try {
         const { data: messages, error } = await _supabase
             .from('direct_messages')
@@ -651,8 +686,7 @@ export async function loadDirectMessages() {
         }
 
         const latestMsgTime = messages[messages.length - 1]?.created_at || null;
-        await markConversationAsRead(recipientEmail, latestMsgTime);
-        await loadConversationsList();
+        setLocalReadTimestamp(currentEmail, recipientEmail, latestMsgTime);
 
         chatList.innerHTML = '';
         messages.forEach(msg => {
@@ -668,7 +702,6 @@ export async function loadDirectMessages() {
             `;
 
             const bubble = document.createElement('div');
-            // Um die Hälfte dicker/voluminöser als Standardblasen (20px 24px Padding, 14px Text, 1.55 Line-Height)
             bubble.style.cssText = `
                 width: 100%;
                 padding: 20px 24px;
@@ -713,17 +746,43 @@ export async function loadDirectMessages() {
         });
 
         chatList.scrollTop = chatList.scrollHeight;
+        markConversationAsRead(recipientEmail, latestMsgTime);
+        loadConversationsList(true);
 
     } catch (err) {
         console.error('Fehler beim Laden der DMs:', err);
-        chatList.innerHTML = '<p style="color: #ef4444; font-size: 12px; text-align:center; padding: 20px;">Fehler beim Laden der Nachrichten.</p>';
+        if (!hasExistingMessages) {
+            chatList.innerHTML = '<p style="color: #ef4444; font-size: 12px; text-align:center; padding: 20px;">Fehler beim Laden der Nachrichten.</p>';
+        }
+    } finally {
+        isLoadingMessages = false;
+    }
+}
+
+async function insertDirectMessageWithRetry(payloadRow) {
+    let attempt = 0;
+    while (attempt < 2) {
+        attempt += 1;
+        const { error } = await _supabase
+            .from('direct_messages')
+            .insert([payloadRow]);
+
+        if (!error) return;
+
+        const isFetchError = String(error.message || '').toLowerCase().includes('failed to fetch');
+        if (!isFetchError || attempt >= 2) {
+            throw error;
+        }
+        await new Promise(resolve => setTimeout(resolve, 350));
     }
 }
 
 /**
- * Sendet eine Direktnachricht an den Empfänger (inkl. Moderations-Check)
+ * Sendet eine Direktnachricht an den Empfänger (inkl. Moderations-Check & Retry)
  */
 export async function sendDirectMessage() {
+    if (isSendingDm) return;
+
     const recipientInput = document.getElementById('dm-recipient');
     const input = document.getElementById('dm-input');
 
@@ -749,23 +808,20 @@ export async function sendDirectMessage() {
         return;
     }
 
+    isSendingDm = true;
     try {
         const nowIso = new Date().toISOString();
-        const { error } = await _supabase
-            .from('direct_messages')
-            .insert([
-                {
-                    id: crypto.randomUUID(),
-                    sender_email: currentEmail,
-                    recipient_email: recipientEmail,
-                    message_text: text,
-                    created_at: nowIso
-                }
-            ]);
+        const payloadRow = {
+            id: crypto.randomUUID(),
+            sender_email: currentEmail,
+            recipient_email: recipientEmail,
+            message_text: text,
+            created_at: nowIso
+        };
 
-        if (error) throw error;
+        await insertDirectMessageWithRetry(payloadRow);
 
-        await markConversationAsRead(recipientEmail, nowIso);
+        setLocalReadTimestamp(currentEmail, recipientEmail, nowIso);
 
         try {
             await notifyDirectMessage(recipientEmail, currentEmail, text);
@@ -774,12 +830,16 @@ export async function sendDirectMessage() {
         activeRecipientEmail = recipientEmail;
         input.value = '';
         await updateActivePartnerHeader(recipientEmail);
-        await loadConversationsList();
-        await loadDirectMessages();
+        await loadDirectMessages(true);
+        await loadConversationsList(true);
+        markConversationAsRead(recipientEmail, nowIso);
 
     } catch (err) {
         console.error('Fehler beim Senden der DM:', err);
-        alert('Fehler beim Senden: ' + err.message);
+        const detail = err?.message || String(err);
+        alert(`Fehler beim Senden: ${detail}\nBitte prüfe deine Internetverbindung oder ob ein Werbeblocker/Firewall Supabase blockiert.`);
+    } finally {
+        isSendingDm = false;
     }
 }
 
@@ -798,8 +858,8 @@ document.addEventListener('DOMContentLoaded', () => {
     if (inboxBtn) {
         inboxBtn.addEventListener('click', () => {
             setTimeout(() => {
-                loadConversationsList();
-                loadDirectMessages();
+                loadConversationsList(true);
+                loadDirectMessages(true);
             }, 50);
         });
     }
@@ -809,9 +869,9 @@ document.addEventListener('DOMContentLoaded', () => {
         ensureDmRealtimeSubscription();
         const inboxTab = document.getElementById('tab-inbox');
         if (inboxTab && !inboxTab.classList.contains('hidden')) {
-            loadConversationsList();
+            loadConversationsList(true);
         }
-    }, 2500);
+    }, 3500);
 });
 
 // Global für HTML-Events verfügbar machen
