@@ -3,7 +3,7 @@ import { _supabase } from './config.js';
 import { state } from './state.js';
 import { checkPasswordRecoveryFlow } from './auth.js';
 import { initNetworkMonitor, safeAsyncAction, renderOfflineBanner, removeOfflineFallbackNotice } from './network.js';
-import { initPushNotifications, subscribeToRealtimeNotifications } from './features/notifications.js';
+import { requestPushPermission, initRealtimePushListeners, updatePushStatusUi } from './features/notifications.js';
 import { loadCampusFeed, loadMyProfilePosts, setReelFilter, setFilter, claimActiveDrop } from './features/feed.js';
 import { loadLiveStreams, setLiveFilter, handlePreLiveCheck, closeLiveFullscreen, sendLiveChatMessage } from './features/live.js';
 import { toggleLectureMode, saveLectureNotesToFile } from './features/lecture.js';
@@ -547,8 +547,8 @@ async function initMainAppSession() {
     bindProfileAvatarClick();
 
     // Push-Benachrichtigungen und Realtime-Subscriptions starten
-    await initPushNotifications();
-    subscribeToRealtimeNotifications();
+    updatePushStatusUi();
+    initRealtimePushListeners(state.currentUserEmail);
 
     let isMasterAdmin = (
         state.currentUserEmail?.toLowerCase() === 'office@pure-logic.at' ||
@@ -617,6 +617,7 @@ async function initMainAppSession() {
     loadCampusFeed('foryou');
     loadLiveStreams();
     loadMyProfilePosts();
+    updatePushStatusUi();
 }
 
 // Leaflet Admin Karte initialisieren

@@ -2,6 +2,7 @@
 import { _supabase } from '../config.js';
 import { state } from '../state.js';
 import { validateInputOrAlert } from './moderation.js';
+import { sendInteractionPush } from './notifications.js';
 
 let selectedMediaFile = null;
 let observer = null;
@@ -262,7 +263,7 @@ export function closeMediaUploadModal() {
 }
 
 /**
- * Verarbeitet die Dateiauswahl (Bilder / Videos)
+ * Verarbeitet die gewählte Datei und zeigt Vorschau / Trimmer
  */
 export function handleMediaSelection(event) {
     const file = event.target.files[0];
@@ -273,8 +274,9 @@ export function handleMediaSelection(event) {
     const videoPreview = document.getElementById('trim-video-preview');
     const infoText = document.getElementById('video-duration-info');
     
+    if (trimmerContainer) trimmerContainer.classList.remove('hidden');
+
     if (file.type.startsWith('video/')) {
-        trimmerContainer?.classList.remove('hidden');
         const fileURL = URL.createObjectURL(file);
         if (videoPreview) videoPreview.src = fileURL;
         
@@ -284,16 +286,20 @@ export function handleMediaSelection(event) {
                 if (infoText) {
                     if (duration > 30) {
                         infoText.textContent = `⚠️ Achtung: Das Video ist ${duration}s lang (Empfohlen: max. 30s).`;
-                        infoText.style.color = '#ef4444';
+                        infoText.style.color = '#f59e0b';
                     } else {
-                        infoText.textContent = `Dauer: ${duration}s (Perfekte Länge 🚀)`;
+                        infoText.textContent = `✅ Video-Länge: ${duration}s (Perfekt für Campus-Reels!)`;
                         infoText.style.color = '#10b981';
                     }
                 }
             };
         }
-    } else {
-        trimmerContainer?.classList.add('hidden');
+    } else if (file.type.startsWith('image/')) {
+        if (videoPreview) videoPreview.src = '';
+        if (infoText) {
+            infoText.textContent = `🖼️ Bild ausgewählt: ${file.name} (Wird automatisch optimiert)`;
+            infoText.style.color = '#818cf8';
+        }
     }
 }
 
@@ -306,7 +312,8 @@ export async function uploadTrimmedMedia() {
         return;
     }
     
-    const caption = document.getElementById('media-caption-input')?.value || '';
+    const captionInput = document.getElementById('media-caption-input');
+    const caption = captionInput ? captionInput.value.trim() : '';
 
     if (!validateInputOrAlert(caption)) {
         return;
@@ -321,14 +328,14 @@ export async function uploadTrimmedMedia() {
             console.warn('Bild-Skalierung fehlgeschlagen, benutze Originaldatei:', resizeErr);
         }
     }
-
-    const fileExt = fileToUpload.name.split('.').pop();
-    const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
-    const filePath = `campus-uploads/${fileName}`;
-
+    
     try {
-        const { error: uploadError } = await _supabase.storage
-            .from('media')
+        const fileExt = fileToUpload.name.split('.').pop();
+        const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
+        const filePath = `uploads/${fileName}`;
+
+        const { data: uploadData, error: uploadError } = await _supabase.storage
+            .from('campus_media')
             .upload(filePath, fileToUpload);
 
         if (uploadError) {
@@ -337,16 +344,16 @@ export async function uploadTrimmedMedia() {
             return;
         }
 
-        const { data: publicURLData } = _supabase.storage
-            .from('media')
+        const { data: urlData } = _supabase.storage
+            .from('campus_media')
             .getPublicUrl(filePath);
 
-        const mediaUrl = publicURLData.publicUrl;
+        const mediaUrl = urlData ? urlData.publicUrl : '';
 
         const { error: dbError } = await _supabase
             .from('media_posts')
             .insert([
-                { 
+                {
                     id: crypto.randomUUID(),
                     author_email: state.currentUserEmail || 'student@uni.at', 
                     caption: caption, 
@@ -377,25 +384,28 @@ export async function uploadTrimmedMedia() {
 }
 
 /**
- * Erhöht die Aufrufe (Views) eines Beitrags beim Sichtbarwerden im Feed
+ * Erhöht den View-Counter eines Beitrags in der Datenbank
  */
 async function incrementPostView(postId) {
     try {
-        const { data } = await _supabase
+        const { data: post } = await _supabase
             .from('media_posts')
             .select('views')
             .eq('id', postId)
             .single();
 
-        if (data) {
-            const newViews = (data.views || 0) + 1;
+        if (post) {
+            const nextViews = (post.views || 0) + 1;
             await _supabase
                 .from('media_posts')
-                .update({ views: newViews })
+                .update({ views: nextViews })
                 .eq('id', postId);
+
+            const viewEl = document.getElementById(`view-count-${postId}`);
+            if (viewEl) viewEl.textContent = `👁️ ${nextViews}`;
         }
-    } catch (e) {
-        console.warn('View-Counter Fehler:', e);
+    } catch (err) {
+        console.warn('View-Update fehlgeschlagen:', err);
     }
 }
 
@@ -411,7 +421,7 @@ window.likePost = async function(postId) {
     try {
         const { data: postData } = await _supabase
             .from('media_posts')
-            .select('liked_by')
+            .select('liked_by, author_email')
             .eq('id', postId)
             .single();
 
@@ -429,6 +439,15 @@ window.likePost = async function(postId) {
             .from('media_posts')
             .update({ liked_by: likedByList })
             .eq('id', postId);
+
+        if (index === -1 && postData?.author_email) {
+            await sendInteractionPush({
+                type: 'like',
+                recipientEmail: postData.author_email,
+                actorEmail: state.currentUserEmail,
+                postId
+            });
+        }
 
         const likeCountEl = document.getElementById(`like-count-${postId}`);
         if (likeCountEl) {
@@ -475,26 +494,28 @@ window.openLikesModal = async function(postId) {
 
             const { data: userData } = await _supabase
                 .from('users')
-                .select('full_name, username, avatar_url')
+                .select('full_name, avatar_url')
                 .eq('email', email)
-                .maybeSingle();
+                .single();
 
             if (userData) {
-                name = userData.full_name || userData.username || name;
+                if (userData.full_name) name = userData.full_name;
                 if (userData.avatar_url) avatar = userData.avatar_url;
             }
 
-            const item = document.createElement('div');
-            item.style.cssText = 'display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.04); padding: 8px; border-radius: 8px; cursor: pointer;';
-            const openUserProfile = () => {
+            const safeEmail = escapeHtmlAttr(email);
+            const safeName = escapeHtmlText(name);
+            const item = document.createElement('button');
+            item.type = 'button';
+            item.style.cssText = 'display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.04); padding: 8px; border-radius: 10px; cursor: pointer; border: none; width: 100%; text-align: left;';
+            item.setAttribute('aria-label', `Profil von ${safeName} öffnen`);
+            item.onclick = () => {
                 modal.classList.add('hidden');
                 window.openPublicProfile(email);
             };
-            item.onclick = openUserProfile;
-            makeKeyboardAccessible(item, openUserProfile);
             item.innerHTML = `
-                <img src="${avatar}" style="width: 30px; height: 30px; border-radius: 50%; object-fit: cover; border: 1px solid var(--primary);" alt="Avatar von ${escapeHtmlAttr(name)}">
-                <span style="font-size: 13px; font-weight: 700; color: #fff;">${name}</span>
+                <img src="${avatar}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover;" alt="Avatar von ${safeName}">
+                <span style="font-size: 12px; font-weight: 700; color: #fff;">${safeName}</span>
             `;
             listContainer.appendChild(item);
         }
@@ -542,12 +563,12 @@ async function loadCommentsForPost(postId) {
 
             const { data: userData } = await _supabase
                 .from('users')
-                .select('full_name, username, avatar_url')
+                .select('full_name, avatar_url')
                 .eq('email', c.author_email)
-                .maybeSingle();
+                .single();
 
             if (userData) {
-                authorName = userData.full_name || userData.username || authorName;
+                if (userData.full_name) authorName = userData.full_name;
                 if (userData.avatar_url) authorAvatar = userData.avatar_url;
             }
 
@@ -606,6 +627,24 @@ window.submitNewComment = async function() {
 
         if (error) throw error;
 
+        try {
+            const { data: postOwner } = await _supabase
+                .from('media_posts')
+                .select('author_email')
+                .eq('id', activeCommentPostId)
+                .maybeSingle();
+
+            if (postOwner?.author_email) {
+                await sendInteractionPush({
+                    type: 'comment',
+                    recipientEmail: postOwner.author_email,
+                    actorEmail: state.currentUserEmail,
+                    postId: activeCommentPostId,
+                    previewText: text
+                });
+            }
+        } catch (_notifErr) {}
+
         input.value = '';
         await loadCommentsForPost(activeCommentPostId);
 
@@ -651,7 +690,7 @@ function createCommentsModal() {
 }
 
 /**
- * Hilfsfunktion zum Erstellen des Info-Modals
+ * Hilfsfunktion zum Erstellen eines dynamischen Info-Modals (für Likes)
  */
 function createInfoModal() {
     const modalDiv = document.createElement('div');
@@ -659,10 +698,10 @@ function createInfoModal() {
     modalDiv.className = 'hidden';
     modalDiv.style.cssText = 'position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); z-index: 9999; display: flex; justify-content: center; align-items: center; backdrop-filter: blur(5px);';
     modalDiv.innerHTML = `
-        <div style="background: var(--card); border: 1px solid var(--border); width: 90%; max-width: 380px; max-height: 70vh; border-radius: 16px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+        <div style="background: var(--card); border: 1px solid var(--border); width: 90%; max-width: 400px; max-height: 70vh; border-radius: 16px; display: flex; flex-direction: column; overflow: hidden;">
             <div style="padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
-                <h3 id="dynamic-modal-title" style="font-size: 15px; font-weight: 900; color: #fff; margin: 0;">Info</h3>
-                <button type="button" onclick="document.getElementById('dynamic-info-modal').classList.add('hidden')" aria-label="Info schließen" style="background: none; border: none; color: var(--text-muted); font-size: 18px; cursor: pointer;">✕</button>
+                <h3 id="dynamic-modal-title" style="font-size: 14px; font-weight: 900; color: #fff; margin: 0;">Info</h3>
+                <button type="button" onclick="document.getElementById('dynamic-info-modal').classList.add('hidden')" aria-label="Info-Fenster schließen" style="background: none; border: none; color: var(--text-muted); font-size: 18px; cursor: pointer;">✕</button>
             </div>
             <div id="dynamic-modal-content" style="flex: 1; overflow-y: auto; padding: 16px;"></div>
         </div>
@@ -672,48 +711,8 @@ function createInfoModal() {
 }
 
 /**
- * Initialisiert den IntersectionObserver für Video-Autoplay & View-Zählung im Sichtfeld
- */
-function initVideoAutoplayObserver() {
-    if (observer) observer.disconnect();
-
-    const options = {
-        root: document.getElementById('reels-list'),
-        rootMargin: '0px',
-        threshold: 0.6
-    };
-
-    observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            const item = entry.target;
-            const video = item.querySelector('video');
-            const postId = item.getAttribute('data-post-id');
-
-            if (entry.isIntersecting) {
-                if (postId && !item.dataset.viewed) {
-                    item.dataset.viewed = 'true';
-                    incrementPostView(postId);
-                }
-                if (video) {
-                    video.play().catch(err => {
-                        console.warn('Autoplay wurde blockiert:', err);
-                    });
-                }
-            } else {
-                if (video) {
-                    video.pause();
-                }
-            }
-        });
-    }, options);
-
-    document.querySelectorAll('.reel-item').forEach(item => {
-        observer.observe(item);
-    });
-}
-
-/**
- * TikTok/Twitter-Style Engagement-Scoring Algorithmus für den "For You" Feed
+ * Berechnet den Engagement-Score eines Beitrags für den "For You"-Algorithmus.
+ * Berücksichtigt Likes, Kommentare, Views und Zeitverfall (Recency Decay).
  */
 async function calculateEngagementScore(post) {
     const views = post.views || 0;
@@ -738,19 +737,32 @@ async function calculateEngagementScore(post) {
     return rawScore / recencyDecay;
 }
 
-function matchesSearchQuery(post, query) {
-    if (!query) return true;
-    const q = normalizeSearchQuery(query);
-    const caption = String(post.caption || '').toLowerCase();
-    const author = String(post.author_email || '').toLowerCase();
+/**
+ * Richtet den IntersectionObserver für automatisches Abspielen & Zählen von Views ein
+ */
+function setupFeedObserver() {
+    if (observer) observer.disconnect();
 
-    if (q.startsWith('#')) {
-        const tagBody = q.slice(1);
-        if (!tagBody) return true;
-        return caption.includes(`#${tagBody}`) || caption.includes(q) || author.includes(tagBody);
-    }
+    observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            const video = entry.target.querySelector('video');
+            const postId = entry.target.dataset.postId;
 
-    return caption.includes(q) || author.includes(q);
+            if (entry.isIntersecting) {
+                if (video) {
+                    video.play().catch(() => {});
+                }
+                if (postId && !entry.target.dataset.viewed) {
+                    entry.target.dataset.viewed = 'true';
+                    incrementPostView(postId);
+                }
+            } else {
+                if (video) {
+                    video.pause();
+                }
+            }
+        });
+    }, { threshold: 0.65 });
 }
 
 /**
@@ -759,17 +771,15 @@ function matchesSearchQuery(post, query) {
 export async function loadCampusFeed(filter = 'foryou') {
     initFeedSearchControls();
     const searchInput = document.getElementById('feed-search-input');
-    if (searchInput && !activeSearchQuery && searchInput.value.trim()) {
+    if (searchInput && normalizeSearchQuery(searchInput.value) !== activeSearchQuery) {
         activeSearchQuery = normalizeSearchQuery(searchInput.value);
     }
 
+    const feedContainer = document.getElementById('reels-list');
+    if (!feedContainer) return;
+
+    feedContainer.innerHTML = '<p style="text-align: center; color: var(--text-muted); font-size: 13px; padding: 30px;">Lade Campus-Feed...</p>';
     ensureActiveSearchBanner();
-
-    state.currentReelFilter = filter;
-    const feedList = document.getElementById('reels-list');
-    if (!feedList) return;
-
-    feedList.innerHTML = '<p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;">Lade Campus-Feeds...</p>';
 
     let query = _supabase.from('media_posts').select('*');
 
@@ -791,18 +801,22 @@ export async function loadCampusFeed(filter = 'foryou') {
 
     const { data: posts, error } = await query;
 
-    if (error || !posts || posts.length === 0) {
-        feedList.innerHTML = '<p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;">Noch keine Beiträge im Campus-Feed vorhanden.</p>';
+    if (error || !posts) {
+        feedContainer.innerHTML = '<p style="text-align: center; color: #ef4444; font-size: 13px; padding: 30px;">Fehler beim Laden der Beiträge.</p>';
         return;
     }
 
-    let processedPosts = posts;
+    let processedPosts = [...posts];
 
     if (activeSearchQuery) {
-        processedPosts = processedPosts.filter(p => matchesSearchQuery(p, activeSearchQuery));
+        processedPosts = processedPosts.filter(p => {
+            const captionText = (p.caption || '').toLowerCase();
+            const authorText = (p.author_email || '').toLowerCase();
+            return captionText.includes(activeSearchQuery) || authorText.includes(activeSearchQuery);
+        });
     }
 
-    if (filter === 'foryou' && !activeSearchQuery) {
+    if (filter === 'foryou') {
         const scoredPosts = [];
         for (const post of processedPosts) {
             const score = await calculateEngagementScore(post);
@@ -813,32 +827,17 @@ export async function loadCampusFeed(filter = 'foryou') {
     }
 
     if (processedPosts.length === 0) {
-        feedList.innerHTML = `
-            <div style="text-align: center; padding: 24px 16px;">
-                <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 10px;">Keine Beiträge für "${escapeHtmlText(activeSearchQuery)}" gefunden.</p>
-                <button type="button" onclick="window.clearFeedSearch()" class="btn" style="width: auto; margin: 0 auto; padding: 7px 14px; font-size: 11px; font-weight: 800;">Filter zurücksetzen</button>
-            </div>
-        `;
+        const emptyMsg = activeSearchQuery
+            ? `Keine Beiträge für „${escapeHtmlText(activeSearchQuery)}“ gefunden.`
+            : 'Noch keine Beiträge in diesem Feed vorhanden.';
+        feedContainer.innerHTML = `<p style="text-align: center; color: var(--text-muted); font-size: 13px; padding: 30px;">${emptyMsg}</p>`;
         return;
     }
 
-    feedList.innerHTML = '';
+    feedContainer.innerHTML = '';
+    setupFeedObserver();
 
     for (const post of processedPosts) {
-        const item = document.createElement('div');
-        item.className = 'reel-item';
-        item.setAttribute('data-post-id', post.id);
-        
-        let mediaHtml = '';
-        if (post.media_type === 'video') {
-            mediaHtml = `<video src="${post.media_url}" muted playsinline loop class="reel-media" style="object-fit: contain; width: 100%; height: 100%;"></video>`;
-        } else if (post.media_url) {
-            mediaHtml = `<img src="${post.media_url}" class="reel-media" style="object-fit: contain; width: 100%; height: 100%;" alt="Beitragsbild">`;
-        }
-
-        const rawCaption = (post.caption && !post.caption.includes('${post.caption}')) ? post.caption : '';
-        const parsedCaption = parseHashtagsInText(rawCaption);
-
         const authorEmail = post.author_email || 'student@uni.at';
         const safeAuthorEmail = escapeHtmlAttr(authorEmail);
         const safePostId = escapeHtmlAttr(post.id);
@@ -860,40 +859,44 @@ export async function loadCampusFeed(filter = 'foryou') {
         let authorAvatar = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150';
 
         try {
-            const { data: authorData } = await _supabase
+            const { data: userData } = await _supabase
                 .from('users')
-                .select('full_name, username, avatar_url')
+                .select('full_name, avatar_url')
                 .eq('email', authorEmail)
-                .maybeSingle();
+                .single();
 
-            if (authorData) {
-                authorName = authorData.full_name || authorData.username || authorName;
-                if (authorData.avatar_url) authorAvatar = authorData.avatar_url;
+            if (userData) {
+                if (userData.full_name) authorName = userData.full_name;
+                if (userData.avatar_url) authorAvatar = userData.avatar_url;
             }
-        } catch (e) {
-            console.warn('Konnte Autor-Profil nicht laden:', e);
+        } catch (e) {}
+
+        const safeAuthorName = escapeHtmlText(authorName);
+        const card = document.createElement('div');
+        card.className = 'reel-card';
+        card.dataset.postId = post.id;
+        card.style.cssText = 'position: relative; background: #000; border-radius: 16px; overflow: hidden; margin-bottom: 16px; border: 1px solid var(--border); box-shadow: 0 4px 20px rgba(0,0,0,0.4);';
+
+        let mediaHtml = '';
+        if (post.media_type === 'video') {
+            mediaHtml = `<video src="${post.media_url}" loop muted playsinline style="width: 100%; max-height: 70vh; object-fit: contain; display: block; background: #000;"></video>`;
+        } else {
+            mediaHtml = `<img src="${post.media_url}" style="width: 100%; max-height: 70vh; object-fit: contain; display: block; background: #000;" alt="Beitrag von ${safeAuthorName}">`;
         }
 
-        const safeAuthorName = escapeHtmlAttr(authorName);
-
-        item.innerHTML = `
+        card.innerHTML = `
             ${mediaHtml}
-            <div style="position: absolute; top: 14px; left: 14px; right: 14px; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; z-index: 10; pointer-events: none;">
-                <div style="pointer-events: auto; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; max-width: 100%;">
-                    <button type="button" onclick="window.openPublicProfile('${safeAuthorEmail}')" aria-label="Profil von ${safeAuthorName} öffnen" style="display: flex; align-items: center; gap: 8px; background: rgba(19, 27, 46, 0.85); border: 1px solid rgba(129, 140, 248, 0.4); padding: 5px 12px; border-radius: 30px; cursor: pointer; backdrop-filter: blur(6px); box-shadow: 0 4px 12px rgba(0,0,0,0.4); flex-shrink: 0;">
-                        <img src="${authorAvatar}" style="width: 26px; height: 26px; border-radius: 50%; object-fit: cover; border: 1px solid var(--primary);" onerror="this.src='https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'" alt="Avatar von ${safeAuthorName}">
-                        <span style="font-size: 12px; font-weight: 800; color: #fff;">${authorName}</span>
+            <div style="position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(transparent, rgba(0,0,0,0.9)); padding: 30px 16px 14px; display: flex; flex-direction: column; gap: 6px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <button type="button" onclick="window.openPublicProfile('${safeAuthorEmail}')" aria-label="Profil von ${safeAuthorName} öffnen" style="display: inline-flex; align-items: center; gap: 8px; background: transparent; border: none; padding: 0; cursor: pointer;">
+                        <img src="${authorAvatar}" style="width: 28px; height: 28px; border-radius: 50%; object-fit: cover; border: 1.5px solid var(--primary); display: block;" alt="Avatar von ${safeAuthorName}">
+                        <span style="font-size: 13px; font-weight: 800; color: #fff;">@${safeAuthorName}</span>
                     </button>
-
-                    ${parsedCaption ? `
-                    <div style="font-size: 12px; color: #fff; font-weight: 600; background: rgba(19, 27, 46, 0.85); border: 1px solid rgba(255, 255, 255, 0.15); padding: 6px 12px; border-radius: 20px; backdrop-filter: blur(6px); box-shadow: 0 4px 12px rgba(0,0,0,0.4); word-break: break-word; max-width: 100%;">
-                        💬 ${parsedCaption}
-                    </div>
-                    ` : ''}
                 </div>
-
-                <div style="pointer-events: auto; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 11px; font-weight: 700;">
-                    <span style="background: rgba(148, 163, 184, 0.2); border: 1px solid rgba(148, 163, 184, 0.45); color: #cbd5e1; padding: 3px 10px; border-radius: 16px; backdrop-filter: blur(6px); box-shadow: 0 2px 8px rgba(0,0,0,0.3);">
+                <p style="font-size: 12px; color: #e2e8f0; margin: 0; line-height: 1.35;">${parseHashtagsInText(post.caption || '')}</p>
+                
+                <div style="display: flex; justify-content: flex-end; align-items: center; gap: 8px; margin-top: 4px;">
+                    <span id="view-count-${safePostId}" style="background: rgba(0, 0, 0, 0.55); border: 1px solid rgba(255, 255, 255, 0.14); color: #e2e8f0; padding: 3px 10px; border-radius: 16px; backdrop-filter: blur(6px); font-size: 11px; font-weight: 700;">
                         👁️ ${viewsCount}
                     </span>
 
@@ -907,11 +910,10 @@ export async function loadCampusFeed(filter = 'foryou') {
                 </div>
             </div>
         `;
-        
-        feedList.appendChild(item);
-    }
 
-    setTimeout(initVideoAutoplayObserver, 100);
+        feedContainer.appendChild(card);
+        if (observer) observer.observe(card);
+    }
 }
 
 /**
@@ -930,20 +932,19 @@ export async function loadMyProfilePosts() {
         .order('created_at', { ascending: false });
 
     if (error || !posts || posts.length === 0) {
-        grid.innerHTML = '<p style="font-size: 11px; color: var(--text-muted);">Noch keine eigenen Beiträge vorhanden.</p>';
+        grid.innerHTML = '<p style="font-size: 11px; color: var(--text-muted);">Noch keine Beiträge hochgeladen.</p>';
         return;
     }
 
     grid.innerHTML = '';
-    
-    for (const post of posts) {
+    posts.forEach(async post => {
         const item = document.createElement('div');
-        item.style.cssText = 'background: var(--card); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; display: flex; flex-direction: column;';
-        
+        item.style.cssText = 'position: relative; background: #000; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); display: flex; flex-direction: column;';
+
         if (post.media_type === 'video') {
-            item.innerHTML = `<video src="${post.media_url}" muted playsinline style="width: 100%; height: 90px; object-fit: contain; background: #000;"></video>`;
+            item.innerHTML = `<video src="${post.media_url}" muted style="width: 100%; height: 110px; object-fit: cover;"></video>`;
         } else {
-            item.innerHTML = `<img src="${post.media_url}" style="width: 100%; height: 90px; object-fit: contain; background: #000;" alt="Eigener Beitrag">`;
+            item.innerHTML = `<img src="${post.media_url}" style="width: 100%; height: 110px; object-fit: cover;" alt="Eigener Beitrag">`;
         }
         
         const views = post.views || 0;
@@ -968,17 +969,18 @@ export async function loadMyProfilePosts() {
         `;
         
         grid.appendChild(item);
-    }
+    });
 }
 
 /**
- * Öffnet das öffentliche Profil eines beliebigen Nutzers per E-Mail
+ * Öffnet ein öffentliches Nutzerprofil
  */
 window.openPublicProfile = async function(email) {
     if (!email) return;
-    
     const modal = document.getElementById('public-profile-modal');
-    if (modal) modal.classList.remove('hidden');
+    if (!modal) return;
+
+    modal.classList.remove('hidden');
 
     const avatar = document.getElementById('pub-profile-avatar');
     const fullname = document.getElementById('pub-profile-fullname');
@@ -1119,6 +1121,12 @@ window.toggleFollowUser = async function(targetEmail) {
                         created_at: new Date().toISOString()
                     }
                 ]);
+
+            await sendInteractionPush({
+                type: 'follow',
+                recipientEmail: targetEmail,
+                actorEmail: state.currentUserEmail
+            });
             
             alert(`Du folgst jetzt ${targetEmail} 🚀`);
         }

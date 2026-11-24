@@ -2,6 +2,7 @@
 import { _supabase } from '../config.js';
 import { state } from '../state.js';
 import { validateInputOrAlert } from './moderation.js';
+import { notifyDirectMessage } from './notifications.js';
 
 let activeRecipientEmail = null;
 
@@ -150,6 +151,10 @@ export async function sendDirectMessage() {
             ]);
 
         if (error) throw error;
+
+        try {
+            await notifyDirectMessage(recipientEmail, state.currentUserEmail, text);
+        } catch (_notifErr) {}
 
         input.value = '';
         loadDirectMessages();
