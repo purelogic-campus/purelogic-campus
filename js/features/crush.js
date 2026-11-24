@@ -1,7 +1,9 @@
-// js/features/crush.js - Anonymes Crush Radar für PURE LOGIC (mit responsiver Layout-Steuerung)
+// js/features/crush.js - Anonymes Crush Radar für PURE LOGIC (100% responsiv, Match- & Blind-Date-Logik, Escape & Fokus)
 import { _supabase } from '../config.js';
 import { state } from '../state.js';
 import { validateInputOrAlert } from './moderation.js';
+
+let previousFocusCrush = null;
 
 function escapeHtml(str) {
     return String(str || '')
@@ -26,9 +28,17 @@ export function syncCrushResponsiveLayout() {
     if (!modal) return;
 
     modal.classList.add('crush-modal-responsive');
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+
     const card = modal.querySelector('.container-box');
     if (card) {
         card.classList.add('crush-modal-card');
+    }
+
+    const matchesBox = document.getElementById('crush-matches-box');
+    if (matchesBox) {
+        matchesBox.classList.add('crush-results-panel');
     }
 
     const isMobile = window.innerWidth < 768;
@@ -37,16 +47,29 @@ export function syncCrushResponsiveLayout() {
 
 export function openCrushModal() {
     const modal = document.getElementById('crush-modal');
-    if (modal) {
-        syncCrushResponsiveLayout();
-        modal.classList.remove('hidden');
-        checkCrushMatches();
+    if (!modal) return;
+
+    previousFocusCrush = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    syncCrushResponsiveLayout();
+    modal.classList.remove('hidden');
+
+    const targetInput = document.getElementById('crush-target-input');
+    if (targetInput) {
+        requestAnimationFrame(() => targetInput.focus());
     }
+
+    checkCrushMatches();
 }
 
 export function closeCrushModal() {
     const modal = document.getElementById('crush-modal');
-    if (modal) modal.classList.add('hidden');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+    if (previousFocusCrush && previousFocusCrush.isConnected) {
+        previousFocusCrush.focus();
+    }
+    previousFocusCrush = null;
 }
 
 export async function submitCrush() {
@@ -65,10 +88,17 @@ export async function submitCrush() {
 
     if (!target) {
         alert('Bitte gib eine E-Mail oder ein @handle deines Crushes ein.');
+        targetInput.focus();
         return;
     }
 
     if (target === state.currentUserEmail.toLowerCase()) {
+        alert('Du kannst dich nicht selbst als Crush eintragen! 😉');
+        return;
+    }
+
+    const myHandle = state.currentUserUsername ? `@${state.currentUserUsername.toLowerCase()}` : '';
+    if (myHandle && target === myHandle) {
         alert('Du kannst dich nicht selbst als Crush eintragen! 😉');
         return;
     }
@@ -78,12 +108,27 @@ export async function submitCrush() {
     }
 
     try {
+        const myEmail = state.currentUserEmail.toLowerCase();
+        const { data: existingRows, error: selectErr } = await _supabase
+            .from('crushes')
+            .select('id, sender_email, target_identifier')
+            .eq('sender_email', myEmail)
+            .eq('target_identifier', target);
+
+        if (selectErr) throw selectErr;
+
+        if (existingRows && existingRows.length > 0) {
+            alert('Du hast diese Person bereits im Crush-Radar eingetragen! 💘');
+            checkCrushMatches();
+            return;
+        }
+
         const { error } = await _supabase
             .from('crushes')
             .insert([
                 {
                     id: crypto.randomUUID(),
-                    sender_email: state.currentUserEmail.toLowerCase(),
+                    sender_email: myEmail,
                     target_identifier: target,
                     secret_hint: hint,
                     created_at: new Date().toISOString()
@@ -95,7 +140,7 @@ export async function submitCrush() {
         targetInput.value = '';
         if (hintInput) hintInput.value = '';
 
-        alert('Crush erfolgreich im Radar gespeichert! 💘 Wenn die Person dich auch einträgt, gibt es ein Match.');
+        alert('Crush erfolgreich im Radar gespeichert! 💘 Wenn die Person dich auch einträgt, gibt es ein Match & Blind-Date-Chance.');
         checkCrushMatches();
 
     } catch (err) {
@@ -113,7 +158,7 @@ export async function checkCrushMatches() {
     const myEmail = state.currentUserEmail.toLowerCase();
     const myHandle = state.currentUserUsername ? `@${state.currentUserUsername.toLowerCase()}` : '';
 
-    matchesBox.innerHTML = '<p style="color: var(--text-muted);">Suche nach Matches im Radar...</p>';
+    matchesBox.innerHTML = '<p style="color: var(--text-muted); text-align: center;">Suche nach Matches im Radar...</p>';
 
     try {
         const { data: allCrushes, error } = await _supabase
@@ -123,7 +168,7 @@ export async function checkCrushMatches() {
         if (error) throw error;
 
         if (!allCrushes) {
-            matchesBox.innerHTML = '<p style="color: var(--text-muted);">Noch keine Matches gefunden. Bleib dran! ✨</p>';
+            matchesBox.innerHTML = '<p style="color: var(--text-muted); text-align: center;">Noch keine Matches gefunden. Bleib dran! ✨</p>';
             return;
         }
 
@@ -156,19 +201,28 @@ export async function checkCrushMatches() {
                </div>`
             : '';
 
+        const statsStripHtml = `
+            <div class="crush-stats-row">
+                <span class="campus-badge accent">💘 Eigene Crushes: ${myCrushes.length}</span>
+                <span class="campus-badge">👀 Haben dich eingetragen: ${whoCrushedMe.length}</span>
+            </div>
+        `;
+
         if (matches.length > 0) {
             const safeFirstMatchAttr = escapeAttr(matches[0]);
             const safeMatchesText = escapeHtml(matches.join(', '));
             matchesBox.innerHTML = `
+                ${statsStripHtml}
                 <div class="crush-match-card">
-                    <div class="crush-match-title">💖 IT'S A MATCH!</div>
-                    <p class="crush-match-text">Du hast ein gegenseitiges Crush-Match mit: <strong>${safeMatchesText}</strong></p>
+                    <div class="crush-match-title">💖 IT'S A MATCH • BLIND-DATE BEREIT!</div>
+                    <p class="crush-match-text">Du hast ein gegenseitiges Crush-Match mit: <strong>${safeMatchesText}</strong>. Startet jetzt eure Unterhaltung oder plant euer Blind-Date am Campus!</p>
                     <button type="button" onclick="window.openDirectMessageWith('${safeFirstMatchAttr}')" class="btn crush-match-btn">Jetzt Nachricht schreiben 💬</button>
                 </div>
                 ${hintBannerHtml}
             `;
         } else {
             matchesBox.innerHTML = `
+                ${statsStripHtml}
                 <p style="color: var(--text-muted); text-align: center; line-height: 1.45;">
                     Bisher noch kein gegenseitiges Match (${whoCrushedMe.length} Personen haben dich im Radar). Trage weitere Crushes ein! 💫
                 </p>
@@ -178,9 +232,17 @@ export async function checkCrushMatches() {
 
     } catch (err) {
         console.error('Fehler beim Prüfen der Matches:', err);
-        matchesBox.innerHTML = '<p style="color: #ef4444;">Fehler beim Laden der Matches.</p>';
+        matchesBox.innerHTML = '<p style="color: #ef4444; text-align: center;">Fehler beim Laden der Matches.</p>';
     }
 }
+
+document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape') return;
+    const modal = document.getElementById('crush-modal');
+    if (modal && !modal.classList.contains('hidden')) {
+        closeCrushModal();
+    }
+});
 
 window.addEventListener('resize', () => {
     const modal = document.getElementById('crush-modal');

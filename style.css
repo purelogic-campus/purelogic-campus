@@ -1570,7 +1570,7 @@ body.match-mittwoch-active {
 }
 
 /* ==========================================================================
-   PUNKT 13: CRUSH RADAR & PROF-RATING RESPONSIVE CONTAINER LAYOUTS
+   PUNKT 13: CRUSH RADAR & PROF-RATING RESPONSIVE CONTAINER LAYOUTS (100%)
    ========================================================================== */
 #crush-modal.crush-modal-responsive,
 #prof-guide-modal.prof-guide-modal-responsive {
@@ -1582,7 +1582,7 @@ body.match-mittwoch-active {
 .crush-modal-card,
 .prof-guide-card {
   width: 100%;
-  max-width: 420px;
+  max-width: 430px;
   max-height: calc(100dvh - 24px);
   margin: 0 auto !important;
   display: flex;
@@ -1593,7 +1593,15 @@ body.match-mittwoch-active {
 }
 
 .prof-guide-card {
-  max-width: 520px;
+  max-width: 540px;
+}
+
+.prof-summary-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+  flex-shrink: 0;
 }
 
 .prof-form-card {
@@ -1685,6 +1693,21 @@ body.match-mittwoch-active {
   word-break: break-all;
 }
 
+.crush-results-panel {
+  max-height: 36dvh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-right: 2px;
+}
+
+.crush-stats-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
 .crush-match-card {
   background: rgba(236, 72, 153, 0.14);
   border: 1px solid var(--accent);
@@ -1774,6 +1797,10 @@ body.match-mittwoch-active {
   #prof-reviews-list {
     max-height: 38dvh;
     min-height: 110px;
+  }
+
+  .crush-results-panel {
+    max-height: 32dvh;
   }
 
   .prof-review-header {

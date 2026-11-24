@@ -1,7 +1,10 @@
-// js/features/profguide.js - Vollständiges Prof-Rating & Survival Guide Modul mit Moderation & responsivem Layout
+// js/features/profguide.js - Vollständiges Prof-Rating & Survival Guide Modul (100% responsiv, Summary-Stats, gezielter Filter, Escape & Fokus)
 import { _supabase } from '../config.js';
 import { state } from '../state.js';
 import { validateInputOrAlert } from './moderation.js';
+
+let previousFocusProf = null;
+let cachedReviews = [];
 
 function escapeHtml(str) {
     return String(str || '')
@@ -12,15 +15,70 @@ function escapeHtml(str) {
         .replace(/'/g, '&#39;');
 }
 
+function ensureProfSummaryContainer(modal) {
+    if (!modal) return null;
+    const card = modal.querySelector('.container-box');
+    if (!card) return null;
+
+    let summaryEl = document.getElementById('prof-guide-summary');
+    if (!summaryEl) {
+        summaryEl = document.createElement('div');
+        summaryEl.id = 'prof-guide-summary';
+        summaryEl.className = 'prof-summary-bar';
+        const searchInput = document.getElementById('prof-search-input');
+        if (searchInput && searchInput.parentElement === card) {
+            card.insertBefore(summaryEl, searchInput);
+        } else {
+            card.appendChild(summaryEl);
+        }
+    }
+    return summaryEl;
+}
+
+function renderProfSummary(reviews) {
+    const modal = document.getElementById('prof-guide-modal');
+    const summaryEl = ensureProfSummaryContainer(modal);
+    if (!summaryEl) return;
+
+    const list = Array.isArray(reviews) ? reviews : [];
+    if (list.length === 0) {
+        summaryEl.innerHTML = `
+            <span class="campus-badge">📝 0 Reviews</span>
+            <span class="campus-badge">⭐ Ø –</span>
+            <span class="campus-badge">⚙️ Ø –</span>
+        `;
+        return;
+    }
+
+    const total = list.length;
+    const avgRating = (
+        list.reduce((acc, r) => acc + (parseFloat(r.rating) || 0), 0) / total
+    ).toFixed(1);
+    const avgDifficulty = (
+        list.reduce((acc, r) => acc + (parseFloat(r.difficulty) || 0), 0) / total
+    ).toFixed(1);
+
+    summaryEl.innerHTML = `
+        <span class="campus-badge accent">📝 ${total} ${total === 1 ? 'Review' : 'Reviews'}</span>
+        <span class="campus-badge success">⭐ Ø ${avgRating}/5</span>
+        <span class="campus-badge warning">⚙️ Schwierigkeit Ø ${avgDifficulty}/5</span>
+    `;
+}
+
 export function syncProfGuideResponsiveLayout() {
     const modal = document.getElementById('prof-guide-modal');
     if (!modal) return;
 
     modal.classList.add('prof-guide-modal-responsive');
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+
     const card = modal.querySelector('.container-box');
     if (card) {
         card.classList.add('prof-guide-card');
     }
+
+    ensureProfSummaryContainer(modal);
 
     const formContainer = document.getElementById('prof-review-form-container');
     if (formContainer) {
@@ -41,11 +99,18 @@ export function syncProfGuideResponsiveLayout() {
 
 export function openProfGuideModal() {
     const modal = document.getElementById('prof-guide-modal');
-    if (modal) {
-        syncProfGuideResponsiveLayout();
-        modal.classList.remove('hidden');
-        loadProfReviews();
+    if (!modal) return;
+
+    previousFocusProf = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    syncProfGuideResponsiveLayout();
+    modal.classList.remove('hidden');
+
+    const searchInput = document.getElementById('prof-search-input');
+    if (searchInput) {
+        requestAnimationFrame(() => searchInput.focus());
     }
+
+    loadProfReviews();
 }
 
 export function closeProfGuideModal() {
@@ -53,13 +118,25 @@ export function closeProfGuideModal() {
     if (modal) {
         modal.classList.add('hidden');
     }
+    if (previousFocusProf && previousFocusProf.isConnected) {
+        previousFocusProf.focus();
+    }
+    previousFocusProf = null;
 }
 
 export function toggleProfForm() {
     syncProfGuideResponsiveLayout();
     const formContainer = document.getElementById('prof-review-form-container');
-    if (formContainer) {
-        formContainer.classList.toggle('hidden');
+    if (!formContainer) return;
+
+    const willShow = formContainer.classList.contains('hidden');
+    formContainer.classList.toggle('hidden');
+
+    if (willShow) {
+        const nameInput = document.getElementById('prof-name-input');
+        if (nameInput) {
+            requestAnimationFrame(() => nameInput.focus());
+        }
     }
 }
 
@@ -79,14 +156,22 @@ export async function loadProfReviews() {
         .order('created_at', { ascending: false });
 
     if (error || !reviews || reviews.length === 0) {
+        cachedReviews = [];
+        renderProfSummary([]);
         listContainer.innerHTML = '<p style="font-size: 12px; color: var(--text-muted); text-align: center; padding: 20px;">Noch keine Bewertungen vorhanden. Sei der Erste! 🚀</p>';
         return;
     }
+
+    cachedReviews = reviews;
+    renderProfSummary(reviews);
 
     listContainer.innerHTML = '';
     reviews.forEach(review => {
         const item = document.createElement('div');
         item.className = 'prof-review-item';
+        item.dataset.profName = String(review.prof_name || '').toLowerCase();
+        item.dataset.subject = String(review.subject || '').toLowerCase();
+        item.dataset.comment = String(review.comment || '').toLowerCase();
 
         const safeRating = Math.max(1, Math.min(5, parseInt(review.rating || 5, 10) || 5));
         const safeDifficulty = Math.max(1, Math.min(5, parseInt(review.difficulty || 3, 10) || 3));
@@ -185,22 +270,52 @@ export async function submitProfReview() {
 }
 
 /**
- * Filtert die Bewertungen live nach Suchbegriff
+ * Filtert die Bewertungen gezielt nach Professor, Modul oder Kommentar
  */
 export function filterProfReviews() {
     const query = (document.getElementById('prof-search-input')?.value || '').trim().toLowerCase();
-    const items = document.querySelectorAll('#prof-reviews-list .prof-review-item, #prof-reviews-list > div');
+    const listContainer = document.getElementById('prof-reviews-list');
+    if (!listContainer) return;
+
+    const items = listContainer.querySelectorAll('.prof-review-item');
+    let visibleCount = 0;
 
     items.forEach(item => {
-        if (!item.classList.contains('prof-review-item')) return;
-        const text = (item.textContent || '').toLowerCase();
-        if (!query || text.includes(query)) {
+        const searchable = [
+            item.dataset.profName || '',
+            item.dataset.subject || '',
+            item.dataset.comment || ''
+        ].join(' ');
+
+        if (!query || searchable.includes(query)) {
             item.style.display = '';
+            visibleCount++;
         } else {
             item.style.display = 'none';
         }
     });
+
+    let emptyFilterEl = document.getElementById('prof-filter-empty-msg');
+    if (items.length > 0 && visibleCount === 0) {
+        if (!emptyFilterEl) {
+            emptyFilterEl = document.createElement('p');
+            emptyFilterEl.id = 'prof-filter-empty-msg';
+            emptyFilterEl.style.cssText = 'font-size: 12px; color: var(--text-muted); text-align: center; padding: 16px;';
+            listContainer.appendChild(emptyFilterEl);
+        }
+        emptyFilterEl.textContent = `Keine passenden Bewertungen für „${document.getElementById('prof-search-input')?.value.trim() || ''}“ gefunden.`;
+    } else if (emptyFilterEl) {
+        emptyFilterEl.remove();
+    }
 }
+
+document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape') return;
+    const modal = document.getElementById('prof-guide-modal');
+    if (modal && !modal.classList.contains('hidden')) {
+        closeProfGuideModal();
+    }
+});
 
 window.addEventListener('resize', () => {
     const modal = document.getElementById('prof-guide-modal');
