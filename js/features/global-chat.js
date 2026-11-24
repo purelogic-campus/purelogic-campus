@@ -1,4 +1,4 @@
-// js/features/global-chat.js - Campus-Chat mit Mobile-Uni-Dropdown unter Allgemein, Smiley-Picker, bis zu 5 Bildern & Bottom-Bar nur auf Smartphone ausgeblendet
+// js/features/global-chat.js - Campus-Chat mit Mobile-Uni-Dropdown unter Allgemein, Smiley-Picker, bis zu 5 Bildern & zuverlässiger Bottom-Bar-Wiederherstellung
 import { _supabase } from '../config.js';
 import { state } from '../state.js';
 import { validateInputOrAlert } from './moderation.js';
@@ -55,32 +55,99 @@ function isMobileViewport() {
     return typeof window !== 'undefined' && window.innerWidth <= MOBILE_BREAKPOINT_PX;
 }
 
-function setBottomBarHiddenForMobileChat(hideBottomBar) {
+function getBottomBarTargets() {
+    const targets = [];
     const navBar = document.getElementById('bottom-nav-bar');
-    const controlsWrapper = navBar ? navBar.closest('.bottom-controls-wrapper') : document.querySelector('.bottom-controls-wrapper');
-    const target = controlsWrapper || navBar;
-    if (!target) return;
+    const wrapper = navBar ? navBar.closest('.bottom-controls-wrapper') : null;
+    const allWrappers = document.querySelectorAll('.bottom-controls-wrapper');
 
-    if (!target.dataset.origDisplay) {
-        target.dataset.origDisplay = target.style.display || '';
+    if (wrapper) targets.push(wrapper);
+    allWrappers.forEach(w => {
+        if (!targets.includes(w)) targets.push(w);
+    });
+    if (navBar && !targets.includes(navBar)) {
+        targets.push(navBar);
     }
+    return targets;
+}
 
+function setBottomBarHiddenForMobileChat(hideBottomBar) {
     const shouldHide = Boolean(hideBottomBar && isMobileViewport());
-    if (shouldHide) {
-        target.style.setProperty('display', 'none', 'important');
-    } else if (target.dataset.origDisplay) {
-        target.style.display = target.dataset.origDisplay;
-    } else {
-        target.style.removeProperty('display');
-    }
+    const targets = getBottomBarTargets();
+
+    targets.forEach(target => {
+        if (shouldHide) {
+            if (!target.dataset.plPrevDisplay && target.style.display && target.style.display !== 'none') {
+                target.dataset.plPrevDisplay = target.style.display;
+            }
+            target.style.setProperty('display', 'none', 'important');
+        } else {
+            target.style.removeProperty('display');
+            if (target.dataset.plPrevDisplay) {
+                target.style.display = target.dataset.plPrevDisplay;
+                delete target.dataset.plPrevDisplay;
+            }
+        }
+    });
+}
+
+function isTabCurrentlyOpen(tabId) {
+    const tab = document.getElementById(tabId);
+    if (!tab) return false;
+    if (tab.classList.contains('hidden')) return false;
+    const style = window.getComputedStyle(tab);
+    return style.display !== 'none' && style.visibility !== 'hidden';
 }
 
 function syncBottomBarVisibility() {
-    const globalTab = document.getElementById('tab-global');
-    const inboxTab = document.getElementById('tab-inbox');
-    const isGlobalOpen = Boolean(globalTab && !globalTab.classList.contains('hidden'));
-    const isInboxOpen = Boolean(inboxTab && !inboxTab.classList.contains('hidden'));
+    const isGlobalOpen = isTabCurrentlyOpen('tab-global');
+    const isInboxOpen = isTabCurrentlyOpen('tab-inbox');
     setBottomBarHiddenForMobileChat(isGlobalOpen || isInboxOpen);
+}
+
+function installTabAndVisibilityWatchers() {
+    if (window.__plBottomBarWatcherInstalled) return;
+    window.__plBottomBarWatcherInstalled = true;
+
+    const runSync = () => {
+        syncBottomBarVisibility();
+        requestAnimationFrame(syncBottomBarVisibility);
+    };
+
+    if (typeof window.switchTab === 'function' && !window.switchTab.__plWrapped) {
+        const origSwitchTab = window.switchTab;
+        const wrappedSwitchTab = function (tabName, ...args) {
+            const res = origSwitchTab.apply(this, [tabName, ...args]);
+            setTimeout(runSync, 0);
+            setTimeout(runSync, 60);
+            return res;
+        };
+        wrappedSwitchTab.__plWrapped = true;
+        window.switchTab = wrappedSwitchTab;
+    }
+
+    const observer = new MutationObserver(() => {
+        runSync();
+    });
+
+    ['tab-global', 'tab-inbox'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            observer.observe(el, {
+                attributes: true,
+                attributeFilter: ['class', 'style']
+            });
+        }
+    });
+
+    document.addEventListener('click', () => {
+        setTimeout(runSync, 0);
+        setTimeout(runSync, 50);
+    }, true);
+
+    window.addEventListener('resize', runSync);
+    window.addEventListener('hashchange', runSync);
+    window.addEventListener('popstate', runSync);
 }
 
 function escapeHtml(str) {
@@ -719,7 +786,6 @@ function buildMobileChannelsBar(sidebarList) {
 
     sidebarList.innerHTML = '';
 
-    // Zeile 1: Links "🌐 Allgemein", rechts das Dropdown für alle Unis
     const topRow = document.createElement('div');
     topRow.style.cssText = [
         'display: grid',
@@ -1055,6 +1121,7 @@ function applyResponsiveLayout(shell, sidebar, channelHeader) {
 }
 
 function ensureGlobalChatLayout() {
+    installTabAndVisibilityWatchers();
     syncBottomBarVisibility();
 
     const globalTab = document.getElementById('tab-global');
@@ -1470,24 +1537,17 @@ export async function sendGlobalMessage() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    installTabAndVisibilityWatchers();
     ensureGlobalChatLayout();
     syncBottomBarVisibility();
-
-    document.addEventListener('click', () => {
-        setTimeout(syncBottomBarVisibility, 20);
-    });
-
-    window.addEventListener('resize', () => {
-        syncBottomBarVisibility();
-    });
 
     const globalTabBtn = document.getElementById('btn-tab-global');
     if (globalTabBtn) {
         globalTabBtn.addEventListener('click', () => {
-            setBottomBarHiddenForMobileChat(true);
             setTimeout(() => {
                 ensureGlobalChatLayout();
                 loadGlobalMessages(false);
+                syncBottomBarVisibility();
             }, 50);
         });
     }

@@ -1,4 +1,4 @@
-// js/features/dm.js - Direct Messaging (DM) Modul mit Konversationsliste, Ungelesen-Zähler, Lesebestätigung, Smiley-Picker, bis zu 5 Bildern & Bottom-Bar nur auf Smartphone ausgeblendet
+// js/features/dm.js - Direct Messaging (DM) Modul mit Konversationsliste, Ungelesen-Zähler, Lesebestätigung, Smiley-Picker, bis zu 5 Bildern & zuverlässiger Bottom-Bar-Wiederherstellung
 import { _supabase } from '../config.js';
 import { state } from '../state.js';
 import { validateInputOrAlert } from './moderation.js';
@@ -38,32 +38,99 @@ function isMobileViewport() {
     return typeof window !== 'undefined' && window.innerWidth <= MOBILE_BREAKPOINT_PX;
 }
 
-function setBottomBarHiddenForMobileInbox(hideBottomBar) {
+function getBottomBarTargets() {
+    const targets = [];
     const navBar = document.getElementById('bottom-nav-bar');
-    const controlsWrapper = navBar ? navBar.closest('.bottom-controls-wrapper') : document.querySelector('.bottom-controls-wrapper');
-    const target = controlsWrapper || navBar;
-    if (!target) return;
+    const wrapper = navBar ? navBar.closest('.bottom-controls-wrapper') : null;
+    const allWrappers = document.querySelectorAll('.bottom-controls-wrapper');
 
-    if (!target.dataset.origDisplay) {
-        target.dataset.origDisplay = target.style.display || '';
+    if (wrapper) targets.push(wrapper);
+    allWrappers.forEach(w => {
+        if (!targets.includes(w)) targets.push(w);
+    });
+    if (navBar && !targets.includes(navBar)) {
+        targets.push(navBar);
     }
+    return targets;
+}
 
+function setBottomBarHiddenForMobileInbox(hideBottomBar) {
     const shouldHide = Boolean(hideBottomBar && isMobileViewport());
-    if (shouldHide) {
-        target.style.setProperty('display', 'none', 'important');
-    } else if (target.dataset.origDisplay) {
-        target.style.display = target.dataset.origDisplay;
-    } else {
-        target.style.removeProperty('display');
-    }
+    const targets = getBottomBarTargets();
+
+    targets.forEach(target => {
+        if (shouldHide) {
+            if (!target.dataset.plPrevDisplay && target.style.display && target.style.display !== 'none') {
+                target.dataset.plPrevDisplay = target.style.display;
+            }
+            target.style.setProperty('display', 'none', 'important');
+        } else {
+            target.style.removeProperty('display');
+            if (target.dataset.plPrevDisplay) {
+                target.style.display = target.dataset.plPrevDisplay;
+                delete target.dataset.plPrevDisplay;
+            }
+        }
+    });
+}
+
+function isTabCurrentlyOpen(tabId) {
+    const tab = document.getElementById(tabId);
+    if (!tab) return false;
+    if (tab.classList.contains('hidden')) return false;
+    const style = window.getComputedStyle(tab);
+    return style.display !== 'none' && style.visibility !== 'hidden';
 }
 
 function syncBottomBarVisibility() {
-    const globalTab = document.getElementById('tab-global');
-    const inboxTab = document.getElementById('tab-inbox');
-    const isGlobalOpen = Boolean(globalTab && !globalTab.classList.contains('hidden'));
-    const isInboxOpen = Boolean(inboxTab && !inboxTab.classList.contains('hidden'));
+    const isGlobalOpen = isTabCurrentlyOpen('tab-global');
+    const isInboxOpen = isTabCurrentlyOpen('tab-inbox');
     setBottomBarHiddenForMobileInbox(isGlobalOpen || isInboxOpen);
+}
+
+function installInboxAndVisibilityWatchers() {
+    if (window.__plBottomBarWatcherInstalled) return;
+    window.__plBottomBarWatcherInstalled = true;
+
+    const runSync = () => {
+        syncBottomBarVisibility();
+        requestAnimationFrame(syncBottomBarVisibility);
+    };
+
+    if (typeof window.switchTab === 'function' && !window.switchTab.__plWrapped) {
+        const origSwitchTab = window.switchTab;
+        const wrappedSwitchTab = function (tabName, ...args) {
+            const res = origSwitchTab.apply(this, [tabName, ...args]);
+            setTimeout(runSync, 0);
+            setTimeout(runSync, 60);
+            return res;
+        };
+        wrappedSwitchTab.__plWrapped = true;
+        window.switchTab = wrappedSwitchTab;
+    }
+
+    const observer = new MutationObserver(() => {
+        runSync();
+    });
+
+    ['tab-global', 'tab-inbox'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            observer.observe(el, {
+                attributes: true,
+                attributeFilter: ['class', 'style']
+            });
+        }
+    });
+
+    document.addEventListener('click', () => {
+        setTimeout(runSync, 0);
+        setTimeout(runSync, 50);
+    }, true);
+
+    window.addEventListener('resize', runSync);
+    window.addEventListener('hashchange', runSync);
+    window.addEventListener('popstate', runSync);
 }
 
 function escapeHtml(str) {
@@ -697,6 +764,7 @@ export async function markConversationAsRead(partnerEmail, referenceIsoDate = nu
 }
 
 function ensureInboxLayout() {
+    installInboxAndVisibilityWatchers();
     syncBottomBarVisibility();
 
     const inboxTab = document.getElementById('tab-inbox');
@@ -1131,8 +1199,7 @@ export async function loadConversationsList(silent = false) {
 
         const activeFromInput = String(document.getElementById('dm-recipient')?.value || '').trim().toLowerCase();
         const selectedPartner = activeFromInput || activeRecipientEmail || '';
-        const inboxTab = document.getElementById('tab-inbox');
-        const isInboxVisible = Boolean(inboxTab && !inboxTab.classList.contains('hidden'));
+        const isInboxVisible = isTabCurrentlyOpen('tab-inbox');
 
         if (isInboxVisible && selectedPartner) {
             setLocalReadTimestamp(currentEmail, selectedPartner);
@@ -1195,8 +1262,7 @@ function ensureDmRealtimeSubscription() {
                         }
                     }
 
-                    const inboxTab = document.getElementById('tab-inbox');
-                    const isInboxVisible = Boolean(inboxTab && !inboxTab.classList.contains('hidden'));
+                    const isInboxVisible = isTabCurrentlyOpen('tab-inbox');
                     const currentTarget = String(document.getElementById('dm-recipient')?.value || activeRecipientEmail || '').trim().toLowerCase();
                     const isOpenWithPartner = Boolean(isInboxVisible && currentTarget && (sender === currentTarget || recipient === currentTarget));
 
@@ -1233,14 +1299,13 @@ export function openDirectMessageWith(recipientEmail) {
     }
 
     activeRecipientEmail = normalizedRecipient;
-    setBottomBarHiddenForMobileInbox(true);
     ensureInboxLayout();
 
     if (typeof window.switchTab === 'function') {
         window.switchTab('inbox');
     }
 
-    setBottomBarHiddenForMobileInbox(true);
+    syncBottomBarVisibility();
 
     const recipientInput = document.getElementById('dm-recipient');
     if (recipientInput) {
@@ -1557,17 +1622,10 @@ export async function sendDirectMessage() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    installInboxAndVisibilityWatchers();
     ensureInboxLayout();
     updateActivePartnerHeader('');
     syncBottomBarVisibility();
-
-    document.addEventListener('click', () => {
-        setTimeout(syncBottomBarVisibility, 20);
-    });
-
-    window.addEventListener('resize', () => {
-        syncBottomBarVisibility();
-    });
 
     const recipientInput = document.getElementById('dm-recipient');
     if (recipientInput) {
@@ -1579,11 +1637,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const inboxBtn = document.getElementById('btn-tab-inbox');
     if (inboxBtn) {
         inboxBtn.addEventListener('click', () => {
-            setBottomBarHiddenForMobileInbox(true);
             setTimeout(() => {
                 ensureInboxLayout();
                 loadConversationsList(true);
                 loadDirectMessages(true);
+                syncBottomBarVisibility();
             }, 50);
         });
     }
@@ -1591,8 +1649,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setInterval(() => {
         if (!state.currentUserEmail) return;
         ensureDmRealtimeSubscription();
-        const inboxTab = document.getElementById('tab-inbox');
-        if (inboxTab && !inboxTab.classList.contains('hidden')) {
+        if (isTabCurrentlyOpen('tab-inbox')) {
             loadConversationsList(true);
         }
     }, 3500);
