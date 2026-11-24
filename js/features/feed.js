@@ -7,12 +7,20 @@ let selectedMediaFile = null;
 let observer = null;
 let activeCommentPostId = null;
 let activeSearchQuery = '';
+let searchListenersInitialized = false;
 
 function escapeHtmlAttr(str) {
     return String(str || '')
         .replace(/&/g, '&amp;')
         .replace(/'/g, '&#39;')
         .replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+}
+
+function escapeHtmlText(str) {
+    return String(str || '')
+        .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;');
 }
@@ -33,6 +41,93 @@ function makeKeyboardAccessible(el, handler) {
     });
 }
 
+function normalizeSearchQuery(rawQuery) {
+    return String(rawQuery || '').trim().toLowerCase();
+}
+
+function ensureActiveSearchBanner() {
+    const feedList = document.getElementById('reels-list');
+    if (!feedList || !feedList.parentElement) return null;
+
+    let banner = document.getElementById('feed-active-search-banner');
+    if (!banner) {
+        banner = document.createElement('div');
+        banner.id = 'feed-active-search-banner';
+        banner.className = 'hidden';
+        banner.style.cssText = 'display: none; align-items: center; justify-content: space-between; gap: 10px; margin: 8px 12px; padding: 8px 12px; border-radius: 12px; background: rgba(99, 102, 241, 0.16); border: 1px solid rgba(129, 140, 248, 0.45); color: #fff; font-size: 12px; font-weight: 700;';
+        feedList.parentElement.insertBefore(banner, feedList);
+    }
+
+    if (!activeSearchQuery) {
+        banner.classList.add('hidden');
+        banner.style.display = 'none';
+        banner.innerHTML = '';
+        return banner;
+    }
+
+    const isTag = activeSearchQuery.startsWith('#') && activeSearchQuery.length > 1;
+    const labelText = isTag
+        ? `Hashtag-Filter aktiv: <span style="color: #818cf8; font-weight: 900;">${escapeHtmlText(activeSearchQuery)}</span>`
+        : `Suchfilter aktiv: <span style="color: #818cf8; font-weight: 900;">"${escapeHtmlText(activeSearchQuery)}"</span>`;
+
+    banner.innerHTML = `
+        <span>🔎 ${labelText}</span>
+        <button type="button" onclick="window.clearFeedSearch()" aria-label="Suchfilter zurücksetzen" style="background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.25); color: #fff; border-radius: 8px; padding: 4px 10px; font-size: 11px; font-weight: 800; cursor: pointer; flex-shrink: 0;">✕ Filter löschen</button>
+    `;
+    banner.classList.remove('hidden');
+    banner.style.display = 'flex';
+    return banner;
+}
+
+export function initFeedSearchControls() {
+    if (searchListenersInitialized) return;
+    const searchInput = document.getElementById('feed-search-input');
+    if (!searchInput) return;
+
+    searchListenersInitialized = true;
+
+    searchInput.addEventListener('input', (event) => {
+        const nextQuery = normalizeSearchQuery(event.target.value);
+        if (nextQuery === activeSearchQuery) return;
+        activeSearchQuery = nextQuery;
+        loadCampusFeed(state.currentReelFilter || 'foryou');
+    });
+
+    searchInput.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            activeSearchQuery = normalizeSearchQuery(searchInput.value);
+            loadCampusFeed(state.currentReelFilter || 'foryou');
+        } else if (event.key === 'Escape') {
+            event.preventDefault();
+            window.clearFeedSearch();
+        }
+    });
+}
+
+window.runFeedSearch = function(queryOverride) {
+    const searchInput = document.getElementById('feed-search-input');
+    const sourceVal = typeof queryOverride === 'string'
+        ? queryOverride
+        : (searchInput ? searchInput.value : '');
+
+    if (searchInput && typeof queryOverride === 'string') {
+        searchInput.value = queryOverride;
+    }
+
+    activeSearchQuery = normalizeSearchQuery(sourceVal);
+    loadCampusFeed(state.currentReelFilter || 'foryou');
+};
+
+window.clearFeedSearch = function() {
+    const searchInput = document.getElementById('feed-search-input');
+    if (searchInput) {
+        searchInput.value = '';
+    }
+    activeSearchQuery = '';
+    loadCampusFeed(state.currentReelFilter || 'foryou');
+};
+
 /**
  * Hilfsfunktion: Text mit Hashtags in klickbare & fokussierbare Links umwandeln
  */
@@ -45,16 +140,19 @@ export function parseHashtagsInText(text) {
 
     return safeText.replace(/#([a-zA-Z0-9_äöüÄÖÜß]+)/g, (_match, tagName) => {
         const safeTag = escapeHtmlAttr(`#${tagName}`);
-        return `<button type="button" class="hashtag-link" onclick="searchByHashtag('${safeTag}')" style="background: transparent; border: none; padding: 0 2px; border-radius: 4px; color: #818cf8; font-weight: 700; font-size: inherit; cursor: pointer; display: inline;">#${tagName}</button>`;
+        return `<button type="button" class="hashtag-link" onclick="searchByHashtag('${safeTag}')" aria-label="Nach Hashtag ${safeTag} suchen" style="background: transparent; border: none; padding: 0 2px; border-radius: 4px; color: #818cf8; font-weight: 700; font-size: inherit; cursor: pointer; display: inline;">#${tagName}</button>`;
     });
 }
 
 window.searchByHashtag = function(tag) {
+    const normalizedTag = normalizeSearchQuery(tag);
+    if (!normalizedTag) return;
+    const formattedTag = normalizedTag.startsWith('#') ? normalizedTag : `#${normalizedTag}`;
     const searchInput = document.getElementById('feed-search-input');
     if (searchInput) {
-        searchInput.value = tag;
+        searchInput.value = formattedTag;
     }
-    activeSearchQuery = tag.toLowerCase();
+    activeSearchQuery = formattedTag;
     loadCampusFeed(state.currentReelFilter || 'foryou');
 };
 
@@ -464,7 +562,7 @@ async function loadCommentsForPost(postId) {
                         <button type="button" onclick="document.getElementById('comments-modal').classList.add('hidden'); window.openPublicProfile('${escapeHtmlAttr(c.author_email)}')" style="background: transparent; border: none; padding: 0; font-size: 12px; font-weight: 800; color: #818cf8; cursor: pointer; text-align: left;">${authorName}</button>
                         <span style="font-size: 10px; color: var(--text-muted);">${new Date(c.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
-                    <p style="font-size: 12px; color: #fff; margin: 0; word-break: break-word;">${c.comment_text}</p>
+                    <p style="font-size: 12px; color: #fff; margin: 0; word-break: break-word;">${parseHashtagsInText(c.comment_text)}</p>
                 </div>
             `;
             listContainer.appendChild(commentItem);
@@ -640,10 +738,33 @@ async function calculateEngagementScore(post) {
     return rawScore / recencyDecay;
 }
 
+function matchesSearchQuery(post, query) {
+    if (!query) return true;
+    const q = normalizeSearchQuery(query);
+    const caption = String(post.caption || '').toLowerCase();
+    const author = String(post.author_email || '').toLowerCase();
+
+    if (q.startsWith('#')) {
+        const tagBody = q.slice(1);
+        if (!tagBody) return true;
+        return caption.includes(`#${tagBody}`) || caption.includes(q) || author.includes(tagBody);
+    }
+
+    return caption.includes(q) || author.includes(q);
+}
+
 /**
  * Lädt den Campus-Feed (For You mit Algorithmus, Discover, Following, sowie Hashtag-Filter)
  */
 export async function loadCampusFeed(filter = 'foryou') {
+    initFeedSearchControls();
+    const searchInput = document.getElementById('feed-search-input');
+    if (searchInput && !activeSearchQuery && searchInput.value.trim()) {
+        activeSearchQuery = normalizeSearchQuery(searchInput.value);
+    }
+
+    ensureActiveSearchBanner();
+
     state.currentReelFilter = filter;
     const feedList = document.getElementById('reels-list');
     if (!feedList) return;
@@ -678,11 +799,7 @@ export async function loadCampusFeed(filter = 'foryou') {
     let processedPosts = posts;
 
     if (activeSearchQuery) {
-        processedPosts = processedPosts.filter(p => {
-            const caption = (p.caption || '').toLowerCase();
-            const author = (p.author_email || '').toLowerCase();
-            return caption.includes(activeSearchQuery) || author.includes(activeSearchQuery);
-        });
+        processedPosts = processedPosts.filter(p => matchesSearchQuery(p, activeSearchQuery));
     }
 
     if (filter === 'foryou' && !activeSearchQuery) {
@@ -696,7 +813,12 @@ export async function loadCampusFeed(filter = 'foryou') {
     }
 
     if (processedPosts.length === 0) {
-        feedList.innerHTML = `<p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;">Keine Beiträge für "${escapeHtmlAttr(activeSearchQuery)}" gefunden.</p>`;
+        feedList.innerHTML = `
+            <div style="text-align: center; padding: 24px 16px;">
+                <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 10px;">Keine Beiträge für "${escapeHtmlText(activeSearchQuery)}" gefunden.</p>
+                <button type="button" onclick="window.clearFeedSearch()" class="btn" style="width: auto; margin: 0 auto; padding: 7px 14px; font-size: 11px; font-weight: 800;">Filter zurücksetzen</button>
+            </div>
+        `;
         return;
     }
 
@@ -1057,6 +1179,10 @@ export function setFilter(element, category) {
     element.classList.add('active');
 }
 
+document.addEventListener('DOMContentLoaded', () => {
+    initFeedSearchControls();
+});
+
 // Global bereitstellen
 window.openUploadModal = openUploadModal;
 window.closeMediaUploadModal = closeMediaUploadModal;
@@ -1067,3 +1193,4 @@ window.loadMyProfilePosts = loadMyProfilePosts;
 window.setReelFilter = setReelFilter;
 window.setFilter = setFilter;
 window.claimActiveDrop = claimActiveDrop;
+window.initFeedSearchControls = initFeedSearchControls;
