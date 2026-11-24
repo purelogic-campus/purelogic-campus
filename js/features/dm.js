@@ -15,6 +15,9 @@ let isSendingDm = false;
 let isLoadingConversations = false;
 let isLoadingMessages = false;
 
+// Cache für bereits aufgelöste Anzeigenamen, damit kein Flackern zwischen Prefix und Profilname entsteht
+const resolvedProfileNames = new Map();
+
 function escapeHtml(str) {
     return String(str || '')
         .replace(/&/g, '&amp;')
@@ -263,6 +266,51 @@ function ensureInboxLayout() {
     return { shell, convList };
 }
 
+function getStableDisplayName(email, profile = null) {
+    const normalized = String(email || '').trim().toLowerCase();
+    const fallback = normalized.split('@')[0] || normalized;
+
+    if (profile) {
+        const candidate = String(profile.full_name || profile.username || '').trim();
+        if (candidate) {
+            resolvedProfileNames.set(normalized, {
+                displayName: candidate,
+                username: String(profile.username || '').trim()
+            });
+            return candidate;
+        }
+    }
+
+    const cached = resolvedProfileNames.get(normalized);
+    if (cached?.displayName) {
+        return cached.displayName;
+    }
+
+    return fallback;
+}
+
+function getStableHeaderLabel(email, profile = null) {
+    const normalized = String(email || '').trim().toLowerCase();
+    const fallback = normalized.split('@')[0] || normalized;
+
+    if (profile) {
+        const displayName = String(profile.full_name || profile.username || fallback).trim();
+        const rawHandle = String(profile.username || '').replace(/^@+/, '').trim();
+        resolvedProfileNames.set(normalized, {
+            displayName,
+            username: rawHandle
+        });
+        return rawHandle ? `${displayName} (@${rawHandle})` : displayName;
+    }
+
+    const cached = resolvedProfileNames.get(normalized);
+    if (cached?.displayName) {
+        return cached.username ? `${cached.displayName} (@${cached.username})` : cached.displayName;
+    }
+
+    return fallback;
+}
+
 async function fetchProfilesMap(emails) {
     const map = new Map();
     const uniqueEmails = [...new Set((emails || []).map(e => String(e || '').trim().toLowerCase()).filter(Boolean))];
@@ -277,7 +325,15 @@ async function fetchProfilesMap(emails) {
         if (!error && Array.isArray(data)) {
             data.forEach(u => {
                 if (u?.email) {
-                    map.set(String(u.email).toLowerCase(), u);
+                    const key = String(u.email).toLowerCase();
+                    map.set(key, u);
+                    const candidate = String(u.full_name || u.username || '').trim();
+                    if (candidate) {
+                        resolvedProfileNames.set(key, {
+                            displayName: candidate,
+                            username: String(u.username || '').replace(/^@+/, '').trim()
+                        });
+                    }
                 }
             });
         }
@@ -300,18 +356,12 @@ async function updateActivePartnerHeader(partnerEmail) {
     }
 
     emailEl.textContent = normalizedPartner;
-    const fallbackName = normalizedPartner.split('@')[0];
-    if (emailEl.dataset.resolvedEmail !== normalizedPartner) {
-        nameEl.textContent = fallbackName;
-    }
+    nameEl.textContent = getStableHeaderLabel(normalizedPartner);
 
     const profilesMap = await fetchProfilesMap([normalizedPartner]);
     const profile = profilesMap.get(normalizedPartner);
     if (profile) {
-        const displayName = profile.full_name || profile.username || fallbackName;
-        const handleSuffix = profile.username ? ` (@${profile.username.replace(/^@+/, '')})` : '';
-        nameEl.textContent = `${displayName}${handleSuffix}`;
-        emailEl.dataset.resolvedEmail = normalizedPartner;
+        nameEl.textContent = getStableHeaderLabel(normalizedPartner, profile);
     }
 }
 
@@ -420,7 +470,7 @@ function renderConversationsView(convList, currentEmail, messages, selectedPartn
 
     convList.innerHTML = '';
     conversations.forEach(conv => {
-        const displayName = conv.partnerEmail.split('@')[0];
+        const displayName = getStableDisplayName(conv.partnerEmail);
         const isSelected = selectedPartner === conv.partnerEmail;
         const timeLabel = formatMessageTime(conv.lastTime);
         const prefix = conv.lastSender === currentEmail ? 'Du: ' : '';
@@ -529,8 +579,8 @@ export async function loadConversationsList(silent = false) {
                 const pEmail = btn.getAttribute('data-partner-email');
                 const profile = profilesMap.get(pEmail);
                 const nameSpan = btn.querySelector('.conv-display-name');
-                if (profile && nameSpan) {
-                    nameSpan.textContent = profile.full_name || profile.username || pEmail.split('@')[0];
+                if (nameSpan) {
+                    nameSpan.textContent = getStableDisplayName(pEmail, profile);
                 }
             });
         }
