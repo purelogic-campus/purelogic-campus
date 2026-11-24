@@ -1,11 +1,48 @@
-// js/features/profguide.js - Vollständiges Prof-Rating & Survival Guide Modul mit Moderation
+// js/features/profguide.js - Vollständiges Prof-Rating & Survival Guide Modul mit Moderation & responsivem Layout
 import { _supabase } from '../config.js';
 import { state } from '../state.js';
 import { validateInputOrAlert } from './moderation.js';
 
+function escapeHtml(str) {
+    return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+export function syncProfGuideResponsiveLayout() {
+    const modal = document.getElementById('prof-guide-modal');
+    if (!modal) return;
+
+    modal.classList.add('prof-guide-modal-responsive');
+    const card = modal.querySelector('.container-box');
+    if (card) {
+        card.classList.add('prof-guide-card');
+    }
+
+    const formContainer = document.getElementById('prof-review-form-container');
+    if (formContainer) {
+        formContainer.classList.add('prof-form-card');
+        const metaRow = formContainer.querySelector('div[style*="display: flex"]');
+        if (metaRow) {
+            metaRow.classList.add('prof-form-meta-row');
+        }
+        const actionRow = formContainer.querySelector('div:last-child');
+        if (actionRow && actionRow !== metaRow) {
+            actionRow.classList.add('prof-form-actions');
+        }
+    }
+
+    const isMobile = window.innerWidth < 768;
+    modal.dataset.viewportMode = isMobile ? 'mobile' : 'desktop';
+}
+
 export function openProfGuideModal() {
     const modal = document.getElementById('prof-guide-modal');
     if (modal) {
+        syncProfGuideResponsiveLayout();
         modal.classList.remove('hidden');
         loadProfReviews();
     }
@@ -19,6 +56,7 @@ export function closeProfGuideModal() {
 }
 
 export function toggleProfForm() {
+    syncProfGuideResponsiveLayout();
     const formContainer = document.getElementById('prof-review-form-container');
     if (formContainer) {
         formContainer.classList.toggle('hidden');
@@ -32,6 +70,7 @@ export async function loadProfReviews() {
     const listContainer = document.getElementById('prof-reviews-list');
     if (!listContainer) return;
 
+    syncProfGuideResponsiveLayout();
     listContainer.innerHTML = '<p style="font-size: 12px; color: var(--text-muted); text-align: center; padding: 20px;">Lade Bewertungen...</p>';
 
     const { data: reviews, error } = await _supabase
@@ -47,25 +86,29 @@ export async function loadProfReviews() {
     listContainer.innerHTML = '';
     reviews.forEach(review => {
         const item = document.createElement('div');
-        item.style.cssText = 'background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 10px; padding: 10px; font-size: 11px;';
-        
-        const stars = '⭐'.repeat(review.rating || 5);
-        
+        item.className = 'prof-review-item';
+
+        const safeRating = Math.max(1, Math.min(5, parseInt(review.rating || 5, 10) || 5));
+        const safeDifficulty = Math.max(1, Math.min(5, parseInt(review.difficulty || 3, 10) || 3));
+        const stars = '⭐'.repeat(safeRating);
+
         item.innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                <strong style="color: #818cf8; font-size: 12px;">${review.prof_name}</strong>
-                <span style="background: rgba(99,102,241,0.2); color: #818cf8; padding: 2px 6px; border-radius: 6px; font-weight: 700;">${review.subject}</span>
+            <div class="prof-review-header">
+                <strong class="prof-review-name">${escapeHtml(review.prof_name)}</strong>
+                <span class="prof-review-subject">${escapeHtml(review.subject)}</span>
             </div>
-            <div style="display: flex; gap: 8px; color: var(--text-muted); margin-bottom: 6px;">
+            <div class="prof-review-meta">
                 <span>Bewertung: ${stars}</span>
-                <span>•</span>
-                <span>Schwierigkeit: ${review.difficulty}/5 ⚙️</span>
+                <span class="prof-meta-sep">•</span>
+                <span>Schwierigkeit: ${safeDifficulty}/5 ⚙️</span>
             </div>
-            <p style="color: var(--text); line-height: 1.4; margin-bottom: 4px;">${review.comment}</p>
-            <div style="font-size: 9px; color: var(--text-muted); text-align: right;">Von: ${review.author_email || 'Anonym'}</div>
+            <p class="prof-review-comment">${escapeHtml(review.comment)}</p>
+            <div class="prof-review-author">Von: ${escapeHtml(review.author_email || 'Anonym')}</div>
         `;
         listContainer.appendChild(item);
     });
+
+    filterProfReviews();
 }
 
 /**
@@ -74,8 +117,8 @@ export async function loadProfReviews() {
 export async function submitProfReview() {
     const profName = document.getElementById('prof-name-input')?.value.trim();
     const subject = document.getElementById('prof-subject-input')?.value.trim();
-    const rating = parseInt(document.getElementById('prof-rating-select')?.value || '5');
-    const difficulty = parseInt(document.getElementById('prof-difficulty-select')?.value || '3');
+    const rating = parseInt(document.getElementById('prof-rating-select')?.value || '5', 10);
+    const difficulty = parseInt(document.getElementById('prof-difficulty-select')?.value || '3', 10);
     const comment = document.getElementById('prof-comment-input')?.value.trim();
 
     if (!profName || !subject || !comment) {
@@ -83,7 +126,6 @@ export async function submitProfReview() {
         return;
     }
 
-    // Moderations-Check für Professor-Name, Fach und Kommentar
     if (!validateInputOrAlert(profName) || !validateInputOrAlert(subject) || !validateInputOrAlert(comment)) {
         return;
     }
@@ -107,14 +149,12 @@ export async function submitProfReview() {
         if (error) throw error;
 
         alert('Bewertung erfolgreich veröffentlicht! Du hast 15 Bonuspunkte erhalten 🚀');
-        
-        // Formular leeren und schließen
+
         document.getElementById('prof-name-input').value = '';
         document.getElementById('prof-subject-input').value = '';
         document.getElementById('prof-comment-input').value = '';
         toggleProfForm();
 
-        // Punkte gutschreiben
         if (state.currentUserEmail) {
             const { data: userData } = await _supabase
                 .from('users')
@@ -148,18 +188,26 @@ export async function submitProfReview() {
  * Filtert die Bewertungen live nach Suchbegriff
  */
 export function filterProfReviews() {
-    const query = document.getElementById('prof-search-input')?.value.toLowerCase() || '';
-    const items = document.querySelectorAll('#prof-reviews-list > div');
-    
+    const query = (document.getElementById('prof-search-input')?.value || '').trim().toLowerCase();
+    const items = document.querySelectorAll('#prof-reviews-list .prof-review-item, #prof-reviews-list > div');
+
     items.forEach(item => {
-        const text = item.textContent.toLowerCase();
-        if (text.includes(query)) {
-            item.style.display = 'block';
+        if (!item.classList.contains('prof-review-item')) return;
+        const text = (item.textContent || '').toLowerCase();
+        if (!query || text.includes(query)) {
+            item.style.display = '';
         } else {
             item.style.display = 'none';
         }
     });
 }
+
+window.addEventListener('resize', () => {
+    const modal = document.getElementById('prof-guide-modal');
+    if (modal && !modal.classList.contains('hidden')) {
+        syncProfGuideResponsiveLayout();
+    }
+});
 
 // Global für HTML-Events bereitstellen
 window.openProfGuideModal = openProfGuideModal;
@@ -167,3 +215,4 @@ window.closeProfGuideModal = closeProfGuideModal;
 window.toggleProfForm = toggleProfForm;
 window.submitProfReview = submitProfReview;
 window.filterProfReviews = filterProfReviews;
+window.syncProfGuideResponsiveLayout = syncProfGuideResponsiveLayout;

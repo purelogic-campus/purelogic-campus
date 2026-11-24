@@ -1568,3 +1568,217 @@ body.match-mittwoch-active {
         opacity: 0;
     }
 }
+
+/* ==========================================================================
+   PUNKT 13: CRUSH RADAR & PROF-RATING RESPONSIVE CONTAINER LAYOUTS
+   ========================================================================== */
+#crush-modal.crush-modal-responsive,
+#prof-guide-modal.prof-guide-modal-responsive {
+  padding: 12px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.crush-modal-card,
+.prof-guide-card {
+  width: 100%;
+  max-width: 420px;
+  max-height: calc(100dvh - 24px);
+  margin: 0 auto !important;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  box-sizing: border-box;
+}
+
+.prof-guide-card {
+  max-width: 520px;
+}
+
+.prof-form-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.prof-form-meta-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.prof-form-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+#prof-reviews-list {
+  min-height: 140px;
+  max-height: 45dvh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-right: 2px;
+}
+
+.prof-review-item {
+  background: var(--surface-subtle);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.prof-review-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.prof-review-name {
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 800;
+  word-break: break-word;
+}
+
+.prof-review-subject {
+  background: rgba(99, 102, 241, 0.18);
+  color: var(--primary);
+  padding: 2px 8px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  max-width: 100%;
+  word-break: break-word;
+}
+
+.prof-review-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 10px;
+  align-items: center;
+}
+
+.prof-review-comment {
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.45;
+  margin: 2px 0;
+  word-break: break-word;
+}
+
+.prof-review-author {
+  font-size: 9px;
+  color: var(--text-muted);
+  text-align: right;
+  word-break: break-all;
+}
+
+.crush-match-card {
+  background: rgba(236, 72, 153, 0.14);
+  border: 1px solid var(--accent);
+  padding: 10px 12px;
+  border-radius: 12px;
+  margin-bottom: 8px;
+}
+
+.crush-match-title {
+  font-weight: 900;
+  font-size: 12px;
+  color: var(--accent);
+  margin-bottom: 4px;
+}
+
+.crush-match-text {
+  color: var(--text);
+  font-size: 11px;
+  line-height: 1.4;
+  margin-bottom: 8px;
+  word-break: break-word;
+}
+
+.crush-match-btn {
+  margin-top: 0;
+  padding: 7px 12px;
+  font-size: 11px;
+}
+
+.crush-hints-box {
+  background: var(--surface-subtle);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 10px;
+  margin-top: 8px;
+}
+
+.crush-hints-title {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--primary);
+  margin-bottom: 4px;
+}
+
+.crush-hints-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--text);
+}
+
+/* Smartphone-Optimierung (< 768px) */
+@media (max-width: 767px) {
+  #crush-modal.crush-modal-responsive,
+  #prof-guide-modal.prof-guide-modal-responsive {
+    padding: 8px;
+    align-items: stretch;
+    justify-content: center;
+  }
+
+  .crush-modal-card,
+  .prof-guide-card {
+    max-width: 100%;
+    max-height: 100dvh;
+    border-radius: 14px;
+    padding: 12px;
+  }
+
+  .prof-form-meta-row {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .prof-form-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .prof-form-actions .btn,
+  .prof-form-actions .btn-secondary {
+    width: 100% !important;
+    margin-top: 0;
+  }
+
+  #prof-reviews-list {
+    max-height: 38dvh;
+    min-height: 110px;
+  }
+
+  .prof-review-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+}

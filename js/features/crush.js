@@ -1,11 +1,44 @@
-// js/features/crush.js - Anonymes Crush Radar für PURE LOGIC
+// js/features/crush.js - Anonymes Crush Radar für PURE LOGIC (mit responsiver Layout-Steuerung)
 import { _supabase } from '../config.js';
 import { state } from '../state.js';
 import { validateInputOrAlert } from './moderation.js';
 
+function escapeHtml(str) {
+    return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function escapeAttr(str) {
+    return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/'/g, '&#39;')
+        .replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+}
+
+export function syncCrushResponsiveLayout() {
+    const modal = document.getElementById('crush-modal');
+    if (!modal) return;
+
+    modal.classList.add('crush-modal-responsive');
+    const card = modal.querySelector('.container-box');
+    if (card) {
+        card.classList.add('crush-modal-card');
+    }
+
+    const isMobile = window.innerWidth < 768;
+    modal.dataset.viewportMode = isMobile ? 'mobile' : 'desktop';
+}
+
 export function openCrushModal() {
     const modal = document.getElementById('crush-modal');
     if (modal) {
+        syncCrushResponsiveLayout();
         modal.classList.remove('hidden');
         checkCrushMatches();
     }
@@ -75,13 +108,14 @@ export async function checkCrushMatches() {
     const matchesBox = document.getElementById('crush-matches-box');
     if (!matchesBox || !state.currentUserEmail) return;
 
+    syncCrushResponsiveLayout();
+
     const myEmail = state.currentUserEmail.toLowerCase();
     const myHandle = state.currentUserUsername ? `@${state.currentUserUsername.toLowerCase()}` : '';
 
     matchesBox.innerHTML = '<p style="color: var(--text-muted);">Suche nach Matches im Radar...</p>';
 
     try {
-        // Alle Einträge holen, wo ich der Absender bin oder der Ziel-Identifier bin
         const { data: allCrushes, error } = await _supabase
             .from('crushes')
             .select('*');
@@ -93,38 +127,52 @@ export async function checkCrushMatches() {
             return;
         }
 
-        // Finde heraus, wen ich gecrasht habe
-        const myCrushes = allCrushes.filter(c => c.sender_email.toLowerCase() === myEmail);
-        
-        // Finde heraus, wer mich gecrasht hat (entweder per E-Mail oder Handle)
+        const myCrushes = allCrushes.filter(c => (c.sender_email || '').toLowerCase() === myEmail);
+
         const whoCrushedMe = allCrushes.filter(c => {
-            const target = c.target_identifier.toLowerCase();
+            const target = (c.target_identifier || '').toLowerCase();
             return target === myEmail || (myHandle && target === myHandle);
         });
 
-        // Prüfe auf Gegenseitigkeit (Match)
         let matches = [];
         myCrushes.forEach(mine => {
-            const target = mine.target_identifier.toLowerCase();
-            const matchFound = whoCrushedMe.find(theirs => theirs.sender_email.toLowerCase() === target);
-            if (matchFound) {
+            const target = (mine.target_identifier || '').toLowerCase();
+            const matchFound = whoCrushedMe.find(theirs => (theirs.sender_email || '').toLowerCase() === target);
+            if (matchFound && !matches.includes(matchFound.sender_email)) {
                 matches.push(matchFound.sender_email);
             }
         });
 
+        const hintsForMe = whoCrushedMe
+            .map(c => String(c.secret_hint || '').trim())
+            .filter(Boolean);
+
+        const hintBannerHtml = hintsForMe.length > 0
+            ? `<div class="crush-hints-box">
+                <div class="crush-hints-title">🕵️ Geheime Hinweise für dich (${hintsForMe.length}):</div>
+                <ul class="crush-hints-list">
+                    ${hintsForMe.map(h => `<li>„${escapeHtml(h)}“</li>`).join('')}
+                </ul>
+               </div>`
+            : '';
+
         if (matches.length > 0) {
+            const safeFirstMatchAttr = escapeAttr(matches[0]);
+            const safeMatchesText = escapeHtml(matches.join(', '));
             matchesBox.innerHTML = `
-                <div style="background: rgba(236,72,153,0.15); border: 1px solid var(--accent); padding: 10px; border-radius: 10px;">
-                    <div style="font-weight: 800; color: var(--accent); margin-bottom: 4px;">💖 IT'S A MATCH!</div>
-                    <p style="color: #fff; margin-bottom: 6px;">Du hast ein gegenseitiges Crush-Match mit: <strong>${matches.join(', ')}</strong></p>
-                    <button onclick="window.openDirectMessageWith('${matches[0]}')" class="btn" style="margin-top:0; padding: 6px; font-size: 11px;">Jetzt Nachricht schreiben 💬</button>
+                <div class="crush-match-card">
+                    <div class="crush-match-title">💖 IT'S A MATCH!</div>
+                    <p class="crush-match-text">Du hast ein gegenseitiges Crush-Match mit: <strong>${safeMatchesText}</strong></p>
+                    <button type="button" onclick="window.openDirectMessageWith('${safeFirstMatchAttr}')" class="btn crush-match-btn">Jetzt Nachricht schreiben 💬</button>
                 </div>
+                ${hintBannerHtml}
             `;
         } else {
             matchesBox.innerHTML = `
-                <p style="color: var(--text-muted); text-align: center;">
+                <p style="color: var(--text-muted); text-align: center; line-height: 1.45;">
                     Bisher noch kein gegenseitiges Match (${whoCrushedMe.length} Personen haben dich im Radar). Trage weitere Crushes ein! 💫
                 </p>
+                ${hintBannerHtml}
             `;
         }
 
@@ -134,7 +182,15 @@ export async function checkCrushMatches() {
     }
 }
 
+window.addEventListener('resize', () => {
+    const modal = document.getElementById('crush-modal');
+    if (modal && !modal.classList.contains('hidden')) {
+        syncCrushResponsiveLayout();
+    }
+});
+
 window.openCrushModal = openCrushModal;
 window.closeCrushModal = closeCrushModal;
 window.submitCrush = submitCrush;
 window.checkCrushMatches = checkCrushMatches;
+window.syncCrushResponsiveLayout = syncCrushResponsiveLayout;
