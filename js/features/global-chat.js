@@ -1,4 +1,4 @@
-// js/features/global-chat.js - Campus-Chat mit Mobile-Uni-Dropdown unter Allgemein, Smiley-Picker & bis zu 5 Bildern
+// js/features/global-chat.js - Campus-Chat mit Mobile-Uni-Dropdown unter Allgemein, Smiley-Picker, bis zu 5 Bildern & ausgeblendeter Bottom-Bar
 import { _supabase } from '../config.js';
 import { state } from '../state.js';
 import { validateInputOrAlert } from './moderation.js';
@@ -50,6 +50,33 @@ let pendingImageDrafts = [];
 const expandedUniversities = new Set();
 let mobileUnisDropdownOpen = false;
 let mobileSelectedUniId = '';
+
+function setBottomBarHiddenForTab(hideBottomBar) {
+    const navBar = document.getElementById('bottom-nav-bar');
+    const controlsWrapper = navBar ? navBar.closest('.bottom-controls-wrapper') : document.querySelector('.bottom-controls-wrapper');
+    const target = controlsWrapper || navBar;
+    if (!target) return;
+
+    if (!target.dataset.origDisplay) {
+        target.dataset.origDisplay = target.style.display || '';
+    }
+
+    if (hideBottomBar) {
+        target.style.setProperty('display', 'none', 'important');
+    } else if (target.dataset.origDisplay) {
+        target.style.display = target.dataset.origDisplay;
+    } else {
+        target.style.removeProperty('display');
+    }
+}
+
+function syncBottomBarVisibility() {
+    const globalTab = document.getElementById('tab-global');
+    const inboxTab = document.getElementById('tab-inbox');
+    const isGlobalOpen = Boolean(globalTab && !globalTab.classList.contains('hidden'));
+    const isInboxOpen = Boolean(inboxTab && !inboxTab.classList.contains('hidden'));
+    setBottomBarHiddenForTab(isGlobalOpen || isInboxOpen);
+}
 
 function isMobileViewport() {
     return typeof window !== 'undefined' && window.innerWidth <= MOBILE_BREAKPOINT_PX;
@@ -763,7 +790,6 @@ function buildMobileChannelsBar(sidebarList) {
     topRow.appendChild(unisDropdownBtn);
     sidebarList.appendChild(topRow);
 
-    // Aufklappbare Uni-Liste unter Allgemein (nur sichtbar wenn geöffnet)
     if (mobileUnisDropdownOpen) {
         const uniMenu = document.createElement('div');
         uniMenu.style.cssText = [
@@ -815,7 +841,6 @@ function buildMobileChannelsBar(sidebarList) {
         sidebarList.appendChild(uniMenu);
     }
 
-    // Wenn eine Uni gewählt ist, kompakte Bereichs-Pills (Plaudern, Lernen, Brett, Events) anzeigen
     if (selectedUniObj) {
         const catRow = document.createElement('div');
         catRow.style.cssText = [
@@ -1029,6 +1054,8 @@ function applyResponsiveLayout(shell, sidebar, channelHeader) {
 }
 
 function ensureGlobalChatLayout() {
+    syncBottomBarVisibility();
+
     const globalTab = document.getElementById('tab-global');
     if (!globalTab) return null;
 
@@ -1442,10 +1469,16 @@ export async function sendGlobalMessage() {
 
 document.addEventListener('DOMContentLoaded', () => {
     ensureGlobalChatLayout();
+    syncBottomBarVisibility();
+
+    document.addEventListener('click', () => {
+        setTimeout(syncBottomBarVisibility, 20);
+    });
 
     const globalTabBtn = document.getElementById('btn-tab-global');
     if (globalTabBtn) {
         globalTabBtn.addEventListener('click', () => {
+            setBottomBarHiddenForTab(true);
             setTimeout(() => {
                 ensureGlobalChatLayout();
                 loadGlobalMessages(false);
