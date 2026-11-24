@@ -1,10 +1,11 @@
-// js/features/global-chat.js - Campus-Chat mit Konversationsleiste, Allgemein-Kanal & 4 Campus-Bereichen pro Uni
+// js/features/global-chat.js - Campus-Chat mit klappbaren Uni-Dropdowns, Allgemein-Kanal & 4 Campus-Bereichen pro Uni
 import { _supabase } from '../config.js';
 import { state } from '../state.js';
 import { validateInputOrAlert } from './moderation.js';
 
 const CHANNEL_PREFIX_REGEX = /^\[channel:([^\]]+)\]\s*/i;
 const DEFAULT_CHANNEL_KEY = 'general:all';
+const CANDIDATE_TABLES = ['global_messages', 'messages', 'chat_messages'];
 
 const UNIVERSITIES = [
     { id: 'uni-wien', label: 'Universität Wien', short: 'Uni Wien' },
@@ -23,10 +24,14 @@ const CAMPUS_CATEGORIES = [
 ];
 
 let activeChannelKey = DEFAULT_CHANNEL_KEY;
+let activeChatTable = null;
 let globalChatChannel = null;
 let supportsChannelColumn = true;
 let isSendingGlobalMsg = false;
 let isLoadingGlobalMsgs = false;
+
+// Standardmäßig alle Uni-Dropdowns eingeklappt; beim Klick auf eine Uni klappt nur diese auf/zu
+const expandedUniversities = new Set();
 
 function escapeHtml(str) {
     return String(str || '')
@@ -83,7 +88,7 @@ function encodeMessageWithChannel(text, channelKey) {
 
 function decodeMessageRow(row) {
     if (!row) return null;
-    const rawText = String(row.message_text || row.content || row.text || '');
+    const rawText = String(row.message_text || row.content || row.text || row.message || '');
     const match = rawText.match(CHANNEL_PREFIX_REGEX);
 
     let channelKey = DEFAULT_CHANNEL_KEY;
@@ -107,6 +112,61 @@ function decodeMessageRow(row) {
         text: cleanText,
         createdAt: row.created_at || ''
     };
+}
+
+async function fetchMessagesFromTable(tableName) {
+    let attempt = 0;
+    while (attempt < 2) {
+        attempt += 1;
+        const { data, error } = await _supabase
+            .from(tableName)
+            .select('*')
+            .order('created_at', { ascending: true })
+            .limit(250);
+
+        if (!error) {
+            return Array.isArray(data) ? data : [];
+        }
+
+        // Falls created_at als Spalte nicht existiert, ohne Order abfragen
+        const errMsg = String(error.message || '').toLowerCase();
+        if (errMsg.includes('created_at') || errMsg.includes('column')) {
+            const fallbackRes = await _supabase
+                .from(tableName)
+                .select('*')
+                .limit(250);
+            if (!fallbackRes.error) {
+                return Array.isArray(fallbackRes.data) ? fallbackRes.data : [];
+            }
+        }
+
+        const isFetchErr = errMsg.includes('failed to fetch');
+        if (!isFetchErr || attempt >= 2) {
+            throw error;
+        }
+        await new Promise(resolve => setTimeout(resolve, 350));
+    }
+    return [];
+}
+
+async function resolveChatTableAndMessages() {
+    if (activeChatTable) {
+        const rows = await fetchMessagesFromTable(activeChatTable);
+        return { table: activeChatTable, rows };
+    }
+
+    let lastError = null;
+    for (const candidate of CANDIDATE_TABLES) {
+        try {
+            const rows = await fetchMessagesFromTable(candidate);
+            activeChatTable = candidate;
+            return { table: candidate, rows };
+        } catch (err) {
+            lastError = err;
+        }
+    }
+
+    throw lastError || new Error('Keine Chat-Tabelle gefunden.');
 }
 
 function ensureGlobalChatLayout() {
@@ -222,13 +282,25 @@ function ensureGlobalChatLayout() {
     }
     applyResponsiveColumns();
 
-    if (sidebarList && !sidebarList.dataset.built) {
-        sidebarList.dataset.built = '1';
+    if (sidebarList) {
         buildChannelsSidebar(sidebarList);
     }
 
     updateActiveChannelHeader();
     return { shell, sidebarList };
+}
+
+function toggleUniversityDropdown(uniId) {
+    if (!uniId) return;
+    if (expandedUniversities.has(uniId)) {
+        expandedUniversities.delete(uniId);
+    } else {
+        expandedUniversities.add(uniId);
+    }
+    const sidebarList = document.getElementById('global-channels-list');
+    if (sidebarList) {
+        buildChannelsSidebar(sidebarList);
+    }
 }
 
 function buildChannelsSidebar(sidebarList) {
@@ -257,44 +329,80 @@ function buildChannelsSidebar(sidebarList) {
     generalBtn.addEventListener('click', () => selectGlobalChannel(DEFAULT_CHANNEL_KEY));
     sidebarList.appendChild(generalBtn);
 
-    // 2. Je Universität eigene Punkte mit den 4 wichtigsten Campus-Bereichen
+    // 2. Je Universität ein klappbares Dropdown-Menü mit den 4 Campus-Bereichen
     UNIVERSITIES.forEach(uni => {
+        const isOpen = expandedUniversities.has(uni.id);
+        const hasActiveChild = activeChannelKey.startsWith(`${uni.id}:`);
+
         const groupBox = document.createElement('div');
         groupBox.style.cssText = [
             'border: 1px solid var(--border)',
             'border-radius: 10px',
-            'background: rgba(255, 255, 255, 0.015)',
-            'padding: 8px',
+            hasActiveChild ? 'background: rgba(99, 102, 241, 0.07);' : 'background: rgba(255, 255, 255, 0.015);',
+            'padding: 6px',
             'display: flex',
             'flex-direction: column',
             'gap: 4px',
             'flex-shrink: 0'
         ].join(';');
 
-        const uniTitle = document.createElement('div');
-        uniTitle.style.cssText = 'font-size: 11px; font-weight: 800; color: #818cf8; padding: 0 4px 2px 4px;';
-        uniTitle.textContent = `🎓 ${uni.label}`;
-        groupBox.appendChild(uniTitle);
+        const uniHeaderBtn = document.createElement('button');
+        uniHeaderBtn.type = 'button';
+        uniHeaderBtn.setAttribute('aria-expanded', String(isOpen));
+        uniHeaderBtn.style.cssText = [
+            'width: 100%',
+            'display: flex',
+            'align-items: center',
+            'justify-content: space-between',
+            'gap: 8px',
+            'padding: 7px 8px',
+            'border-radius: 8px',
+            'border: none',
+            'background: transparent',
+            'cursor: pointer',
+            'text-align: left',
+            'color: #a5b4fc',
+            'font-size: 11px',
+            'font-weight: 800'
+        ].join(';');
+        uniHeaderBtn.innerHTML = `
+            <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">🎓 ${escapeHtml(uni.label)}</span>
+            <span style="font-size: 10px; opacity: 0.85; flex-shrink: 0;">${isOpen ? '▾' : '▸'}</span>
+        `;
+        uniHeaderBtn.addEventListener('click', () => toggleUniversityDropdown(uni.id));
+        groupBox.appendChild(uniHeaderBtn);
 
-        CAMPUS_CATEGORIES.forEach(cat => {
-            const key = `${uni.id}:${cat.id}`;
-            const catBtn = document.createElement('button');
-            catBtn.type = 'button';
-            catBtn.dataset.channelKey = key;
-            catBtn.style.cssText = [
-                'width: 100%',
-                'text-align: left',
-                'padding: 6px 8px',
-                'border-radius: 8px',
-                'cursor: pointer',
-                'font-size: 11px',
-                'font-weight: 700',
-                'transition: background 0.15s ease, border-color 0.15s ease'
+        if (isOpen) {
+            const subMenu = document.createElement('div');
+            subMenu.style.cssText = [
+                'display: flex',
+                'flex-direction: column',
+                'gap: 4px',
+                'padding: 2px 2px 2px 6px'
             ].join(';');
-            catBtn.textContent = cat.label;
-            catBtn.addEventListener('click', () => selectGlobalChannel(key));
-            groupBox.appendChild(catBtn);
-        });
+
+            CAMPUS_CATEGORIES.forEach(cat => {
+                const key = `${uni.id}:${cat.id}`;
+                const catBtn = document.createElement('button');
+                catBtn.type = 'button';
+                catBtn.dataset.channelKey = key;
+                catBtn.style.cssText = [
+                    'width: 100%',
+                    'text-align: left',
+                    'padding: 6px 8px',
+                    'border-radius: 8px',
+                    'cursor: pointer',
+                    'font-size: 11px',
+                    'font-weight: 700',
+                    'transition: background 0.15s ease, border-color 0.15s ease'
+                ].join(';');
+                catBtn.textContent = cat.label;
+                catBtn.addEventListener('click', () => selectGlobalChannel(key));
+                subMenu.appendChild(catBtn);
+            });
+
+            groupBox.appendChild(subMenu);
+        }
 
         sidebarList.appendChild(groupBox);
     });
@@ -333,6 +441,10 @@ function updateActiveChannelHeader() {
 
 export async function selectGlobalChannel(channelKey) {
     activeChannelKey = String(channelKey || DEFAULT_CHANNEL_KEY).trim().toLowerCase();
+    const parts = activeChannelKey.split(':');
+    if (parts.length === 2 && parts[0] !== 'general') {
+        expandedUniversities.add(parts[0]);
+    }
     ensureGlobalChatLayout();
     highlightActiveChannelButtons();
     updateActiveChannelHeader();
@@ -341,13 +453,14 @@ export async function selectGlobalChannel(channelKey) {
 
 function ensureGlobalChatRealtime() {
     if (globalChatChannel) return;
+    const tableName = activeChatTable || 'global_messages';
 
     try {
         globalChatChannel = _supabase
-            .channel('pl-campus-channels-chat')
+            .channel(`pl-campus-channels-chat-${tableName}`)
             .on(
                 'postgres_changes',
-                { event: 'INSERT', schema: 'public', table: 'global_messages' },
+                { event: 'INSERT', schema: 'public', table: tableName },
                 (payload) => {
                     const decoded = decodeMessageRow(payload?.new);
                     if (!decoded) return;
@@ -363,7 +476,6 @@ function ensureGlobalChatRealtime() {
 export async function loadGlobalMessages(silent = false) {
     if (isLoadingGlobalMsgs) return;
     ensureGlobalChatLayout();
-    ensureGlobalChatRealtime();
 
     const listEl = document.getElementById('global-chat-list');
     if (!listEl) return;
@@ -378,15 +490,10 @@ export async function loadGlobalMessages(silent = false) {
 
     isLoadingGlobalMsgs = true;
     try {
-        const { data, error } = await _supabase
-            .from('global_messages')
-            .select('*')
-            .order('created_at', { ascending: true })
-            .limit(250);
+        const { rows } = await resolveChatTableAndMessages();
+        ensureGlobalChatRealtime();
 
-        if (error) throw error;
-
-        const filtered = (data || [])
+        const filtered = rows
             .map(decodeMessageRow)
             .filter(item => item && item.channelKey === activeChannelKey);
 
@@ -429,7 +536,14 @@ export async function loadGlobalMessages(silent = false) {
     } catch (err) {
         console.error('Fehler beim Laden des Campus-Chats:', err);
         if (!hasExisting) {
-            listEl.innerHTML = '<p style="color: #ef4444; font-size: 12px; text-align: center; padding: 20px;">Nachrichten konnten nicht geladen werden.</p>';
+            const reason = escapeHtml(err?.message || 'Netzwerk- oder Tabellenfehler');
+            listEl.innerHTML = `
+                <div style="color: #ef4444; font-size: 12px; text-align:center; padding: 20px;">
+                    <div>Nachrichten konnten nicht geladen werden.</div>
+                    <div style="font-size: 10px; color: var(--text-muted); margin-top: 4px;">${reason}</div>
+                    <button type="button" onclick="window.loadGlobalMessages(false)" style="margin-top: 10px; background: rgba(255,255,255,0.08); border: 1px solid var(--border); color: #fff; border-radius: 8px; padding: 5px 12px; font-size: 11px; cursor: pointer;">Erneut versuchen</button>
+                </div>
+            `;
         }
     } finally {
         isLoadingGlobalMsgs = false;
@@ -457,6 +571,7 @@ export async function sendGlobalMessage() {
 
     isSendingGlobalMsg = true;
     try {
+        const targetTable = activeChatTable || 'global_messages';
         const basePayload = {
             id: crypto.randomUUID(),
             sender_email: currentEmail,
@@ -471,7 +586,7 @@ export async function sendGlobalMessage() {
                 message_text: text
             };
             const { error } = await _supabase
-                .from('global_messages')
+                .from(targetTable)
                 .insert([withColPayload]);
 
             if (error) {
@@ -486,7 +601,7 @@ export async function sendGlobalMessage() {
 
         if (!supportsChannelColumn) {
             const { error: fallbackError } = await _supabase
-                .from('global_messages')
+                .from(targetTable)
                 .insert([basePayload]);
 
             if (fallbackError) throw fallbackError;
@@ -510,7 +625,7 @@ document.addEventListener('DOMContentLoaded', () => {
         globalTabBtn.addEventListener('click', () => {
             setTimeout(() => {
                 ensureGlobalChatLayout();
-                loadGlobalMessages(true);
+                loadGlobalMessages(false);
             }, 50);
         });
     }
