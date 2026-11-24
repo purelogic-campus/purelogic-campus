@@ -1,4 +1,4 @@
-// js/features/dm.js - Direct Messaging (DM) Modul mit Konversationsliste, Ungelesen-Zähler, Lesebestätigung, Smiley-Picker, bis zu 5 Bildern & zuverlässiger Bottom-Bar-Wiederherstellung
+// js/features/dm.js - Direct Messaging (DM) Modul mit Konversationsliste, Ungelesen-Zähler, Lesebestätigung, Smiley-Picker, bis zu 5 Bildern & Bottom-Bar nur auf Smartphone ausgeblendet (Top-Header/Pure-Logic-Schriftzug bleibt unberührt)
 import { _supabase } from '../config.js';
 import { state } from '../state.js';
 import { validateInputOrAlert } from './moderation.js';
@@ -39,17 +39,15 @@ function isMobileViewport() {
 }
 
 function getBottomBarTargets() {
+    // Explizit nur die untere Navigationsleiste / Bottom-Controls ansprechen – niemals Top-Header oder Pure-Logic-Logo
     const targets = [];
     const navBar = document.getElementById('bottom-nav-bar');
-    const wrapper = navBar ? navBar.closest('.bottom-controls-wrapper') : null;
-    const allWrappers = document.querySelectorAll('.bottom-controls-wrapper');
-
-    if (wrapper) targets.push(wrapper);
-    allWrappers.forEach(w => {
-        if (!targets.includes(w)) targets.push(w);
-    });
-    if (navBar && !targets.includes(navBar)) {
+    if (navBar) {
         targets.push(navBar);
+        const wrapper = navBar.closest('.bottom-controls-wrapper');
+        if (wrapper && !targets.includes(wrapper)) {
+            targets.push(wrapper);
+        }
     }
     return targets;
 }

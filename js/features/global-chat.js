@@ -1,13 +1,13 @@
-// js/features/global-chat.js - Campus-Chat mit Mobile-Uni-Dropdown unter Allgemein, Smiley-Picker, bis zu 5 Bildern & zuverlässiger Bottom-Bar-Wiederherstellung
+// js/features/dm.js - Direct Messaging (DM) Modul mit Konversationsliste, Ungelesen-Zähler, Lesebestätigung, Smiley-Picker, bis zu 5 Bildern & zuverlässiger Bottom-Bar-Wiederherstellung
 import { _supabase } from '../config.js';
 import { state } from '../state.js';
 import { validateInputOrAlert } from './moderation.js';
+import { notifyDirectMessage } from './notifications.js';
 
-const CHANNEL_PREFIX_REGEX = /^\[channel:([^\]]+)\]\s*/i;
-const ATTACHMENTS_MARKER_REGEX = /\n?\[attachments:(\[[\s\S]*?\])\]\s*$/i;
-const DEFAULT_CHANNEL_KEY = 'general:all';
-const DEFAULT_CATEGORY_ID = 'plaudern';
-const CHAT_TABLE = 'global_messages';
+const DM_READ_STORAGE_PREFIX = 'pure_logic_dm_last_read_v1:';
+const DM_PARTNER_READ_STORAGE_PREFIX = 'pure_logic_dm_partner_read_v1:';
+const DM_ATTACHMENTS_MARKER_REGEX = /\n?\[attachments:(\[[\s\S]*?\])\]\s*$/i;
+
 const STORAGE_BUCKET = 'media';
 const MAX_IMAGES_PER_MESSAGE = 5;
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
@@ -19,37 +19,20 @@ const QUICK_SMILEYS = [
     '🎉', '☕', '📚', '🎓', '🍻', '❤️', '✨', '🚀'
 ];
 
-const UNIVERSITIES = [
-    { id: 'uni-wien', label: 'Universität Wien', short: 'Uni Wien' },
-    { id: 'tu-wien', label: 'TU Wien', short: 'TU Wien' },
-    { id: 'wu-wien', label: 'WU Wien', short: 'WU Wien' },
-    { id: 'meduni-wien', label: 'MedUni Wien', short: 'MedUni Wien' },
-    { id: 'boku', label: 'BOKU Wien', short: 'BOKU Wien' },
-    { id: 'fh-wien', label: 'FH Wien', short: 'FH Wien' }
-];
-
-const CAMPUS_CATEGORIES = [
-    { id: 'plaudern', label: '💬 Plaudern & Treffen' },
-    { id: 'lernen', label: '📚 Lernen & Skripten' },
-    { id: 'brett', label: '📌 Schwarzes Brett' },
-    { id: 'events', label: '🎉 Campus-Events' }
-];
-
-let activeChannelKey = DEFAULT_CHANNEL_KEY;
-let globalChatChannel = null;
-let supportsChannelColumn = true;
+let activeRecipientEmail = null;
+let dmRealtimeChannel = null;
+let dmRealtimeEmail = '';
+let supportsDbReadColumn = true;
 let supportsAttachmentsColumn = true;
-let isSendingGlobalMsg = false;
-let isLoadingGlobalMsgs = false;
-let cachedAllMessages = [];
+let isSendingDm = false;
+let isLoadingConversations = false;
+let isLoadingMessages = false;
 
 // Ausgewählte Bilder (max. 5) vor dem Absenden: { id, file, previewUrl, name }
-let pendingImageDrafts = [];
+let pendingDmImageDrafts = [];
 
-// Desktop: klappbare Uni-Akkordeons; Mobile: Dropdown-Status unter Allgemein
-const expandedUniversities = new Set();
-let mobileUnisDropdownOpen = false;
-let mobileSelectedUniId = '';
+// Cache für bereits aufgelöste Anzeigenamen, damit kein Flackern zwischen Prefix und Profilname entsteht
+const resolvedProfileNames = new Map();
 
 function isMobileViewport() {
     return typeof window !== 'undefined' && window.innerWidth <= MOBILE_BREAKPOINT_PX;
@@ -71,7 +54,7 @@ function getBottomBarTargets() {
     return targets;
 }
 
-function setBottomBarHiddenForMobileChat(hideBottomBar) {
+function setBottomBarHiddenForMobileInbox(hideBottomBar) {
     const shouldHide = Boolean(hideBottomBar && isMobileViewport());
     const targets = getBottomBarTargets();
 
@@ -102,10 +85,10 @@ function isTabCurrentlyOpen(tabId) {
 function syncBottomBarVisibility() {
     const isGlobalOpen = isTabCurrentlyOpen('tab-global');
     const isInboxOpen = isTabCurrentlyOpen('tab-inbox');
-    setBottomBarHiddenForMobileChat(isGlobalOpen || isInboxOpen);
+    setBottomBarHiddenForMobileInbox(isGlobalOpen || isInboxOpen);
 }
 
-function installTabAndVisibilityWatchers() {
+function installInboxAndVisibilityWatchers() {
     if (window.__plBottomBarWatcherInstalled) return;
     window.__plBottomBarWatcherInstalled = true;
 
@@ -175,56 +158,26 @@ function formatMessageTime(isoDate) {
     return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-function getChannelMeta(channelKey) {
-    const key = String(channelKey || DEFAULT_CHANNEL_KEY).trim().toLowerCase();
-    if (key === DEFAULT_CHANNEL_KEY) {
-        return {
-            key: DEFAULT_CHANNEL_KEY,
-            title: '🌐 Allgemein (Alle Unis)',
-            subtitle: 'Offener Raum für Studierende aller Universitäten'
-        };
-    }
-
-    const parts = key.split(':');
-    const uniId = parts[0] || '';
-    const catId = parts[1] || DEFAULT_CATEGORY_ID;
-
-    const uni = UNIVERSITIES.find(u => u.id === uniId) || {
-        id: uniId,
-        label: uniId || 'Universität',
-        short: uniId || 'Uni'
-    };
-    const cat = CAMPUS_CATEGORIES.find(c => c.id === catId) || {
-        id: catId,
-        label: '💬 Plaudern & Treffen'
-    };
-
-    return {
-        key,
-        title: `${uni.short} · ${cat.label}`,
-        subtitle: `${uni.label} — Bereich: ${cat.label}`
-    };
+function formatReadDateTime(isoDate) {
+    if (!isoDate) return '';
+    const d = new Date(isoDate);
+    if (Number.isNaN(d.getTime())) return '';
+    const datePart = d.toLocaleDateString('de-AT', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+    });
+    const timePart = d.toLocaleTimeString('de-AT', {
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+    return `${datePart}, ${timePart}`;
 }
 
-function encodeMessageWithChannel(text, channelKey, attachments = []) {
-    const cleanText = String(text || '').trim();
-    const key = String(channelKey || DEFAULT_CHANNEL_KEY).trim().toLowerCase();
-    let encoded = `[channel:${key}] ${cleanText}`.trim();
-
-    if (Array.isArray(attachments) && attachments.length > 0) {
-        try {
-            const compact = attachments.slice(0, MAX_IMAGES_PER_MESSAGE).map(a => ({
-                url: sanitizeImageUrl(a.url),
-                name: String(a.name || 'bild').slice(0, 80)
-            })).filter(a => a.url);
-
-            if (compact.length > 0) {
-                encoded = `${encoded}\n[attachments:${JSON.stringify(compact)}]`;
-            }
-        } catch (_err) {}
-    }
-
-    return encoded;
+function parseTimestamp(isoDate) {
+    if (!isoDate) return 0;
+    const ts = new Date(isoDate).getTime();
+    return Number.isNaN(ts) ? 0 : ts;
 }
 
 function parseAttachmentsArray(raw) {
@@ -256,83 +209,50 @@ function parseAttachmentsArray(raw) {
         .filter(Boolean);
 }
 
-function decodeMessageRow(row) {
-    if (!row) return null;
-    let rawText = String(row.message_text || row.content || row.text || row.message || '');
-
-    let attachments = parseAttachmentsArray(row.attachments);
-    const attMatch = rawText.match(ATTACHMENTS_MARKER_REGEX);
-    if (attMatch) {
-        if (attachments.length === 0) {
-            attachments = parseAttachmentsArray(attMatch[1]);
-        }
-        rawText = rawText.replace(ATTACHMENTS_MARKER_REGEX, '').trim();
+function encodeMessageWithAttachments(text, attachments = []) {
+    const cleanText = String(text || '').trim();
+    if (!Array.isArray(attachments) || attachments.length === 0) {
+        return cleanText;
     }
+    try {
+        const compact = attachments.slice(0, MAX_IMAGES_PER_MESSAGE).map(a => ({
+            url: sanitizeImageUrl(a.url),
+            name: String(a.name || 'bild').slice(0, 80)
+        })).filter(a => a.url);
 
-    const chMatch = rawText.match(CHANNEL_PREFIX_REGEX);
-    let channelKey = DEFAULT_CHANNEL_KEY;
-    let cleanText = rawText;
+        if (compact.length === 0) return cleanText;
+        return `${cleanText}\n[attachments:${JSON.stringify(compact)}]`.trim();
+    } catch (_err) {
+        return cleanText;
+    }
+}
 
-    if (row.channel_key) {
-        channelKey = String(row.channel_key).trim().toLowerCase();
-        if (chMatch) {
-            cleanText = rawText.replace(CHANNEL_PREFIX_REGEX, '').trim();
+function decodeDmRow(msg) {
+    if (!msg) return null;
+    let rawText = String(msg.message_text || '');
+    let attachments = parseAttachmentsArray(msg.attachments);
+
+    const match = rawText.match(DM_ATTACHMENTS_MARKER_REGEX);
+    if (match) {
+        if (attachments.length === 0) {
+            attachments = parseAttachmentsArray(match[1]);
         }
-    } else if (chMatch) {
-        channelKey = String(chMatch[1] || DEFAULT_CHANNEL_KEY).trim().toLowerCase();
-        cleanText = rawText.replace(CHANNEL_PREFIX_REGEX, '').trim();
+        rawText = rawText.replace(DM_ATTACHMENTS_MARKER_REGEX, '').trim();
     }
 
     return {
-        id: row.id,
-        senderEmail: String(row.sender_email || row.user_email || row.email || '').trim().toLowerCase(),
-        senderName: String(row.sender_name || row.full_name || row.username || '').trim(),
-        channelKey,
-        text: cleanText,
-        attachments,
-        createdAt: row.created_at || ''
+        ...msg,
+        cleanText: rawText,
+        attachments
     };
 }
 
-function getChannelCountsMap() {
-    const counts = new Map();
-    (cachedAllMessages || []).forEach(msg => {
-        if (!msg?.channelKey) return;
-        counts.set(msg.channelKey, (counts.get(msg.channelKey) || 0) + 1);
-    });
-    return counts;
-}
-
-async function fetchGlobalRowsWithRetry() {
-    let attempt = 0;
-    while (attempt < 2) {
-        attempt += 1;
-        const { data, error } = await _supabase
-            .from(CHAT_TABLE)
-            .select('*')
-            .order('created_at', { ascending: true })
-            .limit(400);
-
-        if (!error) {
-            return Array.isArray(data) ? data : [];
-        }
-
-        const errMsg = String(error.message || '').toLowerCase();
-        const isFetchErr = errMsg.includes('failed to fetch');
-        if (!isFetchErr || attempt >= 2) {
-            throw error;
-        }
-        await new Promise(resolve => setTimeout(resolve, 350));
-    }
-    return [];
-}
-
-function ensureImagePreviewOverlay() {
-    let overlay = document.getElementById('global-chat-image-lightbox');
+function ensureDmImagePreviewOverlay() {
+    let overlay = document.getElementById('dm-chat-image-lightbox');
     if (overlay) return overlay;
 
     overlay = document.createElement('div');
-    overlay.id = 'global-chat-image-lightbox';
+    overlay.id = 'dm-chat-image-lightbox';
     overlay.style.cssText = [
         'position: fixed',
         'inset: 0',
@@ -346,12 +266,12 @@ function ensureImagePreviewOverlay() {
 
     overlay.innerHTML = `
         <div style="position: relative; max-width: 92vw; max-height: 90vh; display: flex; flex-direction: column; align-items: center; gap: 10px;">
-            <button type="button" id="global-lightbox-close" aria-label="Bildvorschau schließen" style="align-self: flex-end; background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.28); color: #fff; border-radius: 999px; padding: 6px 12px; font-size: 12px; font-weight: 800; cursor: pointer;">✕ Schließen</button>
-            <img id="global-lightbox-img" src="" alt="Vorschau" style="max-width: 90vw; max-height: 80vh; border-radius: 12px; object-fit: contain; box-shadow: 0 18px 45px rgba(0,0,0,0.75);">
+            <button type="button" id="dm-lightbox-close" aria-label="Bildvorschau schließen" style="align-self: flex-end; background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.28); color: #fff; border-radius: 999px; padding: 6px 12px; font-size: 12px; font-weight: 800; cursor: pointer;">✕ Schließen</button>
+            <img id="dm-lightbox-img" src="" alt="Vorschau" style="max-width: 90vw; max-height: 80vh; border-radius: 12px; object-fit: contain; box-shadow: 0 18px 45px rgba(0,0,0,0.75);">
         </div>
     `;
 
-    const closeBtn = overlay.querySelector('#global-lightbox-close');
+    const closeBtn = overlay.querySelector('#dm-lightbox-close');
     closeBtn?.addEventListener('click', () => {
         overlay.style.display = 'none';
     });
@@ -365,22 +285,22 @@ function ensureImagePreviewOverlay() {
     return overlay;
 }
 
-function openImageLightbox(url) {
+function openDmImageLightbox(url) {
     const safeUrl = sanitizeImageUrl(url);
     if (!safeUrl) return;
-    const overlay = ensureImagePreviewOverlay();
-    const img = overlay.querySelector('#global-lightbox-img');
+    const overlay = ensureDmImagePreviewOverlay();
+    const img = overlay.querySelector('#dm-lightbox-img');
     if (img) {
         img.src = safeUrl;
     }
     overlay.style.display = 'flex';
 }
 
-function renderPendingAttachmentsBar() {
-    const bar = document.getElementById('global-chat-attachments-bar');
+function renderPendingDmAttachmentsBar() {
+    const bar = document.getElementById('dm-chat-attachments-bar');
     if (!bar) return;
 
-    if (pendingImageDrafts.length === 0) {
+    if (pendingDmImageDrafts.length === 0) {
         bar.style.display = 'none';
         bar.innerHTML = '';
         return;
@@ -389,7 +309,7 @@ function renderPendingAttachmentsBar() {
     bar.style.display = 'flex';
     bar.innerHTML = '';
 
-    pendingImageDrafts.forEach((draft, idx) => {
+    pendingDmImageDrafts.forEach((draft, idx) => {
         const chip = document.createElement('div');
         chip.style.cssText = [
             'position: relative',
@@ -406,7 +326,7 @@ function renderPendingAttachmentsBar() {
         img.src = draft.previewUrl;
         img.alt = draft.name || `Bild ${idx + 1}`;
         img.style.cssText = 'width: 100%; height: 100%; object-fit: cover; cursor: pointer;';
-        img.addEventListener('click', () => openImageLightbox(draft.previewUrl));
+        img.addEventListener('click', () => openDmImageLightbox(draft.previewUrl));
 
         const removeBtn = document.createElement('button');
         removeBtn.type = 'button';
@@ -433,7 +353,7 @@ function renderPendingAttachmentsBar() {
         ].join(';');
         removeBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            removePendingImage(draft.id);
+            removePendingDmImage(draft.id);
         });
 
         chip.appendChild(img);
@@ -443,42 +363,42 @@ function renderPendingAttachmentsBar() {
 
     const infoTag = document.createElement('span');
     infoTag.style.cssText = 'font-size: 10px; font-weight: 700; color: #a5b4fc; align-self: center; margin-left: 4px;';
-    infoTag.textContent = `${pendingImageDrafts.length}/${MAX_IMAGES_PER_MESSAGE} Bilder`;
+    infoTag.textContent = `${pendingDmImageDrafts.length}/${MAX_IMAGES_PER_MESSAGE} Bilder`;
     bar.appendChild(infoTag);
 }
 
-function removePendingImage(draftId) {
-    const target = pendingImageDrafts.find(d => d.id === draftId);
+function removePendingDmImage(draftId) {
+    const target = pendingDmImageDrafts.find(d => d.id === draftId);
     if (target?.previewUrl && target.previewUrl.startsWith('blob:')) {
         try {
             URL.revokeObjectURL(target.previewUrl);
         } catch (_err) {}
     }
-    pendingImageDrafts = pendingImageDrafts.filter(d => d.id !== draftId);
-    renderPendingAttachmentsBar();
+    pendingDmImageDrafts = pendingDmImageDrafts.filter(d => d.id !== draftId);
+    renderPendingDmAttachmentsBar();
 }
 
-function clearPendingImages() {
-    pendingImageDrafts.forEach(d => {
+function clearPendingDmImages() {
+    pendingDmImageDrafts.forEach(d => {
         if (d.previewUrl && d.previewUrl.startsWith('blob:')) {
             try {
                 URL.revokeObjectURL(d.previewUrl);
             } catch (_err) {}
         }
     });
-    pendingImageDrafts = [];
-    const fileInput = document.getElementById('global-chat-image-input');
+    pendingDmImageDrafts = [];
+    const fileInput = document.getElementById('dm-chat-image-input');
     if (fileInput) {
         fileInput.value = '';
     }
-    renderPendingAttachmentsBar();
+    renderPendingDmAttachmentsBar();
 }
 
-function handleImageSelection(filesList) {
+function handleDmImageSelection(filesList) {
     const incoming = Array.from(filesList || []).filter(f => f && String(f.type || '').startsWith('image/'));
     if (incoming.length === 0) return;
 
-    const availableSlots = MAX_IMAGES_PER_MESSAGE - pendingImageDrafts.length;
+    const availableSlots = MAX_IMAGES_PER_MESSAGE - pendingDmImageDrafts.length;
     if (availableSlots <= 0) {
         alert(`Du kannst maximal ${MAX_IMAGES_PER_MESSAGE} Bilder pro Nachricht hinzufügen.`);
         return;
@@ -494,7 +414,7 @@ function handleImageSelection(filesList) {
             alert(`"${file.name}" ist größer als 5 MB und wurde übersprungen.`);
             continue;
         }
-        pendingImageDrafts.push({
+        pendingDmImageDrafts.push({
             id: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
             file,
             name: file.name || 'bild.jpg',
@@ -502,15 +422,15 @@ function handleImageSelection(filesList) {
         });
     }
 
-    const fileInput = document.getElementById('global-chat-image-input');
+    const fileInput = document.getElementById('dm-chat-image-input');
     if (fileInput) {
         fileInput.value = '';
     }
-    renderPendingAttachmentsBar();
+    renderPendingDmAttachmentsBar();
 }
 
-function insertSmileyAtCursor(smiley) {
-    const input = document.getElementById('global-chat-input');
+function insertDmSmileyAtCursor(smiley) {
+    const input = document.getElementById('dm-input');
     if (!input) return;
 
     const start = typeof input.selectionStart === 'number' ? input.selectionStart : input.value.length;
@@ -526,9 +446,9 @@ function insertSmileyAtCursor(smiley) {
     } catch (_err) {}
 }
 
-function toggleSmileyPicker(event) {
+function toggleDmSmileyPicker(event) {
     if (event) event.stopPropagation();
-    const picker = document.getElementById('global-smiley-picker');
+    const picker = document.getElementById('dm-smiley-picker');
     if (!picker) return;
     const willOpen = picker.style.display !== 'grid';
     picker.style.display = willOpen ? 'grid' : 'none';
@@ -569,15 +489,15 @@ function fileToCompressedDataUrl(file, maxDimension = 1024, quality = 0.78) {
     });
 }
 
-async function uploadDraftImages() {
-    if (pendingImageDrafts.length === 0) return [];
+async function uploadDmDraftImages() {
+    if (pendingDmImageDrafts.length === 0) return [];
 
     const uploaded = [];
-    const draftsToSend = pendingImageDrafts.slice(0, MAX_IMAGES_PER_MESSAGE);
+    const draftsToSend = pendingDmImageDrafts.slice(0, MAX_IMAGES_PER_MESSAGE);
 
     for (const draft of draftsToSend) {
         const ext = (draft.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g, '') || 'jpg';
-        const uniquePath = `campus-chat/${Date.now()}_${Math.random().toString(36).slice(2, 9)}.${ext}`;
+        const uniquePath = `dm-chat/${Date.now()}_${Math.random().toString(36).slice(2, 9)}.${ext}`;
 
         let finalUrl = '';
         try {
@@ -613,16 +533,16 @@ async function uploadDraftImages() {
     return uploaded;
 }
 
-function enhanceInputRowWithSmileyAndImages(inputArea) {
-    if (!inputArea || inputArea.dataset.mediaToolbarBound) return;
-    inputArea.dataset.mediaToolbarBound = '1';
+function enhanceDmInputRowWithSmileyAndImages(inputArea) {
+    if (!inputArea || inputArea.dataset.dmMediaToolbarBound) return;
+    inputArea.dataset.dmMediaToolbarBound = '1';
 
     inputArea.style.position = 'relative';
     inputArea.style.flexWrap = 'wrap';
     inputArea.style.gap = '6px';
 
     const previewBar = document.createElement('div');
-    previewBar.id = 'global-chat-attachments-bar';
+    previewBar.id = 'dm-chat-attachments-bar';
     previewBar.style.cssText = [
         'display: none',
         'width: 100%',
@@ -638,7 +558,7 @@ function enhanceInputRowWithSmileyAndImages(inputArea) {
     inputArea.insertBefore(previewBar, inputArea.firstChild);
 
     const picker = document.createElement('div');
-    picker.id = 'global-smiley-picker';
+    picker.id = 'dm-smiley-picker';
     picker.style.cssText = [
         'display: none',
         'position: absolute',
@@ -672,7 +592,7 @@ function enhanceInputRowWithSmileyAndImages(inputArea) {
         ].join(';');
         eBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            insertSmileyAtCursor(emoji);
+            insertDmSmileyAtCursor(emoji);
         });
         picker.appendChild(eBtn);
     });
@@ -680,18 +600,18 @@ function enhanceInputRowWithSmileyAndImages(inputArea) {
 
     const fileInput = document.createElement('input');
     fileInput.type = 'file';
-    fileInput.id = 'global-chat-image-input';
+    fileInput.id = 'dm-chat-image-input';
     fileInput.accept = 'image/*';
     fileInput.multiple = true;
     fileInput.style.display = 'none';
     fileInput.addEventListener('change', (e) => {
-        handleImageSelection(e.target?.files);
+        handleDmImageSelection(e.target?.files);
     });
     inputArea.appendChild(fileInput);
 
     const smileyBtn = document.createElement('button');
     smileyBtn.type = 'button';
-    smileyBtn.id = 'global-smiley-btn';
+    smileyBtn.id = 'dm-smiley-btn';
     smileyBtn.textContent = '😊';
     smileyBtn.title = 'Smiley einfügen';
     smileyBtn.setAttribute('aria-label', 'Smiley einfügen');
@@ -709,11 +629,11 @@ function enhanceInputRowWithSmileyAndImages(inputArea) {
         'align-items: center',
         'justify-content: center'
     ].join(';');
-    smileyBtn.addEventListener('click', toggleSmileyPicker);
+    smileyBtn.addEventListener('click', toggleDmSmileyPicker);
 
     const imageBtn = document.createElement('button');
     imageBtn.type = 'button';
-    imageBtn.id = 'global-image-btn';
+    imageBtn.id = 'dm-image-btn';
     imageBtn.textContent = '🖼️';
     imageBtn.title = `Bis zu ${MAX_IMAGES_PER_MESSAGE} Bilder hinzufügen`;
     imageBtn.setAttribute('aria-label', `Bis zu ${MAX_IMAGES_PER_MESSAGE} Bilder hinzufügen`);
@@ -733,14 +653,14 @@ function enhanceInputRowWithSmileyAndImages(inputArea) {
     ].join(';');
     imageBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        if (pendingImageDrafts.length >= MAX_IMAGES_PER_MESSAGE) {
+        if (pendingDmImageDrafts.length >= MAX_IMAGES_PER_MESSAGE) {
             alert(`Es sind bereits ${MAX_IMAGES_PER_MESSAGE} Bilder ausgewählt.`);
             return;
         }
         fileInput.click();
     });
 
-    const textInput = document.getElementById('global-chat-input');
+    const textInput = document.getElementById('dm-input');
     if (textInput && textInput.parentElement === inputArea) {
         inputArea.insertBefore(smileyBtn, textInput);
         inputArea.insertBefore(imageBtn, textInput);
@@ -758,406 +678,127 @@ function enhanceInputRowWithSmileyAndImages(inputArea) {
     });
 }
 
-function syncMobileStateFromActiveChannel() {
-    const key = String(activeChannelKey || DEFAULT_CHANNEL_KEY).toLowerCase();
-    if (key === DEFAULT_CHANNEL_KEY) {
-        mobileSelectedUniId = '';
-        return;
-    }
-    const parts = key.split(':');
-    if (parts[0] && parts[0] !== 'general') {
-        mobileSelectedUniId = parts[0];
+function getReadMapStorageKey(currentEmail) {
+    return `${DM_READ_STORAGE_PREFIX}${String(currentEmail || '').trim().toLowerCase()}`;
+}
+
+function getReadTimestampsMap(currentEmail) {
+    const normalizedCurrent = String(currentEmail || '').trim().toLowerCase();
+    if (!normalizedCurrent) return {};
+    try {
+        const raw = localStorage.getItem(getReadMapStorageKey(normalizedCurrent));
+        if (!raw) return {};
+        const parsed = JSON.parse(raw);
+        return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch (_err) {
+        return {};
     }
 }
 
-function buildMobileChannelsBar(sidebarList) {
-    syncMobileStateFromActiveChannel();
-    const counts = getChannelCountsMap();
-    const isGeneralActive = activeChannelKey === DEFAULT_CHANNEL_KEY;
-    const generalCount = counts.get(DEFAULT_CHANNEL_KEY) || 0;
+function saveReadTimestampsMap(currentEmail, mapObj) {
+    const normalizedCurrent = String(currentEmail || '').trim().toLowerCase();
+    if (!normalizedCurrent) return;
+    try {
+        localStorage.setItem(getReadMapStorageKey(normalizedCurrent), JSON.stringify(mapObj || {}));
+    } catch (_err) {}
+}
 
-    const currentParts = activeChannelKey.split(':');
-    const currentCatId = currentParts.length === 2 && currentParts[0] !== 'general'
-        ? currentParts[1]
-        : DEFAULT_CATEGORY_ID;
+function getPartnerReadStorageKey(senderEmail, recipientEmail) {
+    const s = String(senderEmail || '').trim().toLowerCase();
+    const r = String(recipientEmail || '').trim().toLowerCase();
+    return `${DM_PARTNER_READ_STORAGE_PREFIX}${s}__to__${r}`;
+}
 
-    const selectedUniObj = UNIVERSITIES.find(u => u.id === mobileSelectedUniId) || null;
-    const selectedUniLabel = selectedUniObj ? selectedUniObj.short : 'Unis';
-
-    sidebarList.innerHTML = '';
-
-    const topRow = document.createElement('div');
-    topRow.style.cssText = [
-        'display: grid',
-        'grid-template-columns: 1fr 1fr',
-        'gap: 6px',
-        'width: 100%'
-    ].join(';');
-
-    const generalBtn = document.createElement('button');
-    generalBtn.type = 'button';
-    generalBtn.dataset.channelKey = DEFAULT_CHANNEL_KEY;
-    generalBtn.style.cssText = [
-        'padding: 7px 10px',
-        'border-radius: 9px',
-        'cursor: pointer',
-        'font-size: 11px',
-        'font-weight: 800',
-        'display: flex',
-        'align-items: center',
-        'justify-content: space-between',
-        'gap: 4px',
-        'white-space: nowrap',
-        'overflow: hidden',
-        'text-overflow: ellipsis',
-        isGeneralActive
-            ? 'background: rgba(99, 102, 241, 0.25); border: 1px solid rgba(129, 140, 248, 0.75); color: #fff;'
-            : 'background: rgba(255, 255, 255, 0.04); border: 1px solid var(--border); color: var(--text);'
-    ].join(';');
-    generalBtn.innerHTML = `
-        <span>🌐 Allgemein</span>
-        ${generalCount > 0 ? `<span style="font-size: 9px; padding: 1px 5px; border-radius: 999px; background: rgba(129, 140, 248, 0.24); color: #c7d2fe;">${generalCount}</span>` : ''}
-    `;
-    generalBtn.addEventListener('click', () => {
-        mobileUnisDropdownOpen = false;
-        mobileSelectedUniId = '';
-        selectGlobalChannel(DEFAULT_CHANNEL_KEY);
-    });
-
-    const unisDropdownBtn = document.createElement('button');
-    unisDropdownBtn.type = 'button';
-    unisDropdownBtn.setAttribute('aria-expanded', String(mobileUnisDropdownOpen));
-    unisDropdownBtn.style.cssText = [
-        'padding: 7px 10px',
-        'border-radius: 9px',
-        'cursor: pointer',
-        'font-size: 11px',
-        'font-weight: 800',
-        'display: flex',
-        'align-items: center',
-        'justify-content: space-between',
-        'gap: 4px',
-        'white-space: nowrap',
-        'overflow: hidden',
-        'text-overflow: ellipsis',
-        !isGeneralActive
-            ? 'background: rgba(99, 102, 241, 0.22); border: 1px solid rgba(129, 140, 248, 0.65); color: #fff;'
-            : 'background: rgba(255, 255, 255, 0.04); border: 1px solid var(--border); color: #a5b4fc;'
-    ].join(';');
-    unisDropdownBtn.innerHTML = `
-        <span style="overflow: hidden; text-overflow: ellipsis;">🎓 ${escapeHtml(selectedUniLabel)}</span>
-        <span style="font-size: 10px; flex-shrink: 0;">${mobileUnisDropdownOpen ? '▴' : '▾'}</span>
-    `;
-    unisDropdownBtn.addEventListener('click', () => {
-        mobileUnisDropdownOpen = !mobileUnisDropdownOpen;
-        buildChannelsSidebar(sidebarList);
-    });
-
-    topRow.appendChild(generalBtn);
-    topRow.appendChild(unisDropdownBtn);
-    sidebarList.appendChild(topRow);
-
-    if (mobileUnisDropdownOpen) {
-        const uniMenu = document.createElement('div');
-        uniMenu.style.cssText = [
-            'display: grid',
-            'grid-template-columns: repeat(2, minmax(0, 1fr))',
-            'gap: 5px',
-            'padding: 6px',
-            'border-radius: 10px',
-            'background: rgba(15, 20, 36, 0.92)',
-            'border: 1px solid rgba(129, 140, 248, 0.4)'
-        ].join(';');
-
-        UNIVERSITIES.forEach(uni => {
-            let uniTotalCount = 0;
-            CAMPUS_CATEGORIES.forEach(cat => {
-                uniTotalCount += counts.get(`${uni.id}:${cat.id}`) || 0;
-            });
-            const isPicked = mobileSelectedUniId === uni.id;
-
-            const uBtn = document.createElement('button');
-            uBtn.type = 'button';
-            uBtn.style.cssText = [
-                'padding: 6px 8px',
-                'border-radius: 8px',
-                'cursor: pointer',
-                'font-size: 10px',
-                'font-weight: 800',
-                'display: flex',
-                'align-items: center',
-                'justify-content: space-between',
-                'gap: 4px',
-                'text-align: left',
-                isPicked
-                    ? 'background: rgba(99, 102, 241, 0.28); border: 1px solid rgba(129, 140, 248, 0.8); color: #fff;'
-                    : 'background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border); color: var(--text);'
-            ].join(';');
-            uBtn.innerHTML = `
-                <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(uni.short)}</span>
-                ${uniTotalCount > 0 ? `<span style="font-size: 9px; opacity: 0.85;">${uniTotalCount}</span>` : ''}
-            `;
-            uBtn.addEventListener('click', () => {
-                mobileSelectedUniId = uni.id;
-                mobileUnisDropdownOpen = false;
-                selectGlobalChannel(`${uni.id}:${currentCatId}`);
-            });
-            uniMenu.appendChild(uBtn);
-        });
-
-        sidebarList.appendChild(uniMenu);
-    }
-
-    if (selectedUniObj) {
-        const catRow = document.createElement('div');
-        catRow.style.cssText = [
-            'display: flex',
-            'gap: 5px',
-            'overflow-x: auto',
-            'padding-bottom: 2px'
-        ].join(';');
-
-        CAMPUS_CATEGORIES.forEach(cat => {
-            const key = `${selectedUniObj.id}:${cat.id}`;
-            const isCatActive = activeChannelKey === key;
-            const cBtn = document.createElement('button');
-            cBtn.type = 'button';
-            cBtn.dataset.channelKey = key;
-            cBtn.style.cssText = [
-                'padding: 5px 8px',
-                'border-radius: 8px',
-                'cursor: pointer',
-                'font-size: 10px',
-                'font-weight: 700',
-                'white-space: nowrap',
-                'flex-shrink: 0',
-                isCatActive
-                    ? 'background: rgba(99, 102, 241, 0.26); border: 1px solid rgba(129, 140, 248, 0.75); color: #fff;'
-                    : 'background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border); color: var(--text);'
-            ].join(';');
-            cBtn.textContent = cat.label;
-            cBtn.addEventListener('click', () => selectGlobalChannel(key));
-            catRow.appendChild(cBtn);
-        });
-
-        sidebarList.appendChild(catRow);
+function getLocalPartnerReadIso(senderEmail, recipientEmail) {
+    try {
+        return localStorage.getItem(getPartnerReadStorageKey(senderEmail, recipientEmail)) || '';
+    } catch (_err) {
+        return '';
     }
 }
 
-function buildDesktopChannelsSidebar(sidebarList) {
-    const counts = getChannelCountsMap();
-
-    const generalCount = counts.get(DEFAULT_CHANNEL_KEY) || 0;
-    const generalBtn = document.createElement('button');
-    generalBtn.type = 'button';
-    generalBtn.dataset.channelKey = DEFAULT_CHANNEL_KEY;
-    generalBtn.style.cssText = [
-        'width: 100%',
-        'text-align: left',
-        'padding: 10px 12px',
-        'border-radius: 10px',
-        'cursor: pointer',
-        'display: flex',
-        'flex-direction: column',
-        'gap: 2px',
-        'flex-shrink: 0',
-        'transition: background 0.15s ease, border-color 0.15s ease'
-    ].join(';');
-    generalBtn.innerHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px;">
-            <span style="font-size: 12px; font-weight: 800; color: #fff;">🌐 Allgemein</span>
-            ${generalCount > 0 ? `<span style="font-size: 10px; font-weight: 800; padding: 1px 6px; border-radius: 999px; background: rgba(129, 140, 248, 0.22); color: #c7d2fe;">${generalCount}</span>` : ''}
-        </div>
-        <span style="font-size: 10px; color: var(--text-muted);">Alle Studierenden · Alle Unis</span>
-    `;
-    generalBtn.addEventListener('click', () => selectGlobalChannel(DEFAULT_CHANNEL_KEY));
-    sidebarList.appendChild(generalBtn);
-
-    UNIVERSITIES.forEach(uni => {
-        const isOpen = expandedUniversities.has(uni.id);
-        const hasActiveChild = activeChannelKey.startsWith(`${uni.id}:`);
-
-        let uniTotalCount = 0;
-        CAMPUS_CATEGORIES.forEach(cat => {
-            uniTotalCount += counts.get(`${uni.id}:${cat.id}`) || 0;
-        });
-
-        const groupBox = document.createElement('div');
-        groupBox.style.cssText = [
-            'border: 1px solid var(--border)',
-            'border-radius: 10px',
-            hasActiveChild ? 'background: rgba(99, 102, 241, 0.07);' : 'background: rgba(255, 255, 255, 0.015);',
-            'padding: 6px',
-            'display: flex',
-            'flex-direction: column',
-            'gap: 4px',
-            'flex-shrink: 0'
-        ].join(';');
-
-        const uniHeaderBtn = document.createElement('button');
-        uniHeaderBtn.type = 'button';
-        uniHeaderBtn.setAttribute('aria-expanded', String(isOpen));
-        uniHeaderBtn.style.cssText = [
-            'width: 100%',
-            'display: flex',
-            'align-items: center',
-            'justify-content: space-between',
-            'gap: 8px',
-            'padding: 7px 8px',
-            'border-radius: 8px',
-            'border: none',
-            'background: transparent',
-            'cursor: pointer',
-            'text-align: left',
-            'color: #a5b4fc',
-            'font-size: 11px',
-            'font-weight: 800'
-        ].join(';');
-        uniHeaderBtn.innerHTML = `
-            <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">🎓 ${escapeHtml(uni.label)}</span>
-            <span style="display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0;">
-                ${uniTotalCount > 0 ? `<span style="font-size: 9px; font-weight: 800; padding: 1px 5px; border-radius: 999px; background: rgba(129, 140, 248, 0.16); color: #a5b4fc;">${uniTotalCount}</span>` : ''}
-                <span style="font-size: 10px; opacity: 0.85;">${isOpen ? '▾' : '▸'}</span>
-            </span>
-        `;
-        uniHeaderBtn.addEventListener('click', () => toggleUniversityDropdown(uni.id));
-        groupBox.appendChild(uniHeaderBtn);
-
-        if (isOpen) {
-            const subMenu = document.createElement('div');
-            subMenu.style.cssText = [
-                'display: flex',
-                'flex-direction: column',
-                'gap: 4px',
-                'padding: 2px 2px 2px 6px'
-            ].join(';');
-
-            CAMPUS_CATEGORIES.forEach(cat => {
-                const key = `${uni.id}:${cat.id}`;
-                const catCount = counts.get(key) || 0;
-                const catBtn = document.createElement('button');
-                catBtn.type = 'button';
-                catBtn.dataset.channelKey = key;
-                catBtn.style.cssText = [
-                    'width: 100%',
-                    'text-align: left',
-                    'padding: 6px 8px',
-                    'border-radius: 8px',
-                    'cursor: pointer',
-                    'font-size: 11px',
-                    'font-weight: 700',
-                    'display: flex',
-                    'justify-content: space-between',
-                    'align-items: center',
-                    'gap: 6px',
-                    'transition: background 0.15s ease, border-color 0.15s ease'
-                ].join(';');
-                catBtn.innerHTML = `
-                    <span>${escapeHtml(cat.label)}</span>
-                    ${catCount > 0 ? `<span style="font-size: 9px; font-weight: 800; opacity: 0.85;">${catCount}</span>` : ''}
-                `;
-                catBtn.addEventListener('click', () => selectGlobalChannel(key));
-                subMenu.appendChild(catBtn);
-            });
-
-            groupBox.appendChild(subMenu);
-        }
-
-        sidebarList.appendChild(groupBox);
-    });
-
-    highlightActiveChannelButtons();
+function setLocalPartnerReadIso(senderEmail, recipientEmail, isoString) {
+    try {
+        const prev = getLocalPartnerReadIso(senderEmail, recipientEmail);
+        const nextTs = Math.max(parseTimestamp(prev), parseTimestamp(isoString), Date.now());
+        localStorage.setItem(getPartnerReadStorageKey(senderEmail, recipientEmail), new Date(nextTs).toISOString());
+    } catch (_err) {}
 }
 
-function buildChannelsSidebar(sidebarList) {
-    if (!sidebarList) return;
-    sidebarList.innerHTML = '';
+function setLocalReadTimestamp(currentEmail, partnerEmail, referenceIsoDate = null) {
+    const mapObj = getReadTimestampsMap(currentEmail);
+    const prevTs = parseTimestamp(mapObj[partnerEmail]);
+    const refTs = parseTimestamp(referenceIsoDate);
+    const nextTs = Math.max(Date.now(), prevTs, refTs);
+    const nextIso = new Date(nextTs).toISOString();
 
-    if (isMobileViewport()) {
-        sidebarList.style.overflowY = 'visible';
-        sidebarList.style.padding = '6px 8px';
-        sidebarList.style.gap = '6px';
-        buildMobileChannelsBar(sidebarList);
-    } else {
-        sidebarList.style.overflowY = 'auto';
-        sidebarList.style.padding = '8px';
-        sidebarList.style.gap = '8px';
-        buildDesktopChannelsSidebar(sidebarList);
-    }
+    mapObj[partnerEmail] = nextIso;
+    saveReadTimestampsMap(currentEmail, mapObj);
+    setLocalPartnerReadIso(partnerEmail, currentEmail, nextIso);
+    return nextIso;
 }
 
-function applyResponsiveLayout(shell, sidebar, channelHeader) {
-    if (!shell || !sidebar) return;
-    const mobile = isMobileViewport();
+export async function markConversationAsRead(partnerEmail, referenceIsoDate = null) {
+    const currentEmail = String(state.currentUserEmail || '').trim().toLowerCase();
+    const partner = String(partnerEmail || '').trim().toLowerCase();
+    if (!currentEmail || !partner) return;
 
-    if (mobile) {
-        shell.style.gridTemplateColumns = '1fr';
-        shell.style.gridTemplateRows = 'auto minmax(0, 1fr)';
-        shell.style.gap = '8px';
+    const nextIso = setLocalReadTimestamp(currentEmail, partner, referenceIsoDate);
 
-        sidebar.style.maxHeight = 'none';
-        const headerBar = sidebar.firstElementChild;
-        if (headerBar && headerBar.tagName === 'DIV') {
-            headerBar.style.display = 'none';
-        }
-        if (channelHeader) {
-            channelHeader.style.padding = '7px 10px';
-            channelHeader.style.marginBottom = '6px';
-        }
-    } else {
-        shell.style.gridTemplateColumns = 'minmax(225px, 300px) minmax(0, 1fr)';
-        shell.style.gridTemplateRows = '1fr';
-        shell.style.gap = '12px';
+    if (!supportsDbReadColumn) return;
 
-        const headerBar = sidebar.firstElementChild;
-        if (headerBar && headerBar.tagName === 'DIV') {
-            headerBar.style.display = 'flex';
+    try {
+        const { error } = await _supabase
+            .from('direct_messages')
+            .update({ recipient_last_read_at: nextIso })
+            .eq('sender_email', partner)
+            .eq('recipient_email', currentEmail);
+
+        if (error) {
+            const msgText = String(error.message || '').toLowerCase();
+            if (msgText.includes('recipient_last_read_at') || msgText.includes('column')) {
+                supportsDbReadColumn = false;
+            }
         }
-        if (channelHeader) {
-            channelHeader.style.padding = '10px 14px';
-            channelHeader.style.marginBottom = '8px';
-        }
-    }
+    } catch (_err) {}
 }
 
-function ensureGlobalChatLayout() {
-    installTabAndVisibilityWatchers();
+function ensureInboxLayout() {
+    installInboxAndVisibilityWatchers();
     syncBottomBarVisibility();
 
-    const globalTab = document.getElementById('tab-global');
-    if (!globalTab) return null;
+    const inboxTab = document.getElementById('tab-inbox');
+    if (!inboxTab) return null;
 
-    const chatContainer = globalTab.querySelector('.chat-container');
-    const messagesList = document.getElementById('global-chat-list');
-    const inputArea = globalTab.querySelector('.chat-input-area');
-    if (!chatContainer || !messagesList || !inputArea) return null;
+    const chatList = document.getElementById('dm-chat-list');
+    const recipientInput = document.getElementById('dm-recipient');
+    const inputArea = inboxTab.querySelector('.chat-input-area');
+    if (!chatList || !recipientInput) return null;
 
-    enhanceInputRowWithSmileyAndImages(inputArea);
+    if (inputArea) {
+        enhanceDmInputRowWithSmileyAndImages(inputArea);
+    }
 
-    chatContainer.style.padding = '10px';
-    chatContainer.style.display = 'flex';
-    chatContainer.style.flexDirection = 'column';
-    chatContainer.style.overflow = 'hidden';
-
-    let shell = document.getElementById('global-chat-shell');
-    let sidebar = document.getElementById('global-channels-sidebar');
-    let sidebarList = document.getElementById('global-channels-list');
-    let channelHeader = document.getElementById('global-active-channel-header');
+    let shell = document.getElementById('dm-inbox-shell');
+    let convList = document.getElementById('dm-conversations-list');
 
     if (!shell) {
+        const parentContainer = chatList.parentElement;
+        if (!parentContainer) return null;
+
         shell = document.createElement('div');
-        shell.id = 'global-chat-shell';
+        shell.id = 'dm-inbox-shell';
         shell.style.cssText = [
             'display: grid',
-            'grid-template-columns: minmax(225px, 300px) minmax(0, 1fr)',
+            'grid-template-columns: minmax(210px, 280px) minmax(0, 1fr)',
             'gap: 12px',
             'flex: 1',
             'min-height: 0',
             'overflow: hidden'
         ].join(';');
 
-        sidebar = document.createElement('div');
-        sidebar.id = 'global-channels-sidebar';
+        const sidebar = document.createElement('div');
+        sidebar.id = 'dm-conversations-sidebar';
         sidebar.style.cssText = [
             'display: flex',
             'flex-direction: column',
@@ -1170,14 +811,16 @@ function ensureGlobalChatLayout() {
 
         sidebar.innerHTML = `
             <div style="padding: 10px 12px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 6px; flex-shrink: 0;">
-                <span style="font-size: 12px; font-weight: 800; color: #fff;">🧭 Campus-Kanäle</span>
-                <button type="button" onclick="window.loadGlobalMessages(false)" aria-label="Chat aktualisieren" style="background: rgba(255,255,255,0.06); border: 1px solid var(--border); color: var(--text-muted); border-radius: 8px; padding: 3px 8px; font-size: 10px; font-weight: 700; cursor: pointer;">↻</button>
+                <span style="font-size: 12px; font-weight: 800; color: #fff;">💬 Konversationen</span>
+                <button type="button" onclick="window.loadConversationsList(false)" aria-label="Konversationen aktualisieren" style="background: rgba(255,255,255,0.06); border: 1px solid var(--border); color: var(--text-muted); border-radius: 8px; padding: 3px 8px; font-size: 10px; font-weight: 700; cursor: pointer;">↻</button>
             </div>
-            <div id="global-channels-list" style="flex: 1; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 8px;"></div>
+            <div id="dm-conversations-list" style="flex: 1; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 6px;">
+                <p style="color: var(--text-muted); font-size: 11px; text-align: center; padding: 14px;">Lade Chats...</p>
+            </div>
         `;
 
         const threadPane = document.createElement('div');
-        threadPane.id = 'global-thread-pane';
+        threadPane.id = 'dm-thread-pane';
         threadPane.style.cssText = [
             'display: flex',
             'flex-direction: column',
@@ -1186,9 +829,9 @@ function ensureGlobalChatLayout() {
             'overflow: hidden'
         ].join(';');
 
-        channelHeader = document.createElement('div');
-        channelHeader.id = 'global-active-channel-header';
-        channelHeader.style.cssText = [
+        const activePartnerHeader = document.createElement('div');
+        activePartnerHeader.id = 'dm-active-partner-header';
+        activePartnerHeader.style.cssText = [
             'display: flex',
             'align-items: center',
             'justify-content: space-between',
@@ -1200,120 +843,437 @@ function ensureGlobalChatLayout() {
             'border-radius: 12px',
             'flex-shrink: 0'
         ].join(';');
-        channelHeader.innerHTML = `
+        activePartnerHeader.innerHTML = `
             <div style="min-width: 0;">
-                <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px;">Aktiver Kanal</div>
-                <div id="global-active-channel-title" style="font-size: 14px; font-weight: 800; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">🌐 Allgemein (Alle Unis)</div>
-                <div id="global-active-channel-sub" style="font-size: 11px; color: #818cf8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Offener Raum für Studierende aller Universitäten</div>
+                <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px;">Konversation mit</div>
+                <div id="dm-active-partner-name" style="font-size: 14px; font-weight: 800; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Kein Gesprächspartner gewählt</div>
+                <div id="dm-active-partner-email" style="font-size: 11px; color: #818cf8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">–</div>
             </div>
         `;
 
-        threadPane.appendChild(channelHeader);
-        if (messagesList.parentElement === chatContainer) {
-            threadPane.appendChild(messagesList);
+        const recipientLabel = inboxTab.querySelector('label[for="dm-recipient"]');
+
+        threadPane.appendChild(activePartnerHeader);
+
+        if (recipientLabel && recipientLabel.parentElement === parentContainer) {
+            threadPane.appendChild(recipientLabel);
         }
-        if (inputArea.parentElement === chatContainer) {
+        if (recipientInput.parentElement === parentContainer) {
+            threadPane.appendChild(recipientInput);
+        }
+        if (chatList.parentElement === parentContainer) {
+            threadPane.appendChild(chatList);
+        }
+        if (inputArea && inputArea.parentElement === parentContainer) {
             threadPane.appendChild(inputArea);
         }
 
         shell.appendChild(sidebar);
         shell.appendChild(threadPane);
-        chatContainer.appendChild(shell);
+        parentContainer.insertBefore(shell, parentContainer.firstChild);
 
-        sidebarList = document.getElementById('global-channels-list');
+        convList = document.getElementById('dm-conversations-list');
     }
+
+    const applyResponsiveColumns = () => {
+        if (!shell) return;
+        if (window.innerWidth <= 720) {
+            shell.style.gridTemplateColumns = '1fr';
+            shell.style.gridTemplateRows = 'minmax(110px, 155px) minmax(0, 1fr)';
+        } else {
+            shell.style.gridTemplateColumns = 'minmax(210px, 280px) minmax(0, 1fr)';
+            shell.style.gridTemplateRows = '1fr';
+        }
+        syncBottomBarVisibility();
+    };
 
     if (!shell.dataset.resizeBound) {
         shell.dataset.resizeBound = '1';
-        window.addEventListener('resize', () => {
-            applyResponsiveLayout(shell, sidebar, channelHeader);
-            buildChannelsSidebar(document.getElementById('global-channels-list'));
-            syncBottomBarVisibility();
+        window.addEventListener('resize', applyResponsiveColumns);
+    }
+    applyResponsiveColumns();
+
+    return { shell, convList };
+}
+
+function getStableDisplayName(email, profile = null) {
+    const normalized = String(email || '').trim().toLowerCase();
+    const fallback = normalized.split('@')[0] || normalized;
+
+    if (profile) {
+        const candidate = String(profile.full_name || profile.username || '').trim();
+        if (candidate) {
+            resolvedProfileNames.set(normalized, {
+                displayName: candidate,
+                username: String(profile.username || '').replace(/^@+/, '').trim()
+            });
+            return candidate;
+        }
+    }
+
+    const cached = resolvedProfileNames.get(normalized);
+    if (cached?.displayName) {
+        return cached.displayName;
+    }
+
+    return fallback;
+}
+
+function getStableHeaderLabel(email, profile = null) {
+    const normalized = String(email || '').trim().toLowerCase();
+    const fallback = normalized.split('@')[0] || normalized;
+
+    if (profile) {
+        const displayName = String(profile.full_name || profile.username || fallback).trim();
+        const rawHandle = String(profile.username || '').replace(/^@+/, '').trim();
+        resolvedProfileNames.set(normalized, {
+            displayName,
+            username: rawHandle
+        });
+        return rawHandle ? `${displayName} (@${rawHandle})` : displayName;
+    }
+
+    const cached = resolvedProfileNames.get(normalized);
+    if (cached?.displayName) {
+        return cached.username ? `${cached.displayName} (@${cached.username})` : cached.displayName;
+    }
+
+    return fallback;
+}
+
+async function fetchProfilesMap(emails) {
+    const map = new Map();
+    const uniqueEmails = [...new Set((emails || []).map(e => String(e || '').trim().toLowerCase()).filter(Boolean))];
+    if (uniqueEmails.length === 0) return map;
+
+    try {
+        const { data, error } = await _supabase
+            .from('users')
+            .select('email, full_name, username, avatar_url')
+            .in('email', uniqueEmails);
+
+        if (!error && Array.isArray(data)) {
+            data.forEach(u => {
+                if (u?.email) {
+                    const key = String(u.email).toLowerCase();
+                    map.set(key, u);
+                    const candidate = String(u.full_name || u.username || '').trim();
+                    if (candidate) {
+                        resolvedProfileNames.set(key, {
+                            displayName: candidate,
+                            username: String(u.username || '').replace(/^@+/, '').trim()
+                        });
+                    }
+                }
+            });
+        }
+    } catch (_err) {}
+
+    return map;
+}
+
+async function updateActivePartnerHeader(partnerEmail) {
+    ensureInboxLayout();
+    const nameEl = document.getElementById('dm-active-partner-name');
+    const emailEl = document.getElementById('dm-active-partner-email');
+    if (!nameEl || !emailEl) return;
+
+    const normalizedPartner = String(partnerEmail || '').trim().toLowerCase();
+    if (!normalizedPartner) {
+        nameEl.textContent = 'Kein Gesprächspartner gewählt';
+        emailEl.textContent = 'Links wählen oder E-Mail eingeben';
+        return;
+    }
+
+    emailEl.textContent = normalizedPartner;
+    nameEl.textContent = getStableHeaderLabel(normalizedPartner);
+
+    const profilesMap = await fetchProfilesMap([normalizedPartner]);
+    const profile = profilesMap.get(normalizedPartner);
+    if (profile) {
+        nameEl.textContent = getStableHeaderLabel(normalizedPartner, profile);
+    }
+}
+
+function updateInboxTabBadge(totalUnread) {
+    const inboxBtn = document.getElementById('btn-tab-inbox');
+    if (!inboxBtn) return;
+
+    let badge = document.getElementById('dm-inbox-tab-badge');
+    if (totalUnread > 0) {
+        if (!badge) {
+            badge = document.createElement('span');
+            badge.id = 'dm-inbox-tab-badge';
+            badge.style.cssText = [
+                'display: inline-flex',
+                'align-items: center',
+                'justify-content: center',
+                'min-width: 16px',
+                'height: 16px',
+                'padding: 0 4px',
+                'margin-left: 5px',
+                'border-radius: 999px',
+                'background: #ec4899',
+                'color: #fff',
+                'font-size: 9px',
+                'font-weight: 900',
+                'line-height: 1'
+            ].join(';');
+            inboxBtn.appendChild(badge);
+        }
+        badge.textContent = totalUnread > 99 ? '99+' : String(totalUnread);
+    } else if (badge) {
+        badge.remove();
+    }
+}
+
+function resolveMessageReadAt(msg, currentEmail) {
+    const recipient = String(msg.recipient_email || '').trim().toLowerCase();
+    const dbReadIso = msg.recipient_last_read_at || '';
+    const localReadIso = getLocalPartnerReadIso(currentEmail, recipient);
+
+    const dbTs = parseTimestamp(dbReadIso);
+    const localTs = parseTimestamp(localReadIso);
+    const bestReadTs = Math.max(dbTs, localTs);
+    if (!bestReadTs) return '';
+
+    const msgTs = parseTimestamp(msg.created_at);
+    if (msgTs > 0 && bestReadTs >= msgTs) {
+        return new Date(bestReadTs).toISOString();
+    }
+    return '';
+}
+
+function renderConversationsView(convList, currentEmail, messages, selectedPartner, isInboxVisible) {
+    const readMap = getReadTimestampsMap(currentEmail);
+    const conversationsMap = new Map();
+
+    (messages || []).forEach(rawMsg => {
+        const msg = decodeDmRow(rawMsg);
+        if (!msg) return;
+
+        const sender = String(msg.sender_email || '').trim().toLowerCase();
+        const recipient = String(msg.recipient_email || '').trim().toLowerCase();
+        if (!sender || !recipient) return;
+
+        const partnerEmail = sender === currentEmail ? recipient : sender;
+        if (!partnerEmail || partnerEmail === currentEmail) return;
+
+        const summaryText = msg.cleanText || (msg.attachments?.length ? `📷 ${msg.attachments.length} Bild(er)` : '');
+
+        if (!conversationsMap.has(partnerEmail)) {
+            conversationsMap.set(partnerEmail, {
+                partnerEmail,
+                lastMessage: summaryText,
+                lastTime: msg.created_at || '',
+                lastSender: sender,
+                unreadCount: 0
+            });
+        }
+
+        const convEntry = conversationsMap.get(partnerEmail);
+        const isIncoming = sender === partnerEmail && recipient === currentEmail;
+        const isCurrentlyOpen = isInboxVisible && selectedPartner === partnerEmail;
+
+        if (isIncoming && !isCurrentlyOpen) {
+            const msgTs = parseTimestamp(msg.created_at);
+            const lastReadTs = parseTimestamp(readMap[partnerEmail]);
+            if (msgTs > lastReadTs) {
+                convEntry.unreadCount += 1;
+            }
+        }
+    });
+
+    if (selectedPartner && selectedPartner !== currentEmail && !conversationsMap.has(selectedPartner)) {
+        conversationsMap.set(selectedPartner, {
+            partnerEmail: selectedPartner,
+            lastMessage: 'Neue Konversation starten',
+            lastTime: '',
+            lastSender: '',
+            unreadCount: 0
         });
     }
 
-    applyResponsiveLayout(shell, sidebar, channelHeader);
-    buildChannelsSidebar(sidebarList);
-    updateActiveChannelHeader();
-    return { shell, sidebarList };
-}
+    const conversations = [...conversationsMap.values()];
+    const totalUnread = conversations.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
+    updateInboxTabBadge(totalUnread);
 
-function toggleUniversityDropdown(uniId) {
-    if (!uniId) return;
-    if (expandedUniversities.has(uniId)) {
-        expandedUniversities.delete(uniId);
-    } else {
-        expandedUniversities.add(uniId);
+    if (conversations.length === 0) {
+        convList.innerHTML = '<p style="color: var(--text-muted); font-size: 11px; text-align: center; padding: 14px;">Noch keine Konversationen vorhanden. Trage rechts eine E-Mail ein, um zu starten.</p>';
+        return conversations;
     }
-    const sidebarList = document.getElementById('global-channels-list');
-    if (sidebarList) {
-        buildChannelsSidebar(sidebarList);
-    }
-}
 
-function highlightActiveChannelButtons() {
-    const sidebarList = document.getElementById('global-channels-list');
-    if (!sidebarList) return;
+    convList.innerHTML = '';
+    conversations.forEach(conv => {
+        const displayName = getStableDisplayName(conv.partnerEmail);
+        const isSelected = selectedPartner === conv.partnerEmail;
+        const timeLabel = formatMessageTime(conv.lastTime);
+        const prefix = conv.lastSender === currentEmail ? 'Du: ' : '';
+        const previewText = `${prefix}${conv.lastMessage || ''}`;
+        const hasUnread = conv.unreadCount > 0;
+        const unreadLabel = conv.unreadCount > 99 ? '99+' : String(conv.unreadCount);
 
-    sidebarList.querySelectorAll('button[data-channel-key]').forEach(btn => {
-        const key = btn.getAttribute('data-channel-key');
-        const isActive = key === activeChannelKey;
-        btn.setAttribute('aria-pressed', String(isActive));
+        const itemBtn = document.createElement('button');
+        itemBtn.type = 'button';
+        itemBtn.dataset.partnerEmail = conv.partnerEmail;
+        itemBtn.setAttribute('aria-pressed', String(isSelected));
+        itemBtn.style.cssText = [
+            'width: 100%',
+            'text-align: left',
+            'padding: 9px 10px',
+            'border-radius: 10px',
+            'cursor: pointer',
+            'display: flex',
+            'flex-direction: column',
+            'gap: 3px',
+            'transition: background 0.15s ease, border-color 0.15s ease',
+            isSelected
+                ? 'background: rgba(99, 102, 241, 0.22); border: 1px solid rgba(129, 140, 248, 0.65); color: #fff;'
+                : hasUnread
+                    ? 'background: rgba(236, 72, 153, 0.10); border: 1px solid rgba(236, 72, 153, 0.45); color: var(--text);'
+                    : 'background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border); color: var(--text);'
+        ].join(';');
 
-        if (isActive) {
-            btn.style.background = 'rgba(99, 102, 241, 0.24)';
-            btn.style.border = '1px solid rgba(129, 140, 248, 0.7)';
-            btn.style.color = '#fff';
-        } else {
-            btn.style.background = key === DEFAULT_CHANNEL_KEY ? 'rgba(255, 255, 255, 0.04)' : 'rgba(255, 255, 255, 0.02)';
-            btn.style.border = '1px solid var(--border)';
-            btn.style.color = 'var(--text)';
-        }
+        itemBtn.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px;">
+                <span class="conv-display-name" style="font-size: 12px; font-weight: 800; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(displayName)}</span>
+                <div style="display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0;">
+                    ${hasUnread ? `<span aria-label="${escapeHtml(unreadLabel)} ungelesene Nachrichten" style="display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: #ec4899; color: #fff; font-size: 10px; font-weight: 900; line-height: 1;">${escapeHtml(unreadLabel)}</span>` : ''}
+                    <span style="font-size: 9px; color: ${hasUnread ? '#f472b6' : 'var(--text-muted)'}; font-weight: ${hasUnread ? '700' : '400'};">${escapeHtml(timeLabel)}</span>
+                </div>
+            </div>
+            <div style="font-size: 10px; color: #818cf8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(conv.partnerEmail)}</div>
+            <div style="font-size: 11px; color: ${hasUnread ? '#f8fafc' : 'var(--text-muted)'}; font-weight: ${hasUnread ? '700' : '400'}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(previewText)}</div>
+        `;
+
+        itemBtn.addEventListener('click', async () => {
+            activeRecipientEmail = conv.partnerEmail;
+            const recipientInput = document.getElementById('dm-recipient');
+            if (recipientInput) {
+                recipientInput.value = conv.partnerEmail;
+            }
+            setLocalReadTimestamp(currentEmail, conv.partnerEmail, conv.lastTime);
+            await updateActivePartnerHeader(conv.partnerEmail);
+            await loadConversationsList(true);
+            await loadDirectMessages(true);
+            markConversationAsRead(conv.partnerEmail, conv.lastTime);
+        });
+
+        convList.appendChild(itemBtn);
     });
+
+    return conversations;
 }
 
-function updateActiveChannelHeader() {
-    const meta = getChannelMeta(activeChannelKey);
-    const titleEl = document.getElementById('global-active-channel-title');
-    const subEl = document.getElementById('global-active-channel-sub');
-    const inputEl = document.getElementById('global-chat-input');
-    if (titleEl) titleEl.textContent = meta.title;
-    if (subEl) subEl.textContent = meta.subtitle;
-    if (inputEl) inputEl.placeholder = `Nachricht in ${meta.title}...`;
-}
+/**
+ * Lädt alle Konversationen des aktuellen Nutzers inklusive Ungelesen-Zähler
+ */
+export async function loadConversationsList(silent = false) {
+    if (isLoadingConversations) return;
+    const layout = ensureInboxLayout();
+    const convList = layout?.convList || document.getElementById('dm-conversations-list');
+    if (!convList) return;
 
-export async function selectGlobalChannel(channelKey) {
-    activeChannelKey = String(channelKey || DEFAULT_CHANNEL_KEY).trim().toLowerCase();
-    const parts = activeChannelKey.split(':');
-    if (parts.length === 2 && parts[0] !== 'general') {
-        expandedUniversities.add(parts[0]);
-        mobileSelectedUniId = parts[0];
-    } else {
-        mobileSelectedUniId = '';
+    const currentEmail = String(state.currentUserEmail || '').trim().toLowerCase();
+    if (!currentEmail) {
+        updateInboxTabBadge(0);
+        convList.innerHTML = '<p style="color: var(--text-muted); font-size: 11px; text-align: center; padding: 14px;">Bitte logge dich ein, um Chats zu sehen.</p>';
+        return;
     }
-    ensureGlobalChatLayout();
-    highlightActiveChannelButtons();
-    updateActiveChannelHeader();
-    await loadGlobalMessages(false);
+
+    const hasExistingItems = convList.querySelectorAll('button').length > 0;
+    if (!silent && !hasExistingItems) {
+        convList.innerHTML = '<p style="color: var(--text-muted); font-size: 11px; text-align: center; padding: 14px;">Lade Konversationen...</p>';
+    }
+
+    isLoadingConversations = true;
+    try {
+        const { data: messages, error } = await _supabase
+            .from('direct_messages')
+            .select('*')
+            .or(`sender_email.eq.${currentEmail},recipient_email.eq.${currentEmail}`)
+            .order('created_at', { ascending: false })
+            .limit(300);
+
+        if (error) throw error;
+
+        const activeFromInput = String(document.getElementById('dm-recipient')?.value || '').trim().toLowerCase();
+        const selectedPartner = activeFromInput || activeRecipientEmail || '';
+        const isInboxVisible = isTabCurrentlyOpen('tab-inbox');
+
+        if (isInboxVisible && selectedPartner) {
+            setLocalReadTimestamp(currentEmail, selectedPartner);
+        }
+
+        const conversations = renderConversationsView(convList, currentEmail, messages || [], selectedPartner, isInboxVisible);
+
+        if (Array.isArray(conversations) && conversations.length > 0) {
+            const profilesMap = await fetchProfilesMap(conversations.map(c => c.partnerEmail));
+            convList.querySelectorAll('button[data-partner-email]').forEach(btn => {
+                const pEmail = btn.getAttribute('data-partner-email');
+                const profile = profilesMap.get(pEmail);
+                const nameSpan = btn.querySelector('.conv-display-name');
+                if (nameSpan) {
+                    nameSpan.textContent = getStableDisplayName(pEmail, profile);
+                }
+            });
+        }
+    } catch (err) {
+        console.error('Fehler beim Laden der Konversationen:', err);
+        if (!hasExistingItems) {
+            convList.innerHTML = '<p style="color: #ef4444; font-size: 11px; text-align: center; padding: 14px;">Konversationen konnten nicht geladen werden.</p>';
+        }
+    } finally {
+        isLoadingConversations = false;
+    }
 }
 
-function ensureGlobalChatRealtime() {
-    if (globalChatChannel) return;
+function ensureDmRealtimeSubscription() {
+    const currentEmail = String(state.currentUserEmail || '').trim().toLowerCase();
+    if (!currentEmail) return;
+    if (dmRealtimeChannel && dmRealtimeEmail === currentEmail) return;
+
+    if (dmRealtimeChannel && typeof _supabase.removeChannel === 'function') {
+        _supabase.removeChannel(dmRealtimeChannel);
+        dmRealtimeChannel = null;
+    }
+
+    dmRealtimeEmail = currentEmail;
 
     try {
-        globalChatChannel = _supabase
-            .channel('pl-campus-channels-chat')
+        dmRealtimeChannel = _supabase
+            .channel(`pl-dm-inbox-${currentEmail}`)
             .on(
                 'postgres_changes',
-                { event: 'INSERT', schema: 'public', table: CHAT_TABLE },
-                (payload) => {
-                    const decoded = decodeMessageRow(payload?.new);
-                    if (!decoded) return;
-                    cachedAllMessages = [...cachedAllMessages, decoded];
-                    const sidebarList = document.getElementById('global-channels-list');
-                    if (sidebarList) buildChannelsSidebar(sidebarList);
-                    if (decoded.channelKey === activeChannelKey) {
-                        loadGlobalMessages(true);
+                { event: '*', schema: 'public', table: 'direct_messages' },
+                async (payload) => {
+                    const row = payload?.new || payload?.old;
+                    if (!row) return;
+                    const sender = String(row.sender_email || '').trim().toLowerCase();
+                    const recipient = String(row.recipient_email || '').trim().toLowerCase();
+                    if (sender !== currentEmail && recipient !== currentEmail) return;
+
+                    const partner = sender === currentEmail ? recipient : sender;
+                    if (!activeRecipientEmail && partner) {
+                        activeRecipientEmail = partner;
+                        const recipientInput = document.getElementById('dm-recipient');
+                        if (recipientInput && !recipientInput.value.trim()) {
+                            recipientInput.value = partner;
+                        }
+                    }
+
+                    const isInboxVisible = isTabCurrentlyOpen('tab-inbox');
+                    const currentTarget = String(document.getElementById('dm-recipient')?.value || activeRecipientEmail || '').trim().toLowerCase();
+                    const isOpenWithPartner = Boolean(isInboxVisible && currentTarget && (sender === currentTarget || recipient === currentTarget));
+
+                    if (isOpenWithPartner && partner && sender === partner) {
+                        setLocalReadTimestamp(currentEmail, partner, row.created_at);
+                    }
+
+                    await updateActivePartnerHeader(currentTarget || activeRecipientEmail || '');
+                    await loadConversationsList(true);
+                    if (isOpenWithPartner) {
+                        await loadDirectMessages(true);
                     }
                 }
             )
@@ -1321,7 +1281,45 @@ function ensureGlobalChatRealtime() {
     } catch (_err) {}
 }
 
-function renderMessageAttachments(item, attachments) {
+/**
+ * Öffnet das Postfach für eine bestimmte Empfänger-E-Mail
+ */
+export function openDirectMessageWith(recipientEmail) {
+    if (!state.currentUserEmail) {
+        alert('Bitte logge dich ein, um Direktnachrichten zu schreiben.');
+        return;
+    }
+
+    const normalizedRecipient = String(recipientEmail || '').trim().toLowerCase();
+    const normalizedCurrent = String(state.currentUserEmail || '').trim().toLowerCase();
+
+    if (normalizedRecipient === normalizedCurrent) {
+        alert('Du kannst dir nicht selbst Nachrichten schreiben.');
+        return;
+    }
+
+    activeRecipientEmail = normalizedRecipient;
+    ensureInboxLayout();
+
+    if (typeof window.switchTab === 'function') {
+        window.switchTab('inbox');
+    }
+
+    syncBottomBarVisibility();
+
+    const recipientInput = document.getElementById('dm-recipient');
+    if (recipientInput) {
+        recipientInput.value = normalizedRecipient;
+    }
+
+    setLocalReadTimestamp(normalizedCurrent, normalizedRecipient);
+    updateActivePartnerHeader(normalizedRecipient);
+    loadConversationsList(true);
+    loadDirectMessages(false);
+    markConversationAsRead(normalizedRecipient);
+}
+
+function renderDmMessageAttachments(bubble, attachments) {
     if (!Array.isArray(attachments) || attachments.length === 0) return;
 
     const gallery = document.createElement('div');
@@ -1339,220 +1337,327 @@ function renderMessageAttachments(item, attachments) {
 
         const img = document.createElement('img');
         img.src = safeUrl;
-        img.alt = att.name || 'Chat-Bild';
+        img.alt = att.name || 'DM-Bild';
         img.loading = 'lazy';
         img.style.cssText = [
             'width: 100%',
             'max-height: 180px',
             'object-fit: cover',
             'border-radius: 10px',
-            'border: 1px solid rgba(255, 255, 255, 0.15)',
+            'border: 1px solid rgba(255, 255, 255, 0.18)',
             'cursor: pointer',
             'background: rgba(0, 0, 0, 0.25)'
         ].join(';');
-        img.addEventListener('click', () => openImageLightbox(safeUrl));
+        img.addEventListener('click', () => openDmImageLightbox(safeUrl));
         gallery.appendChild(img);
     });
 
     if (gallery.children.length > 0) {
-        item.appendChild(gallery);
+        bubble.appendChild(gallery);
     }
 }
 
-function renderFilteredMessages(listEl, currentEmail, meta) {
-    const filtered = (cachedAllMessages || []).filter(item => item && item.channelKey === activeChannelKey);
+/**
+ * Lädt die Direktnachrichten zwischen dem aktuellen Nutzer und dem Empfänger
+ */
+export async function loadDirectMessages(silent = false) {
+    if (isLoadingMessages) return;
+    ensureInboxLayout();
+    ensureDmRealtimeSubscription();
 
-    if (filtered.length === 0) {
-        listEl.innerHTML = `<p style="color: var(--text-muted); font-size: 12px; text-align: center; padding: 20px;">Noch keine Nachrichten in <strong>${escapeHtml(meta.title)}</strong>. Schreib als Erste/r! 💬</p>`;
+    const recipientInput = document.getElementById('dm-recipient');
+    const chatList = document.getElementById('dm-chat-list');
+
+    if (!recipientInput || !chatList) return;
+
+    const currentEmail = String(state.currentUserEmail || '').trim().toLowerCase();
+    const recipientEmail = recipientInput.value.trim().toLowerCase();
+    activeRecipientEmail = recipientEmail;
+
+    updateActivePartnerHeader(recipientEmail);
+
+    if (!currentEmail) {
+        chatList.innerHTML = '<p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;">Bitte logge dich ein.</p>';
         return;
     }
 
-    listEl.innerHTML = '';
-    filtered.forEach(msg => {
-        const isMe = currentEmail && msg.senderEmail === currentEmail;
-        const senderLabel = msg.senderName || (msg.senderEmail ? msg.senderEmail.split('@')[0] : 'Student');
-
-        const item = document.createElement('div');
-        item.className = 'campus-chat-msg';
-        item.style.cssText = [
-            'max-width: 82%',
-            'padding: 12px 16px',
-            'border-radius: 14px',
-            'font-size: 13px',
-            'line-height: 1.45',
-            'word-break: break-word',
-            'margin-bottom: 8px',
-            `align-self: ${isMe ? 'flex-end' : 'flex-start'}`,
-            `background: ${isMe ? 'var(--primary)' : 'var(--card)'}`,
-            'color: #fff',
-            `border: 1px solid ${isMe ? 'transparent' : 'var(--border)'}`
-        ].join(';');
-
-        const timeStr = formatMessageTime(msg.createdAt);
-        const textHtml = msg.text ? `<div>${escapeHtml(msg.text)}</div>` : '';
-
-        item.innerHTML = `
-            <div style="font-size: 10px; font-weight: 800; opacity: 0.85; margin-bottom: 4px; color: ${isMe ? '#fff' : '#818cf8'};">${escapeHtml(senderLabel)}</div>
-            ${textHtml}
-            <div style="font-size: 9px; opacity: 0.7; text-align: right; margin-top: 6px;">${escapeHtml(timeStr)}</div>
-        `;
-
-        renderMessageAttachments(item, msg.attachments);
-        listEl.appendChild(item);
-    });
-
-    listEl.scrollTop = listEl.scrollHeight;
-}
-
-export async function loadGlobalMessages(silent = false) {
-    if (isLoadingGlobalMsgs) return;
-    ensureGlobalChatLayout();
-    ensureGlobalChatRealtime();
-
-    const listEl = document.getElementById('global-chat-list');
-    if (!listEl) return;
-
-    const currentEmail = String(state.currentUserEmail || '').trim().toLowerCase();
-    const meta = getChannelMeta(activeChannelKey);
-
-    const hasExisting = listEl.querySelectorAll('.campus-chat-msg').length > 0;
-    if (!silent && !hasExisting) {
-        listEl.innerHTML = `<p style="color: var(--text-muted); font-size: 12px; text-align: center; padding: 20px;">Lade ${escapeHtml(meta.title)}...</p>`;
+    if (!recipientEmail) {
+        chatList.innerHTML = '<p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;">Wähle links eine Konversation aus oder gib oben eine E-Mail ein.</p>';
+        return;
     }
 
-    isLoadingGlobalMsgs = true;
-    try {
-        const rows = await fetchGlobalRowsWithRetry();
-        cachedAllMessages = rows.map(decodeMessageRow).filter(Boolean);
+    setLocalReadTimestamp(currentEmail, recipientEmail);
 
-        const sidebarList = document.getElementById('global-channels-list');
-        if (sidebarList) {
-            buildChannelsSidebar(sidebarList);
+    const hasExistingMessages = chatList.querySelectorAll('div').length > 0 && !chatList.textContent.includes('Lade Nachrichten...');
+    if (!silent && !hasExistingMessages) {
+        chatList.innerHTML = '<p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;">Lade Nachrichten...</p>';
+    }
+
+    isLoadingMessages = true;
+    try {
+        const { data: messages, error } = await _supabase
+            .from('direct_messages')
+            .select('*')
+            .or(`and(sender_email.eq.${currentEmail},recipient_email.eq.${recipientEmail}),and(sender_email.eq.${recipientEmail},recipient_email.eq.${currentEmail})`)
+            .order('created_at', { ascending: true });
+
+        if (error) throw error;
+
+        if (!messages || messages.length === 0) {
+            chatList.innerHTML = `<p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;">Noch keine Nachrichten mit ${escapeHtml(recipientEmail)}. Starte die Konversation! 💬</p>`;
+            return;
         }
 
-        renderFilteredMessages(listEl, currentEmail, meta);
-    } catch (err) {
-        console.error('Fehler beim Laden des Campus-Chats:', err);
-        if (!hasExisting) {
-            const reason = escapeHtml(err?.message || 'Netzwerk- oder Tabellenfehler');
-            listEl.innerHTML = `
-                <div style="color: #ef4444; font-size: 12px; text-align:center; padding: 20px;">
-                    <div>Nachrichten konnten nicht geladen werden.</div>
-                    <div style="font-size: 10px; color: var(--text-muted); margin-top: 4px;">${reason}</div>
-                    <button type="button" onclick="window.loadGlobalMessages(false)" style="margin-top: 10px; background: rgba(255,255,255,0.08); border: 1px solid var(--border); color: #fff; border-radius: 8px; padding: 5px 12px; font-size: 11px; cursor: pointer;">Erneut versuchen</button>
-                </div>
+        const latestMsgTime = messages[messages.length - 1]?.created_at || null;
+        setLocalReadTimestamp(currentEmail, recipientEmail, latestMsgTime);
+
+        chatList.innerHTML = '';
+        messages.forEach(rawMsg => {
+            const msg = decodeDmRow(rawMsg);
+            if (!msg) return;
+
+            const isMe = String(msg.sender_email || '').toLowerCase() === currentEmail;
+            const wrapper = document.createElement('div');
+            wrapper.style.cssText = `
+                display: flex;
+                flex-direction: column;
+                align-items: ${isMe ? 'flex-end' : 'flex-start'};
+                margin-bottom: 10px;
+                max-width: 82%;
+                align-self: ${isMe ? 'flex-end' : 'flex-start'};
             `;
+
+            const bubble = document.createElement('div');
+            bubble.style.cssText = `
+                width: 100%;
+                padding: 16px 20px;
+                border-radius: 20px;
+                font-size: 14px;
+                line-height: 1.55;
+                word-break: break-word;
+                background: ${isMe ? 'var(--primary)' : 'var(--card)'};
+                color: #fff;
+                border: 1px solid ${isMe ? 'transparent' : 'var(--border)'};
+                box-shadow: 0 4px 14px rgba(0,0,0,0.28);
+            `;
+
+            const timeStr = formatMessageTime(msg.created_at);
+            const textBlock = msg.cleanText ? `<div>${escapeHtml(msg.cleanText)}</div>` : '';
+            bubble.innerHTML = `
+                ${textBlock}
+                <div style="font-size: 10px; opacity: 0.75; text-align: right; margin-top: 8px;">${escapeHtml(timeStr)}</div>
+            `;
+            renderDmMessageAttachments(bubble, msg.attachments);
+            wrapper.appendChild(bubble);
+
+            if (isMe) {
+                const readIso = resolveMessageReadAt(msg, currentEmail);
+                const statusRow = document.createElement('div');
+                statusRow.style.cssText = `
+                    font-size: 10px;
+                    margin-top: 4px;
+                    padding-right: 4px;
+                    font-weight: 700;
+                    color: ${readIso ? '#34d399' : 'var(--text-muted)'};
+                `;
+
+                if (readIso) {
+                    statusRow.textContent = `✓✓ Gelesen · ${formatReadDateTime(readIso)}`;
+                } else {
+                    statusRow.textContent = '✓ Ungelesen';
+                }
+
+                wrapper.appendChild(statusRow);
+            }
+
+            chatList.appendChild(wrapper);
+        });
+
+        chatList.scrollTop = chatList.scrollHeight;
+        markConversationAsRead(recipientEmail, latestMsgTime);
+        loadConversationsList(true);
+
+    } catch (err) {
+        console.error('Fehler beim Laden der DMs:', err);
+        if (!hasExistingMessages) {
+            chatList.innerHTML = '<p style="color: #ef4444; font-size: 12px; text-align:center; padding: 20px;">Fehler beim Laden der Nachrichten.</p>';
         }
     } finally {
-        isLoadingGlobalMsgs = false;
+        isLoadingMessages = false;
     }
 }
 
-export async function sendGlobalMessage() {
-    if (isSendingGlobalMsg) return;
+async function insertDirectMessageWithRetry(payloadRow) {
+    let attempt = 0;
+    while (attempt < 2) {
+        attempt += 1;
+        const { error } = await _supabase
+            .from('direct_messages')
+            .insert([payloadRow]);
 
-    const input = document.getElementById('global-chat-input');
-    if (!input) return;
+        if (!error) return;
 
+        const isFetchError = String(error.message || '').toLowerCase().includes('failed to fetch');
+        if (!isFetchError || attempt >= 2) {
+            throw error;
+        }
+        await new Promise(resolve => setTimeout(resolve, 350));
+    }
+}
+
+/**
+ * Sendet eine Direktnachricht an den Empfänger (inkl. Moderations-Check, bis zu 5 Bildern & Retry)
+ */
+export async function sendDirectMessage() {
+    if (isSendingDm) return;
+
+    const recipientInput = document.getElementById('dm-recipient');
+    const input = document.getElementById('dm-input');
+
+    if (!recipientInput || !input) return;
+
+    const currentEmail = String(state.currentUserEmail || '').trim().toLowerCase();
+    const recipientEmail = recipientInput.value.trim().toLowerCase();
     const text = input.value.trim();
-    const hasImages = pendingImageDrafts.length > 0;
+    const hasImages = pendingDmImageDrafts.length > 0;
+
+    if (!recipientEmail) {
+        alert('Bitte gib zuerst eine Empfänger-E-Mail ein.');
+        return;
+    }
+
     if (!text && !hasImages) return;
 
     if (text && !validateInputOrAlert(text)) {
         return;
     }
 
-    const currentEmail = String(state.currentUserEmail || '').trim().toLowerCase();
     if (!currentEmail) {
-        alert('Bitte logge dich ein, um im Chat zu schreiben.');
+        alert('Du musst eingeloggt sein.');
         return;
     }
 
-    isSendingGlobalMsg = true;
+    isSendingDm = true;
     try {
-        const uploadedAttachments = await uploadDraftImages();
-        const safeBodyText = text || (uploadedAttachments.length > 0 ? '📷 Bildanhang' : '');
+        const nowIso = new Date().toISOString();
+        const uploadedAttachments = await uploadDmDraftImages();
+        const encodedText = encodeMessageWithAttachments(text, uploadedAttachments);
 
-        const fallbackEncodedText = encodeMessageWithChannel(safeBodyText, activeChannelKey, uploadedAttachments);
         const basePayload = {
             id: crypto.randomUUID(),
             sender_email: currentEmail,
-            message_text: fallbackEncodedText,
-            created_at: new Date().toISOString()
+            recipient_email: recipientEmail,
+            message_text: encodedText || '📷 Bildanhang',
+            created_at: nowIso
         };
 
         let inserted = false;
 
-        if (supportsChannelColumn && supportsAttachmentsColumn) {
-            const fullPayload = {
+        if (supportsAttachmentsColumn) {
+            const withAttachmentsPayload = {
                 ...basePayload,
-                channel_key: activeChannelKey,
-                message_text: safeBodyText,
+                message_text: text || (uploadedAttachments.length > 0 ? '📷 Bildanhang' : ''),
                 attachments: uploadedAttachments
             };
-            const { error } = await _supabase.from(CHAT_TABLE).insert([fullPayload]);
-            if (!error) {
-                inserted = true;
-            } else {
-                const msg = String(error.message || '').toLowerCase();
-                if (msg.includes('attachments')) supportsAttachmentsColumn = false;
-                if (msg.includes('channel_key')) supportsChannelColumn = false;
-                if (!msg.includes('column')) throw error;
-            }
-        }
 
-        if (!inserted && supportsChannelColumn) {
-            const channelOnlyPayload = {
-                ...basePayload,
-                channel_key: activeChannelKey,
-                message_text: encodeMessageWithChannel(safeBodyText, activeChannelKey, uploadedAttachments)
-            };
-            const { error } = await _supabase.from(CHAT_TABLE).insert([channelOnlyPayload]);
-            if (!error) {
-                inserted = true;
-            } else {
-                const msg = String(error.message || '').toLowerCase();
-                if (msg.includes('channel_key') || msg.includes('column')) {
-                    supportsChannelColumn = false;
+            try {
+                let attempt = 0;
+                while (attempt < 2) {
+                    attempt += 1;
+                    const { error } = await _supabase
+                        .from('direct_messages')
+                        .insert([withAttachmentsPayload]);
+
+                    if (!error) {
+                        inserted = true;
+                        break;
+                    }
+
+                    const msg = String(error.message || '').toLowerCase();
+                    if (msg.includes('attachments') || msg.includes('column')) {
+                        supportsAttachmentsColumn = false;
+                        break;
+                    }
+                    if (!msg.includes('failed to fetch') || attempt >= 2) {
+                        throw error;
+                    }
+                    await new Promise(resolve => setTimeout(resolve, 350));
+                }
+            } catch (err) {
+                const msg = String(err?.message || '').toLowerCase();
+                if (msg.includes('attachments') || msg.includes('column')) {
+                    supportsAttachmentsColumn = false;
                 } else {
-                    throw error;
+                    throw err;
                 }
             }
         }
 
         if (!inserted) {
-            const { error: fallbackError } = await _supabase.from(CHAT_TABLE).insert([basePayload]);
-            if (fallbackError) throw fallbackError;
+            await insertDirectMessageWithRetry(basePayload);
         }
 
+        setLocalReadTimestamp(currentEmail, recipientEmail, nowIso);
+
+        try {
+            const notifText = text || `📷 ${uploadedAttachments.length} Bild(er) gesendet`;
+            await notifyDirectMessage(recipientEmail, currentEmail, notifText);
+        } catch (_notifErr) {}
+
+        activeRecipientEmail = recipientEmail;
         input.value = '';
-        clearPendingImages();
-        await loadGlobalMessages(true);
+        clearPendingDmImages();
+        await updateActivePartnerHeader(recipientEmail);
+        await loadDirectMessages(true);
+        await loadConversationsList(true);
+        markConversationAsRead(recipientEmail, nowIso);
+
     } catch (err) {
-        console.error('Fehler beim Senden der Chat-Nachricht:', err);
-        alert('Fehler beim Senden: ' + (err?.message || String(err)));
+        console.error('Fehler beim Senden der DM:', err);
+        const detail = err?.message || String(err);
+        alert(`Fehler beim Senden: ${detail}\nBitte prüfe deine Internetverbindung oder ob ein Werbeblocker/Firewall Supabase blockiert.`);
     } finally {
-        isSendingGlobalMsg = false;
+        isSendingDm = false;
     }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    installTabAndVisibilityWatchers();
-    ensureGlobalChatLayout();
+    installInboxAndVisibilityWatchers();
+    ensureInboxLayout();
+    updateActivePartnerHeader('');
     syncBottomBarVisibility();
 
-    const globalTabBtn = document.getElementById('btn-tab-global');
-    if (globalTabBtn) {
-        globalTabBtn.addEventListener('click', () => {
+    const recipientInput = document.getElementById('dm-recipient');
+    if (recipientInput) {
+        recipientInput.addEventListener('input', () => {
+            updateActivePartnerHeader(recipientInput.value.trim().toLowerCase());
+        });
+    }
+
+    const inboxBtn = document.getElementById('btn-tab-inbox');
+    if (inboxBtn) {
+        inboxBtn.addEventListener('click', () => {
             setTimeout(() => {
-                ensureGlobalChatLayout();
-                loadGlobalMessages(false);
+                ensureInboxLayout();
+                loadConversationsList(true);
+                loadDirectMessages(true);
                 syncBottomBarVisibility();
             }, 50);
         });
     }
+
+    setInterval(() => {
+        if (!state.currentUserEmail) return;
+        ensureDmRealtimeSubscription();
+        if (isTabCurrentlyOpen('tab-inbox')) {
+            loadConversationsList(true);
+        }
+    }, 3500);
 });
 
-window.selectGlobalChannel = selectGlobalChannel;
-window.loadGlobalMessages = loadGlobalMessages;
-window.sendGlobalMessage = sendGlobalMessage;
+// Global für HTML-Events verfügbar machen
+window.openDirectMessageWith = openDirectMessageWith;
+window.loadDirectMessages = loadDirectMessages;
+window.sendDirectMessage = sendDirectMessage;
+window.loadConversationsList = loadConversationsList;
+window.markConversationAsRead = markConversationAsRead;
