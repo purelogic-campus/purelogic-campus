@@ -44,11 +44,11 @@ let pollRealtimeChannel = null;
 
 function escapeHtml(str) {
     return String(str || '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
+        .replace(/&/g, '&')
+        .replace(/</g, '<')
+        .replace(/>/g, '>')
+        .replace(/"/g, '"')
+        .replace(/'/g, ''');
 }
 
 function canUseNetwork() {
@@ -122,6 +122,162 @@ function removeUnwantedFloatingButtons() {
     if (fab) fab.remove();
 }
 
+export function injectNewPostPollOption() {
+    if (typeof document === 'undefined' || !document.body) return;
+    const uploadModal = document.getElementById('media-upload-modal');
+    if (!uploadModal) return;
+    if (document.getElementById('new-post-poll-section')) return;
+
+    const captionInput = document.getElementById('media-caption-input');
+    const anchor = captionInput ? captionInput.parentElement : uploadModal.querySelector('.container-box');
+    if (!anchor) return;
+
+    const section = document.createElement('div');
+    section.id = 'new-post-poll-section';
+    section.style.cssText = [
+        'margin-bottom: 14px',
+        'padding: 10px 12px',
+        'border-radius: 12px',
+        'background: rgba(99, 102, 241, 0.08)',
+        'border: 1px solid rgba(129, 140, 248, 0.3)'
+    ].join(';');
+
+    section.innerHTML = `
+        <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 800; color: #e2e8f0; cursor: pointer; margin: 0;">
+            <input type="checkbox" id="new-post-poll-enabled" onchange="toggleNewPostPollBuilder(this.checked)" style="width: 15px; height: 15px; cursor: pointer;">
+            <span>📊 Umfrage zu diesem Beitrag / Story hinzufügen</span>
+        </label>
+
+        <div id="new-post-poll-builder" class="hidden" style="margin-top: 10px; display: flex; flex-direction: column; gap: 6px;">
+            <select id="new-post-poll-context" style="margin: 0; padding: 7px 10px; border-radius: 9px; border: 1px solid rgba(255,255,255,0.16); background: #0f172a; color: #fff; font-size: 11px;">
+                <option value="post">📝 Im Beitrag / Feed anzeigen</option>
+                <option value="story">⚡ In Stories anzeigen</option>
+            </select>
+            <input type="text" id="new-post-poll-question" placeholder="Umfragefrage eingeben *" style="margin: 0; padding: 8px 10px; border-radius: 9px; border: 1px solid rgba(255,255,255,0.16); background: rgba(15,23,42,0.85); color: #fff; font-size: 11px;">
+            <input type="text" id="new-post-poll-opt-1" placeholder="Antwortoption 1 *" style="margin: 0; padding: 7px 10px; border-radius: 9px; border: 1px solid rgba(255,255,255,0.16); background: rgba(15,23,42,0.85); color: #fff; font-size: 11px;">
+            <input type="text" id="new-post-poll-opt-2" placeholder="Antwortoption 2 *" style="margin: 0; padding: 7px 10px; border-radius: 9px; border: 1px solid rgba(255,255,255,0.16); background: rgba(15,23,42,0.85); color: #fff; font-size: 11px;">
+            <input type="text" id="new-post-poll-opt-3" placeholder="Antwortoption 3 (optional)" style="margin: 0; padding: 7px 10px; border-radius: 9px; border: 1px solid rgba(255,255,255,0.16); background: rgba(15,23,42,0.85); color: #fff; font-size: 11px;">
+            <input type="text" id="new-post-poll-opt-4" placeholder="Antwortoption 4 (optional)" style="margin: 0; padding: 7px 10px; border-radius: 9px; border: 1px solid rgba(255,255,255,0.16); background: rgba(15,23,42,0.85); color: #fff; font-size: 11px;">
+        </div>
+    `;
+
+    if (captionInput && captionInput.nextElementSibling) {
+        anchor.insertBefore(section, captionInput.nextElementSibling);
+    } else {
+        anchor.appendChild(section);
+    }
+}
+
+export function toggleNewPostPollBuilder(forceState = null) {
+    injectNewPostPollOption();
+    const checkbox = document.getElementById('new-post-poll-enabled');
+    const builder = document.getElementById('new-post-poll-builder');
+    if (!checkbox || !builder) return;
+
+    const enabled = typeof forceState === 'boolean' ? forceState : checkbox.checked;
+    checkbox.checked = enabled;
+    builder.classList.toggle('hidden', !enabled);
+    if (enabled) {
+        const qInput = document.getElementById('new-post-poll-question');
+        if (qInput) qInput.focus();
+    }
+}
+
+export function resetNewPostPollForm() {
+    const checkbox = document.getElementById('new-post-poll-enabled');
+    const builder = document.getElementById('new-post-poll-builder');
+    if (checkbox) checkbox.checked = false;
+    if (builder) builder.classList.add('hidden');
+    ['new-post-poll-question', 'new-post-poll-opt-1', 'new-post-poll-opt-2', 'new-post-poll-opt-3', 'new-post-poll-opt-4'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+}
+
+async function createPollRecord({ contextType, targetId, question, rawOptions }) {
+    const myEmail = getCurrentEmail();
+    if (!myEmail) {
+        alert('Bitte logge dich zuerst ein, um eine Umfrage zu erstellen.');
+        return null;
+    }
+
+    const cleanQuestion = String(question || '').trim();
+    const optionsList = (Array.isArray(rawOptions) ? rawOptions : [])
+        .map((t) => String(t || '').trim())
+        .filter(Boolean);
+
+    if (!cleanQuestion) {
+        alert('Bitte gib eine Umfragefrage ein.');
+        return null;
+    }
+    if (optionsList.length < 2) {
+        alert('Bitte gib mindestens zwei Antwortoptionen an.');
+        return null;
+    }
+    if (!validateInputOrAlert(cleanQuestion)) return null;
+    for (const optText of optionsList) {
+        if (!validateInputOrAlert(optText)) return null;
+    }
+
+    const normalizedContext = contextType === 'story' ? 'story' : 'post';
+    const newPoll = {
+        id: (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function')
+            ? crypto.randomUUID()
+            : `poll_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        context_type: normalizedContext,
+        target_id: targetId || (normalizedContext === 'story' ? 'story-general' : 'feed-general'),
+        question: cleanQuestion,
+        options: optionsList.map((text, idx) => ({
+            id: `opt_${idx + 1}_${Math.random().toString(36).slice(2, 6)}`,
+            text
+        })),
+        creator_email: myEmail,
+        created_at: new Date().toISOString()
+    };
+
+    if (canUseNetwork()) {
+        try {
+            const { error } = await _supabase
+                .from('campus_polls')
+                .insert([newPoll]);
+            if (error && isNetworkError(error)) {
+                renderOfflineBanner(true);
+            }
+        } catch (_e) {}
+    }
+
+    pollsCache = [newPoll, ...pollsCache];
+    saveLocalPolls(pollsCache);
+    renderAllPollWidgets();
+    return newPoll;
+}
+
+export async function attachPollIfEnabledOnPostPublish(targetId = null) {
+    injectNewPostPollOption();
+    const checkbox = document.getElementById('new-post-poll-enabled');
+    if (!checkbox || !checkbox.checked) return true;
+
+    const contextType = document.getElementById('new-post-poll-context')?.value === 'story' ? 'story' : 'post';
+    const question = document.getElementById('new-post-poll-question')?.value || '';
+    const rawOptions = [
+        document.getElementById('new-post-poll-opt-1')?.value || '',
+        document.getElementById('new-post-poll-opt-2')?.value || '',
+        document.getElementById('new-post-poll-opt-3')?.value || '',
+        document.getElementById('new-post-poll-opt-4')?.value || ''
+    ];
+
+    const created = await createPollRecord({
+        contextType,
+        targetId: targetId || (contextType === 'story' ? 'story-general' : 'feed-general'),
+        question,
+        rawOptions
+    });
+
+    if (!created) return false;
+    resetNewPostPollForm();
+    return true;
+}
+
 function ensureCreatePollModal() {
     let modal = document.getElementById('campus-poll-create-modal');
     if (modal) return modal;
@@ -152,7 +308,7 @@ function ensureCreatePollModal() {
                     <h3 id="poll-modal-heading" style="margin: 0; font-size: 16px; font-weight: 900; color: #f8fafc;">📊 Neue Umfrage erstellen</h3>
                     <div id="poll-modal-subtext" style="font-size: 11px; color: #94a3b8; margin-top: 2px;">Für Beiträge & Stories</div>
                 </div>
-                <button type="button" onclick="closeCreatePollModal()" aria-label="Umfrage-Dialog schließen" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.16); color: #fff; width: 32px; height: 32px; border-radius: 10px; font-size: 18px; line-height: 1; cursor: pointer;">&times;</button>
+                <button type="button" onclick="closeCreatePollModal()" aria-label="Umfrage-Dialog schließen" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.16); color: #fff; width: 32px; height: 32px; border-radius: 10px; font-size: 18px; line-height: 1; cursor: pointer;">×</button>
             </div>
 
             <div style="display: flex; flex-direction: column; gap: 8px;">
@@ -247,66 +403,24 @@ export function closeCreatePollModal() {
 }
 
 export async function submitNewPoll() {
-    const myEmail = getCurrentEmail();
-    if (!myEmail) {
-        alert('Bitte logge dich zuerst ein, um eine Umfrage zu erstellen.');
-        return;
-    }
-
     const contextSelect = document.getElementById('poll-context-select');
     const qInput = document.getElementById('poll-question-input');
     const optionInputs = Array.from(document.querySelectorAll('#campus-poll-create-modal .poll-option-field'));
 
     const contextType = contextSelect?.value === 'story' ? 'story' : 'post';
-    const question = (qInput?.value || '').trim();
-    const rawOptions = optionInputs
-        .map((el) => (el.value || '').trim())
-        .filter(Boolean);
+    const question = qInput?.value || '';
+    const rawOptions = optionInputs.map((el) => el.value || '');
 
-    if (!question) {
-        alert('Bitte gib eine Umfragefrage ein.');
-        return;
-    }
-    if (rawOptions.length < 2) {
-        alert('Bitte gib mindestens zwei Antwortoptionen an.');
-        return;
-    }
-
-    if (!validateInputOrAlert(question)) return;
-    for (const optText of rawOptions) {
-        if (!validateInputOrAlert(optText)) return;
-    }
-
-    const newPoll = {
-        id: (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function')
-            ? crypto.randomUUID()
-            : `poll_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-        context_type: contextType,
-        target_id: activeCreateTargetId || (contextType === 'story' ? 'story-general' : 'feed-general'),
+    const created = await createPollRecord({
+        contextType,
+        targetId: activeCreateTargetId || (contextType === 'story' ? 'story-general' : 'feed-general'),
         question,
-        options: rawOptions.map((text, idx) => ({
-            id: `opt_${idx + 1}_${Math.random().toString(36).slice(2, 6)}`,
-            text
-        })),
-        creator_email: myEmail,
-        created_at: new Date().toISOString()
-    };
+        rawOptions
+    });
 
-    if (canUseNetwork()) {
-        try {
-            const { error } = await _supabase
-                .from('campus_polls')
-                .insert([newPoll]);
-            if (error && isNetworkError(error)) {
-                renderOfflineBanner(true);
-            }
-        } catch (_e) {}
+    if (created) {
+        closeCreatePollModal();
     }
-
-    pollsCache = [newPoll, ...pollsCache];
-    saveLocalPolls(pollsCache);
-    closeCreatePollModal();
-    renderAllPollWidgets();
 }
 
 export async function voteInPoll(pollId, optionId) {
@@ -442,6 +556,7 @@ function renderPollsIntoContainer(container, contextType) {
 export function injectPollWidgets() {
     if (typeof document === 'undefined' || !document.body) return;
     removeUnwantedFloatingButtons();
+    injectNewPostPollOption();
 
     const reelsTab = document.getElementById('tab-reels');
     if (reelsTab && !document.getElementById('campus-story-polls-box')) {
@@ -554,6 +669,10 @@ window.voteInPoll = voteInPoll;
 window.deletePoll = deletePoll;
 window.loadCampusPolls = loadCampusPolls;
 window.injectPollWidgets = injectPollWidgets;
+window.injectNewPostPollOption = injectNewPostPollOption;
+window.toggleNewPostPollBuilder = toggleNewPostPollBuilder;
+window.resetNewPostPollForm = resetNewPostPollForm;
+window.attachPollIfEnabledOnPostPublish = attachPollIfEnabledOnPostPublish;
 
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {

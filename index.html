@@ -500,7 +500,7 @@
         <button type="button" class="tab-btn" onclick="switchTab('feed')" id="btn-tab-feed">💬 Treffen</button>
 
         <div class="tab-btn-action-container">
-          <button type="button" class="tab-btn-action" onclick="openUploadModal()" title="Beitrag erstellen" aria-label="Neuen Beitrag erstellen">+</button>
+          <button type="button" class="tab-btn-action" onclick="openUploadModal(); if(window.injectNewPostPollOption) injectNewPostPollOption();" title="Beitrag erstellen" aria-label="Neuen Beitrag erstellen">+</button>
         </div>
 
         <button type="button" class="tab-btn" onclick="switchTab('global')" id="btn-tab-global">⚡ Chat</button>
@@ -669,7 +669,7 @@
   </div>
 
   <div id="media-upload-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.95); z-index: 150; backdrop-filter: blur(8px);">
-    <div class="container-box" style="width: 100%; max-width: 440px; margin: 16px; border: 1px solid rgba(99, 102, 241, 0.4); box-shadow: 0 15px 35px rgba(0, 0, 0, 0.8), 0 0 20px rgba(99, 102, 241, 0.15);">
+    <div class="container-box" style="width: 100%; max-width: 440px; max-height: 90vh; overflow-y: auto; margin: 16px; border: 1px solid rgba(99, 102, 241, 0.4); box-shadow: 0 15px 35px rgba(0, 0, 0, 0.8), 0 0 20px rgba(99, 102, 241, 0.15);">
       
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
         <h3 style="font-size: 16px; font-weight: 900; background: var(--gradient-main); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">🎬 Cyberpunk Media Uploader</h3>
@@ -689,10 +689,28 @@
       </div>
 
       <label for="media-caption-input" style="font-size: 11px; font-weight: 700; color: #818cf8; display: block; margin-bottom: 6px;">Bild- / Video-Untertitel:</label>
-      <input type="text" id="media-caption-input" placeholder="Schreibe eine fesselnde Confession..." style="margin-bottom: 16px;">
+      <input type="text" id="media-caption-input" placeholder="Schreibe eine fesselnde Confession..." style="margin-bottom: 14px;">
+
+      <div id="new-post-poll-section" style="margin-bottom: 14px; padding: 10px 12px; border-radius: 12px; background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(129, 140, 248, 0.3);">
+        <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 800; color: #e2e8f0; cursor: pointer; margin: 0;">
+          <input type="checkbox" id="new-post-poll-enabled" onchange="toggleNewPostPollBuilder(this.checked)" style="width: 15px; height: 15px; cursor: pointer;">
+          <span>📊 Umfrage zu diesem Beitrag / Story hinzufügen</span>
+        </label>
+        <div id="new-post-poll-builder" class="hidden" style="margin-top: 10px; display: flex; flex-direction: column; gap: 6px;">
+          <select id="new-post-poll-context" style="margin: 0; padding: 7px 10px; border-radius: 9px; border: 1px solid rgba(255,255,255,0.16); background: #0f172a; color: #fff; font-size: 11px;">
+            <option value="post">📝 Im Beitrag / Feed anzeigen</option>
+            <option value="story">⚡ In Stories anzeigen</option>
+          </select>
+          <input type="text" id="new-post-poll-question" placeholder="Umfragefrage eingeben *" style="margin: 0; padding: 8px 10px; border-radius: 9px; border: 1px solid rgba(255,255,255,0.16); background: rgba(15,23,42,0.85); color: #fff; font-size: 11px;">
+          <input type="text" id="new-post-poll-opt-1" placeholder="Antwortoption 1 *" style="margin: 0; padding: 7px 10px; border-radius: 9px; border: 1px solid rgba(255,255,255,0.16); background: rgba(15,23,42,0.85); color: #fff; font-size: 11px;">
+          <input type="text" id="new-post-poll-opt-2" placeholder="Antwortoption 2 *" style="margin: 0; padding: 7px 10px; border-radius: 9px; border: 1px solid rgba(255,255,255,0.16); background: rgba(15,23,42,0.85); color: #fff; font-size: 11px;">
+          <input type="text" id="new-post-poll-opt-3" placeholder="Antwortoption 3 (optional)" style="margin: 0; padding: 7px 10px; border-radius: 9px; border: 1px solid rgba(255,255,255,0.16); background: rgba(15,23,42,0.85); color: #fff; font-size: 11px;">
+          <input type="text" id="new-post-poll-opt-4" placeholder="Antwortoption 4 (optional)" style="margin: 0; padding: 7px 10px; border-radius: 9px; border: 1px solid rgba(255,255,255,0.16); background: rgba(15,23,42,0.85); color: #fff; font-size: 11px;">
+        </div>
+      </div>
 
       <div style="display: flex; gap: 8px;">
-        <button type="button" class="btn" onclick="uploadTrimmedMedia()" style="margin-top: 0; background: var(--gradient-main); font-weight: 900; box-shadow: 0 4px 15px rgba(99,102,241,0.4);">Beitrag veröffentlichen 🚀</button>
+        <button type="button" id="publish-post-with-poll-btn" onclick="if(window.attachPollIfEnabledOnPostPublish) attachPollIfEnabledOnPostPublish();" class="btn" style="margin-top: 0; background: var(--gradient-main); font-weight: 900; box-shadow: 0 4px 15px rgba(99,102,241,0.4);">Beitrag veröffentlichen 🚀</button>
         <button type="button" class="btn btn-secondary" onclick="closeMediaUploadModal()" style="margin-top: 0; width: auto;">Abbrechen</button>
       </div>
 
@@ -973,14 +991,23 @@
   document.addEventListener('DOMContentLoaded', () => {
     placeLanguageSwitcherRightOfLogout();
     syncFeedSpecialButtons();
+    if (typeof window.injectNewPostPollOption === 'function') {
+      window.injectNewPostPollOption();
+    }
   });
 
   window.addEventListener('load', () => {
     placeLanguageSwitcherRightOfLogout();
     syncFeedSpecialButtons();
+    if (typeof window.injectNewPostPollOption === 'function') {
+      window.injectNewPostPollOption();
+    }
     setTimeout(() => {
       placeLanguageSwitcherRightOfLogout();
       syncFeedSpecialButtons();
+      if (typeof window.injectNewPostPollOption === 'function') {
+        window.injectNewPostPollOption();
+      }
     }, 300);
     setTimeout(() => {
       placeLanguageSwitcherRightOfLogout();
