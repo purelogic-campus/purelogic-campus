@@ -127,6 +127,17 @@ function saveLocalMessages(groupId, messages) {
     } catch (_e) {}
 }
 
+function setModalVisible(modal, visible) {
+    if (!modal) return;
+    if (visible) {
+        modal.classList.remove('hidden');
+        modal.style.display = 'flex';
+    } else {
+        modal.classList.add('hidden');
+        modal.style.display = 'none';
+    }
+}
+
 export function injectGroupChatsAccessPoints() {
     if (typeof document === 'undefined' || !document.body) return;
 
@@ -186,7 +197,7 @@ function ensureGroupChatModal() {
         'z-index: 10040',
         'background: rgba(7, 11, 20, 0.92)',
         'backdrop-filter: blur(8px)',
-        'display: flex',
+        'display: none',
         'align-items: center',
         'justify-content: center',
         'padding: 12px',
@@ -323,7 +334,7 @@ export async function openLectureGroupChatsModal(preselectGroupId = null) {
     previousFocusElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     injectGroupChatsAccessPoints();
     const modal = ensureGroupChatModal();
-    modal.classList.remove('hidden');
+    setModalVisible(modal, true);
 
     await loadLectureGroups();
 
@@ -338,9 +349,7 @@ export async function openLectureGroupChatsModal(preselectGroupId = null) {
 
 export function closeLectureGroupChatsModal() {
     const modal = document.getElementById('lecture-group-chats-modal');
-    if (modal) {
-        modal.classList.add('hidden');
-    }
+    setModalVisible(modal, false);
     stopGroupRealtimeSync();
     if (previousFocusElement && previousFocusElement.isConnected) {
         previousFocusElement.focus();

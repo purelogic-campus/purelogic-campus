@@ -13,7 +13,6 @@
   <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/icon-512.png">
 
-  <!-- Sofortiges Theme-Setup vor dem ersten Rendern (Standard: dark, 4 Modes: dark, light-dark, soft-light, light) -->
   <script>
     (function () {
       try {
@@ -33,7 +32,6 @@
     })();
   </script>
 
-  <!-- Externe Bibliotheken (Supabase, Leaflet Karten, jsPDF) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -43,10 +41,8 @@
 </head>
 <body>
 
-<!-- Hauptcontainer der App-Karte -->
 <div class="app-card">
   
-  <!-- Header Bereich: PURE LOGIC Banner oben zentriert, Leiste direkt darunter + Sprachwähler rechts oben -->
   <div class="header" id="app-header">
     <div class="brand-banner-bar">
       <button type="button" class="logo" onclick="switchTab('reels')" title="Zur Startseite" aria-label="PURE LOGIC Startseite">PURE LOGIC</button>
@@ -90,46 +86,16 @@
         </button>
 
         <div class="lang-dropdown-list hidden" id="lang-dropdown-list" role="listbox" aria-label="Sprache auswählen">
-          <button type="button" class="lang-option-item active" data-lang="de" onclick="selectLanguageOption('de')">
-            <img class="lang-flag-img" src="icons/flags/de.svg" alt="DE">
-            <span class="lang-option-code">DE</span>
-          </button>
-          <button type="button" class="lang-option-item" data-lang="en" onclick="selectLanguageOption('en')">
-            <img class="lang-flag-img" src="icons/flags/en.svg" alt="EN">
-            <span class="lang-option-code">EN</span>
-          </button>
-          <button type="button" class="lang-option-item" data-lang="it" onclick="selectLanguageOption('it')">
-            <img class="lang-flag-img" src="icons/flags/it.svg" alt="IT">
-            <span class="lang-option-code">IT</span>
-          </button>
-          <button type="button" class="lang-option-item" data-lang="bks" onclick="selectLanguageOption('bks')">
-            <img class="lang-flag-img" src="icons/flags/bks.svg" alt="BKS">
-            <span class="lang-option-code">BKS</span>
-          </button>
-          <button type="button" class="lang-option-item" data-lang="tr" onclick="selectLanguageOption('tr')">
-            <img class="lang-flag-img" src="icons/flags/tr.svg" alt="TR">
-            <span class="lang-option-code">TR</span>
-          </button>
-          <button type="button" class="lang-option-item" data-lang="es" onclick="selectLanguageOption('es')">
-            <img class="lang-flag-img" src="icons/flags/es.svg" alt="ES">
-            <span class="lang-option-code">ES</span>
-          </button>
-          <button type="button" class="lang-option-item" data-lang="fr" onclick="selectLanguageOption('fr')">
-            <img class="lang-flag-img" src="icons/flags/fr.svg" alt="FR">
-            <span class="lang-option-code">FR</span>
-          </button>
-          <button type="button" class="lang-option-item" data-lang="pl" onclick="selectLanguageOption('pl')">
-            <img class="lang-flag-img" src="icons/flags/pl.svg" alt="PL">
-            <span class="lang-option-code">PL</span>
-          </button>
-          <button type="button" class="lang-option-item" data-lang="hu" onclick="selectLanguageOption('hu')">
-            <img class="lang-flag-img" src="icons/flags/hu.svg" alt="HU">
-            <span class="lang-option-code">HU</span>
-          </button>
-          <button type="button" class="lang-option-item" data-lang="uk" onclick="selectLanguageOption('uk')">
-            <img class="lang-flag-img" src="icons/flags/uk.svg" alt="UK">
-            <span class="lang-option-code">UK</span>
-          </button>
+          <button type="button" class="lang-option-item active" data-lang="de" onclick="selectLanguageOption('de')"><img class="lang-flag-img" src="icons/flags/de.svg" alt="DE"><span class="lang-option-code">DE</span></button>
+          <button type="button" class="lang-option-item" data-lang="en" onclick="selectLanguageOption('en')"><img class="lang-flag-img" src="icons/flags/en.svg" alt="EN"><span class="lang-option-code">EN</span></button>
+          <button type="button" class="lang-option-item" data-lang="it" onclick="selectLanguageOption('it')"><img class="lang-flag-img" src="icons/flags/it.svg" alt="IT"><span class="lang-option-code">IT</span></button>
+          <button type="button" class="lang-option-item" data-lang="bks" onclick="selectLanguageOption('bks')"><img class="lang-flag-img" src="icons/flags/bks.svg" alt="BKS"><span class="lang-option-code">BKS</span></button>
+          <button type="button" class="lang-option-item" data-lang="tr" onclick="selectLanguageOption('tr')"><img class="lang-flag-img" src="icons/flags/tr.svg" alt="TR"><span class="lang-option-code">TR</span></button>
+          <button type="button" class="lang-option-item" data-lang="es" onclick="selectLanguageOption('es')"><img class="lang-flag-img" src="icons/flags/es.svg" alt="ES"><span class="lang-option-code">ES</span></button>
+          <button type="button" class="lang-option-item" data-lang="fr" onclick="selectLanguageOption('fr')"><img class="lang-flag-img" src="icons/flags/fr.svg" alt="FR"><span class="lang-option-code">FR</span></button>
+          <button type="button" class="lang-option-item" data-lang="pl" onclick="selectLanguageOption('pl')"><img class="lang-flag-img" src="icons/flags/pl.svg" alt="PL"><span class="lang-option-code">PL</span></button>
+          <button type="button" class="lang-option-item" data-lang="hu" onclick="selectLanguageOption('hu')"><img class="lang-flag-img" src="icons/flags/hu.svg" alt="HU"><span class="lang-option-code">HU</span></button>
+          <button type="button" class="lang-option-item" data-lang="uk" onclick="selectLanguageOption('uk')"><img class="lang-flag-img" src="icons/flags/uk.svg" alt="UK"><span class="lang-option-code">UK</span></button>
         </div>
       </div>
     </div>
@@ -161,11 +127,8 @@
       <button type="button" class="forgot-password" onclick="handleForgotPassword()">Passwort vergessen?</button>
 
       <button type="button" class="btn" onclick="handleLogin()">Einloggen</button>
-      
       <button type="button" class="btn btn-secondary" onclick="openRegisterModal()" style="margin-top: 8px; background: rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.4); color: #818cf8; font-weight: 800;">+ Registrieren (Neuer Account)</button>
-      
       <button type="button" class="btn btn-secondary hidden" id="install-app-auth-btn" onclick="installPWA()" style="margin-top: 10px; background: rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.4); color: #818cf8; font-weight: 800;">📲 App für Homescreen herunterladen</button>
-      
       <button type="button" class="btn btn-secondary" onclick="openReportModal()" style="margin-top: 10px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444; font-size: 11px;">⚠️ Fehler / Problem melden (+5 Gratis-Punkte)</button>
     </div>
   </div>
@@ -178,15 +141,11 @@
         <button type="button" onclick="closeRegisterModal()" aria-label="Registrierung schließen" style="background: transparent; border: none; color: var(--text-muted); font-size: 16px; cursor: pointer;">✕</button>
       </div>
       <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 14px;">Erstelle deinen verifizierten Studenten-Account mit deiner offiziellen Uni-Adresse.</p>
-
       <div id="reg-msg" class="msg-box hidden" style="margin-bottom: 10px;"></div>
-
       <label for="reg-fullname" style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Dein Name:</label>
       <input type="text" id="reg-fullname" placeholder="Max Mustermann" style="margin-bottom: 10px;">
-
       <label for="reg-email" style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Offizielle Uni-E-Mail-Adresse (.ac.at):</label>
       <input type="email" id="reg-email" placeholder="name@uni.ac.at" style="margin-bottom: 10px;">
-
       <label for="reg-password" style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Passwort (min. 8 Zeichen, 1 Zahl, 1 Sonderzeichen):</label>
       <div class="password-container" style="margin-bottom: 4px;">
         <input type="password" id="reg-password" placeholder="••••••••">
@@ -195,7 +154,6 @@
       <div style="font-size: 10px; color: var(--text-muted); margin-bottom: 14px; line-height: 1.3;">
         Muss mindestens 8 Zeichen lang sein sowie eine Zahl und ein Sonderzeichen enthalten.
       </div>
-
       <div style="display: flex; gap: 8px;">
         <button type="button" class="btn" onclick="submitRegistration()" style="margin-top: 0; background: var(--gradient-main); font-weight: 900;">Account erstellen 🚀</button>
         <button type="button" class="btn btn-secondary" onclick="closeRegisterModal()" style="margin-top: 0; width: auto;">Abbrechen</button>
@@ -203,18 +161,14 @@
     </div>
   </div>
 
-  <!-- Haupt-App-Layout nach erfolgreichem Login -->
+  <!-- Haupt-App-Layout -->
   <div id="main-app" class="hidden main-app-layout">
-    
     <div id="campus-drop-banner" class="flash-banner-active" style="display:none; width: 100%; background: linear-gradient(135deg, #f59e0b, #ec4899); color: white; padding: 10px 14px; border-radius: 12px; margin-bottom: 6px; text-align: center; cursor: pointer; flex-shrink: 0; border: 2px solid rgba(255, 255, 255, 0.6);" onclick="claimActiveDrop()">
       <div style="font-weight: 900; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">⚡ FLASH DROP: 50 Extra-Punkte!</div>
       <div style="font-size: 10px; opacity: 0.95; margin-top: 2px; font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,0.2);">Nur für kurze Zeit verfügbar! [Jetzt tippen 🎁]</div>
     </div>
 
-    <!-- Sektion für die verschiedenen App-Tabs -->
     <div class="tab-content-wrapper">
-      
-      <!-- 1. Lecture Mode Tab -->
       <div id="tab-lecture-mode" class="lecture-mode-view tab-content hidden">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
           <div>
@@ -223,16 +177,13 @@
           </div>
           <button type="button" class="btn btn-secondary" style="width: auto; margin-top: 0; padding: 6px 12px; font-size: 11px;" onclick="toggleLectureMode()">Modus beenden ✕</button>
         </div>
-
         <textarea id="lecture-notes-input" class="lecture-notepad" placeholder="Schreibe hier deine Vorlesungsnotizen mit..."></textarea>
-
         <div class="container-box" style="margin-top: 8px; padding: 10px; flex-shrink: 0;">
           <div style="font-size: 11px; font-weight: 700; color: #cbd5e1; margin-bottom: 6px;">💾 Notiz auf Gerät speichern:</div>
           <div style="display: flex; gap: 6px; margin-bottom: 6px;">
             <input type="text" id="lecture-file-name" placeholder="Dateiname (z.B. Vorlesung_Mathe)" style="margin: 0; flex: 2; font-size: 11px; padding: 8px 10px;">
             <input type="date" id="lecture-file-date" style="margin: 0; flex: 1; font-size: 11px; padding: 8px 10px; background: var(--card); color: var(--text); border: 1px solid var(--border); border-radius: 12px;">
           </div>
-          
           <div style="display: flex; gap: 6px; margin-bottom: 6px; align-items: center;">
             <label for="lecture-file-format" style="font-size: 11px; font-weight: 600; color: var(--text-muted); white-space: nowrap;">Format:</label>
             <select id="lecture-file-format" style="margin: 0; font-size: 11px; padding: 8px 10px; background: var(--card); color: var(--text); border: 1px solid var(--border); border-radius: 12px;">
@@ -240,12 +191,10 @@
               <option value="pdf">.pdf (Dokument)</option>
             </select>
           </div>
-
           <button type="button" class="btn" onclick="saveLectureNotesToFile()" style="margin: 0; padding: 9px; font-size: 11px; font-weight: 800;">📥 Als Datei herunterladen</button>
         </div>
       </div>
 
-      <!-- 2. Live Streams Tab -->
       <div id="tab-live" class="tab-content hidden">
         <div style="padding: 10px 16px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; background: rgba(0,0,0,0.2);">
           <div class="category-group" id="live-filter-group" style="margin: 0; overflow-x: auto;">
@@ -257,20 +206,17 @@
           </div>
           <button type="button" class="btn" id="start-stream-btn" style="width: auto; margin: 0; padding: 6px 12px; font-size: 11px;" onclick="handlePreLiveCheck()">+ Start</button>
         </div>
-
         <div class="reel-card-wrapper" id="live-streams-list" style="flex: 1; overflow-y: auto; scroll-snap-type: y mandatory; padding: 10px 0;">
           <p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;">Lade aktive Live-Streams...</p>
         </div>
       </div>
 
-      <!-- 3. Reels / Campus Feed Tab -->
       <div id="tab-reels" class="tab-content">
         <div class="feed-filter-bar" id="feed-filter-bar" role="tablist" aria-label="Feed-Ansichten">
           <div class="feed-specials-row">
             <button type="button" class="feed-subtab-btn feed-subtab-duell" id="subtab-uni-duell" onclick="switchTab('ranking'); if(window.loadRankingData) loadRankingData();" title="Wiener Uni-Duell & Rangliste öffnen">🏆 Wiener Uni-Duell</button>
             <button type="button" class="feed-subtab-btn feed-subtab-match" id="subtab-match-mittwoch" onclick="openCrushModal()" title="Match Mittwoch & Crush Radar öffnen">💖 Match Mittwoch</button>
           </div>
-
           <div class="feed-tabs-row">
             <button type="button" class="feed-subtab-btn active" style="font-size: 12px; font-weight: 800; cursor: pointer; color: var(--primary);" id="subtab-foryou" onclick="setReelFilter('foryou')">✨ Für dich</button>
             <button type="button" class="feed-subtab-btn" style="font-size: 12px; font-weight: 800; cursor: pointer; color: var(--text-muted);" id="subtab-discover" onclick="setReelFilter('discover')">🔥 Entdecken</button>
@@ -278,13 +224,11 @@
             <button type="button" class="feed-subtab-btn" style="font-size: 12px; font-weight: 800; cursor: pointer; color: var(--danger);" id="subtab-live" onclick="switchTab('live')">🔴 LIVE</button>
           </div>
         </div>
-
         <div class="reel-card-wrapper" id="reels-list" style="flex: 1; overflow-y: auto; scroll-snap-type: y mandatory; padding: 0 12px 10px 12px;">
           <p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;">Lade Campus-Feeds...</p>
         </div>
       </div>
 
-      <!-- 4. Spontane Treffen Tab -->
       <div id="tab-feed" class="tab-content hidden">
         <div class="container-box" style="margin-bottom: 12px;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px; gap: 6px; flex-wrap: wrap;">
@@ -294,7 +238,6 @@
               <button type="button" class="btn" style="width:auto; margin-top:0; padding: 6px 12px; font-size: 12px;" onclick="openUploadModal()">+ Erstellen</button>
             </div>
           </div>
-
           <div class="category-group" id="filter-group">
             <button type="button" class="cat-pill active" onclick="setFilter(this, 'Alle')">Alle</button>
             <button type="button" class="cat-pill" onclick="setFilter(this, '☕ Kaffee')">☕ Kaffee</button>
@@ -303,19 +246,16 @@
             <button type="button" class="cat-pill" onclick="setFilter(this, '🏀 Sport')">🏀 Sport</button>
           </div>
         </div>
-
         <div id="feed-list" style="overflow-y:auto; flex:1;">
           <p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;">Lade Treffen...</p>
         </div>
       </div>
 
-      <!-- 5. Ranking & Uni-Duell Tab -->
       <div id="tab-ranking" class="tab-content hidden">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px; flex-shrink:0;">
           <h3 style="font-size: 16px; font-weight: 800;">🏆 Uni-Duell & Top 100</h3>
           <button type="button" class="btn btn-secondary" onclick="if(window.loadRankingData) loadRankingData();" style="width: auto; margin-top: 0; padding: 4px 10px; font-size: 10px;">🔄 Aktualisieren</button>
         </div>
-
         <div style="overflow-y: auto; flex: 1; padding-bottom: 20px;">
           <div class="container-box" style="margin-bottom: 12px;">
             <h4 style="font-size: 13px; font-weight: 800; margin-bottom: 8px; color: #818cf8;">🎓 Wiener Uni-Duell (Pro-Kopf)</h4>
@@ -323,7 +263,6 @@
               <p style="color: var(--text-muted); font-size: 12px;">Berechne Uni-Wertung...</p>
             </div>
           </div>
-
           <h4 style="font-size: 13px; font-weight: 800; margin-bottom: 6px;">⭐ Wall of Fame (Top Creator)</h4>
           <div id="top-creators-list" class="container-box" style="display: flex; flex-direction: column; gap: 6px;">
             <p style="color: var(--text-muted); font-size: 12px;">Lade Top Creator...</p>
@@ -331,12 +270,11 @@
         </div>
       </div>
 
-      <!-- 6. Globaler Chat Tab (inkl. integrierter Vorlesungs-Gruppenchats) -->
       <div id="tab-global" class="tab-content hidden">
         <div class="chat-container container-box" style="height: 100%; padding: 0; overflow: hidden; display: flex; flex-direction: column;">
           <div style="padding: 10px 14px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-shrink: 0; background: rgba(255, 255, 255, 0.02);">
             <span style="font-size: 13px; font-weight: 800; color: var(--text);">⚡ Campus-Chat</span>
-            <button type="button" id="chat-group-chats-btn" data-open-group-chats onclick="openLectureGroupChatsModal()" title="Vorlesungs- & Studiengang-Gruppenchats öffnen" style="background: rgba(99,102,241,0.18); border: 1px solid rgba(129,140,248,0.45); color: #c7d2fe; border-radius: 10px; padding: 6px 12px; font-size: 11px; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;">
+            <button type="button" id="chat-group-chats-btn" data-open-group-chats onclick="if(typeof window.openLectureGroupChatsModal==='function'){window.openLectureGroupChatsModal();}" title="Vorlesungs- & Studiengang-Gruppenchats öffnen" style="background: rgba(99,102,241,0.18); border: 1px solid rgba(129,140,248,0.45); color: #c7d2fe; border-radius: 10px; padding: 6px 12px; font-size: 11px; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;">
               🎓 Gruppen
             </button>
           </div>
@@ -350,7 +288,6 @@
         </div>
       </div>
 
-      <!-- 7. Postfach / Direktnachrichten Tab -->
       <div id="tab-inbox" class="tab-content hidden">
         <div class="chat-container container-box" style="height: 100%; padding: 12px; overflow: hidden; display: flex; flex-direction: column; gap: 8px;">
           <div id="dm-inbox-shell" style="display: grid; grid-template-columns: minmax(210px, 280px) minmax(0, 1fr); gap: 12px; flex: 1; min-height: 0; overflow: hidden;">
@@ -380,7 +317,6 @@
         </div>
       </div>
 
-      <!-- 8. Profil Tab -->
       <div id="tab-profile" class="tab-content hidden">
         <div style="overflow-y: auto; flex: 1; padding: 4px; min-height: 0; height: 100%;">
           <div class="profile-header-card container-box" style="margin-bottom: 12px;">
@@ -406,7 +342,6 @@
             </div>
           </div>
 
-          <!-- Punkt 27: Lokale Benachrichtigungs-Historie / Activity Feed -->
           <div id="profile-activity-feed" style="max-width: 600px; margin-bottom: 14px;"></div>
 
           <div class="container-box" style="max-width: 600px; margin-bottom: 20px;">
@@ -443,7 +378,6 @@
         </div>
       </div>
 
-      <!-- 9. Admin Dashboard Tab -->
       <div id="tab-admin" class="tab-content hidden">
         <div class="container-box" style="max-width: 600px; padding-bottom: 20px;">
           <h3 style="font-size: 16px; font-weight: 800; margin-bottom: 4px; color: var(--admin);">⚡ Admin-Interface: Campus-Drops & Test-Tools</h3>
@@ -497,7 +431,6 @@
 
     </div>
 
-    <!-- Untere Navigation & Footer Links -->
     <div class="bottom-controls-wrapper">
       <nav class="nav-tabs" id="bottom-nav-bar" aria-label="Hauptnavigation">
         <button type="button" class="tab-btn active" onclick="switchTab('reels')" id="btn-tab-reels">✨ Feed</button>
@@ -524,10 +457,8 @@
 
   </div>
 
-  <!-- VOLLSTÄNDIG FLEXIBLES & OPTIMIERTES LIVE FULLSCREEN MODAL -->
+  <!-- Modals -->
   <div id="live-fullscreen-modal" class="hidden tab-content" style="position: absolute; top:0; left:0; width:100%; height:100%; background: #000; z-index: 200; display: flex; flex-direction: column; overflow: hidden;">
-    
-    <!-- Modal Header -->
     <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: rgba(9,13,22,0.95); border-bottom: 1px solid var(--border); flex-shrink: 0; z-index: 210;">
       <div>
         <h2 id="active-live-title-display" style="font-size: 14px; font-weight: 800; color: #fff; margin: 0;">🔴 Live Stream</h2>
@@ -535,24 +466,12 @@
       </div>
       <button type="button" class="btn btn-secondary" onclick="closeLiveFullscreen()" style="padding: 4px 10px; font-size: 11px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); width: auto; margin:0;">✕ Schließen</button>
     </div>
-    
-    <!-- Video Player Container -->
-    <div id="live-stream-player-container" style="flex: 1; position: relative; width: 100%; background: #000; display: flex; align-items: center; justify-content: center; overflow: hidden; min-height: 0;">
-      <!-- Dynamischer Inhalt -->
-    </div>
-
-    <!-- Unterer Bereich für Chat & Geschenke -->
+    <div id="live-stream-player-container" style="flex: 1; position: relative; width: 100%; background: #000; display: flex; align-items: center; justify-content: center; overflow: hidden; min-height: 0;"></div>
     <div style="width: 100%; background: rgba(9,13,22,0.98); border-top: 1px solid var(--border); display: flex; flex-direction: column; padding: 8px 12px; box-sizing: border-box; flex-shrink: 0; max-height: 42vh;">
-      
-      <!-- Chat Nachrichten -->
       <div id="live-chat-messages" style="height: 65px; min-height: 50px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; margin-bottom: 4px; font-size: 11px; padding-right: 4px;">
         <div style="color: var(--text-muted); text-align: center;">Willkommen im Live-Chat! 💬</div>
       </div>
-
-      <!-- Eingabe & Steuerungsbereich -->
-      <div id="live-chat-input-container" style="display: flex; flex-direction: column; gap: 4px; width: 100%;">
-        <!-- Wird dynamisch befüllt -->
-      </div>
+      <div id="live-chat-input-container" style="display: flex; flex-direction: column; gap: 4px; width: 100%;"></div>
     </div>
   </div>
 
@@ -560,23 +479,19 @@
     <div class="container-box" style="width: 100%; max-width: 400px; margin: 10px;">
       <h3 style="margin-bottom: 4px; font-weight: 900; color: var(--primary);">🎁 Mehr Punkte sammeln</h3>
       <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 14px; line-height: 1.4;">Wähle eine Methode, um deinen Punktestand und dein Uni-Ranking zu pushen:</p>
-      
       <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px;">
         <button type="button" onclick="closeMorePointsModal(); openCampusQuizModal();" style="text-align: left; width: 100%; background: rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.3); padding: 12px; border-radius: 12px; cursor: pointer;">
           <div style="font-weight: 800; font-size: 13px; color: #818cf8; margin-bottom: 2px;">🧠 Tägliches Campus- & Allgemein-Quiz</div>
           <div style="font-size: 11px; color: var(--text-muted);">Teste dein Wissen in 15 Sek. pro Frage & hol dir Bonuspunkte!</div>
         </button>
-
         <button type="button" onclick="closeMorePointsModal(); openActiveSpotsModal();" style="text-align: left; width: 100%; background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.3); padding: 12px; border-radius: 12px; cursor: pointer;">
           <div style="font-weight: 800; font-size: 13px; color: var(--admin); margin-bottom: 2px;">📍 Vor-Ort Campus-Drops</div>
           <div style="font-size: 11px; color: var(--text-muted);">Checke aktive Partner-Spots in Wien ab.</div>
         </button>
-
         <button type="button" onclick="closeMorePointsModal(); openBlackboardModal();" style="text-align: left; width: 100%; background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); padding: 12px; border-radius: 12px; cursor: pointer;">
           <div style="font-weight: 800; font-size: 13px; color: #10b981; margin-bottom: 2px;">📌 Schwarzes Brett (Marktplatz)</div>
           <div style="font-size: 11px; color: var(--text-muted);">Finde WG-Zimmer, Lernpartner und Skripten.</div>
         </button>
-
         <button type="button" onclick="closeMorePointsModal(); switchTab('profile');" style="text-align: left; width: 100%; background: rgba(236,72,153,0.15); border: 1px solid rgba(236,72,153,0.3); padding: 12px; border-radius: 12px; cursor: pointer;">
           <div style="font-weight: 800; font-size: 13px; color: var(--accent); margin-bottom: 2px;">📲 Profil & Social Sharing</div>
           <div style="font-size: 11px; color: var(--text-muted);">Teile deine Erfolge in WhatsApp / Insta für Hype-Punkte.</div>
@@ -593,12 +508,10 @@
         <button type="button" class="btn btn-secondary" style="width: auto; padding: 4px 10px; font-size: 11px; margin-top: 0;" onclick="toggleProfForm()">+ Review schreiben</button>
       </div>
       <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;">Altklausuren-Tipps, Prof-Erfahrungen und Schwierigkeitsgrade.</p>
-      
       <div id="prof-review-form-container" class="hidden" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 12px;">
         <h4 style="font-size: 13px; font-weight: 800; margin-bottom: 6px; color: var(--text);">✍️ Neue Erfahrung teilen</h4>
         <input type="text" id="prof-name-input" placeholder="Name des Professors (z. B. Prof. Müller)" style="margin-bottom: 6px;">
         <input type="text" id="prof-subject-input" placeholder="Modul / Vorlesung (z. B. Analysis 1)" style="margin-bottom: 6px;">
-        
         <div style="display: flex; gap: 8px; margin-bottom: 6px;">
           <div style="flex: 1;">
             <label for="prof-rating-select" style="font-size: 10px; color: var(--text-muted);">Bewertung:</label>
@@ -627,7 +540,6 @@
           <button type="button" class="btn btn-secondary" onclick="toggleProfForm()" style="margin-top: 0; padding: 8px; width: auto;">Abbrechen</button>
         </div>
       </div>
-
       <input type="text" id="prof-search-input" placeholder="🔍 Nach Prof oder Fach suchen..." oninput="filterProfReviews()" style="margin-bottom: 10px;">
       <div id="prof-reviews-list" style="overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;">
         <p style="font-size: 12px; color: var(--text-muted); text-align: center; padding: 20px;">Lade Bewertungen...</p>
@@ -674,27 +586,21 @@
 
   <div id="media-upload-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.95); z-index: 150; backdrop-filter: blur(8px);">
     <div class="container-box" style="width: 100%; max-width: 440px; max-height: 90vh; overflow-y: auto; margin: 16px; border: 1px solid rgba(99, 102, 241, 0.4); box-shadow: 0 15px 35px rgba(0, 0, 0, 0.8), 0 0 20px rgba(99, 102, 241, 0.15);">
-      
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
         <h3 style="font-size: 16px; font-weight: 900; background: var(--gradient-main); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">🎬 Cyberpunk Media Uploader</h3>
         <button type="button" onclick="closeMediaUploadModal()" aria-label="Upload-Modal schließen" style="background: transparent; border: none; color: var(--text-muted); font-size: 16px; cursor: pointer;">✕</button>
       </div>
-      
       <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 14px; line-height: 1.4;">Teile deine Confession oder Clips im Campus-Feed. Videos werden automatisch auf max. 30 Sekunden optimiert.</p>
-      
       <label for="media-file-input" style="font-size: 11px; font-weight: 700; color: #818cf8; display: block; margin-bottom: 6px;">Mediendatei auswählen (Video / Foto):</label>
       <div style="border: 2px dashed rgba(99, 102, 241, 0.3); background: rgba(99, 102, 241, 0.03); padding: 16px; border-radius: 12px; text-align: center; margin-bottom: 12px;">
         <input type="file" id="media-file-input" accept="video/*,image/*" onchange="handleMediaSelection(event)" style="font-size: 11px; color: var(--text-muted); width: 100%; cursor: pointer;">
       </div>
-
       <div id="trimmer-container" class="hidden" style="margin-bottom: 12px; background: rgba(0,0,0,0.4); padding: 8px; border-radius: 10px; border: 1px solid var(--border);">
         <video id="trim-video-preview" controls style="width: 100%; max-height: 160px; border-radius: 8px; background: #000; margin-bottom: 6px;"></video>
         <div style="font-size: 10px; font-weight: 700; text-align: center;" id="video-duration-info">Dauer: 0s</div>
       </div>
-
       <label for="media-caption-input" style="font-size: 11px; font-weight: 700; color: #818cf8; display: block; margin-bottom: 6px;">Bild- / Video-Untertitel:</label>
       <input type="text" id="media-caption-input" placeholder="Schreibe eine fesselnde Confession..." style="margin-bottom: 14px;">
-
       <div id="new-post-poll-section" style="margin-bottom: 14px; padding: 10px 12px; border-radius: 12px; background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(129, 140, 248, 0.3);">
         <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 800; color: #e2e8f0; cursor: pointer; margin: 0;">
           <input type="checkbox" id="new-post-poll-enabled" onchange="toggleNewPostPollBuilder(this.checked)" style="width: 15px; height: 15px; cursor: pointer;">
@@ -712,19 +618,16 @@
           <input type="text" id="new-post-poll-opt-4" placeholder="Antwortoption 4 (optional)" style="margin: 0; padding: 7px 10px; border-radius: 9px; border: 1px solid rgba(255,255,255,0.16); background: rgba(15,23,42,0.85); color: #fff; font-size: 11px;">
         </div>
       </div>
-
       <div style="display: flex; gap: 8px;">
         <button type="button" id="publish-post-with-poll-btn" onclick="if(window.attachPollIfEnabledOnPostPublish) attachPollIfEnabledOnPostPublish();" class="btn" style="margin-top: 0; background: var(--gradient-main); font-weight: 900; box-shadow: 0 4px 15px rgba(99,102,241,0.4);">Beitrag veröffentlichen 🚀</button>
         <button type="button" class="btn btn-secondary" onclick="closeMediaUploadModal()" style="margin-top: 0; width: auto;">Abbrechen</button>
       </div>
-
     </div>
   </div>
 
   <div id="public-profile-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.95); z-index: 220;">
     <div class="container-box" style="width: 100%; max-width: 450px; max-height: 90vh; overflow-y: auto; margin: 10px; position: relative;">
       <button type="button" onclick="closePublicProfileModal()" aria-label="Profilansicht schließen" style="position: absolute; top: 16px; right: 16px; background: rgba(255,255,255,0.1); border: none; color: #fff; width: 32px; height: 32px; border-radius: 50%; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center;">✕</button>
-      
       <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 20px;">
         <img id="pub-profile-avatar" src="" style="width: 70px; height: 70px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent); background: #000;" alt="Avatar">
         <div>
@@ -733,7 +636,6 @@
           <div id="pub-profile-badge-container"></div>
         </div>
       </div>
-
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;">
         <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); padding: 10px; border-radius: 10px; text-align: center;">
           <div style="font-size: 10px; color: var(--text-muted);">Universität</div>
@@ -744,12 +646,10 @@
           <div id="pub-profile-score" style="font-size: 12px; font-weight: 800; color: #818cf8; margin-top: 2px;">0 P</div>
         </div>
       </div>
-
       <div style="margin-bottom: 20px;">
         <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">Bio</div>
         <p id="pub-profile-bio" style="font-size: 13px; color: var(--text); background: rgba(255,255,255,0.02); padding: 10px; border-radius: 8px; border: 1px solid var(--border); margin: 0; min-height: 40px;">-</p>
       </div>
-
       <div>
         <div style="font-size: 12px; font-weight: 700; color: #fff; margin-bottom: 10px;">Beiträge von diesem Nutzer</div>
         <div id="pub-profile-posts-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;"></div>
@@ -784,20 +684,15 @@
     <div class="container-box" style="width: 100%; max-width: 450px; padding: 20px; border: 1px solid rgba(239, 68, 68, 0.4);">
       <h3 style="font-size: 18px; font-weight: 900; color: #ef4444; margin-bottom: 6px;">⚠️ Problem / Fehler melden</h3>
       <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;">Beschreibe uns das Problem. Als Dankeschön erhältst du direkt **5 Gratis-Punkte** auf dein Konto! 🎁</p>
-      
       <label for="bug-report-email" style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Deine E-Mail-Adresse (für Rückmeldung):</label>
       <input type="email" id="bug-report-email" placeholder="deine.mail@uni.at" style="margin-bottom: 10px;">
-
       <label for="bug-report-details" style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Fehlerbeschreibung / Anliegen:</label>
       <textarea id="bug-report-details" rows="4" placeholder="Was ist passiert? Welcher Fehler tritt auf?" style="margin-bottom: 10px; resize: none;"></textarea>
-      
       <label for="bug-report-screenshot" style="font-size: 11px; font-weight: 600; color: #818cf8; display: block; margin-bottom: 4px;">Screenshot hochladen (optional):</label>
       <input type="file" id="bug-report-screenshot" accept="image/*" style="font-size: 11px; color: var(--text-muted); margin-bottom: 14px; width: 100%;">
-
       <div id="bug-report-msg" class="hidden" style="font-size: 11px; padding: 8px; border-radius: 8px; margin-bottom: 10px; background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3);">
         Dein Anliegen ist uns sehr wichtig und bei der nächsten Prüfung werden wir es genau unter die Lupe nehmen ! Danke für dein Feedback! (+5 Punkte gutgeschrieben ✨)
       </div>
-
       <div style="display: flex; gap: 8px;">
         <button type="button" class="btn" onclick="submitBugReport()" style="margin-top:0; background: #ef4444; font-weight: 800;">Meldung abschicken 🚀</button>
         <button type="button" class="btn btn-secondary" onclick="document.getElementById('report-modal').classList.add('hidden')" style="margin-top:0; width:auto;">Schließen</button>
@@ -807,7 +702,6 @@
 
 </div>
 
-<!-- Modul-Skripte Einbindung -->
 <script type="module" src="js/config.js?v=6"></script>
 <script type="module" src="js/state.js?v=6"></script>
 <script type="module" src="js/i18n.js?v=6"></script>
@@ -827,7 +721,6 @@
 <script type="module" src="js/features/group-chats.js?v=6"></script>
 <script type="module" src="js/features/polls.js?v=6"></script>
 
-<!-- Inline-Logik für Custom-Sprachmenü rechts oben, Flaggen-Dateien, Feed-Special-Leiste & Bug-Reports -->
 <script type="module">
   import { _supabase } from './js/config.js?v=6';
   import { state } from './js/state.js?v=6';
@@ -1109,7 +1002,6 @@
   };
 </script>
 
-<!-- Zentrales Hauptskript -->
 <script type="module" src="js/main.js?v=6"></script>
 </body>
 </html>
