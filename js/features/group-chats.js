@@ -55,11 +55,11 @@ let previousFocusElement = null;
 
 function escapeHtml(str) {
     return String(str || '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
+        .replace(/&/g, '&')
+        .replace(/</g, '<')
+        .replace(/>/g, '>')
+        .replace(/"/g, '"')
+        .replace(/'/g, ''');
 }
 
 function canUseNetwork() {
@@ -130,6 +130,9 @@ function saveLocalMessages(groupId, messages) {
 export function injectGroupChatsAccessPoints() {
     if (typeof document === 'undefined' || !document.body) return;
 
+    const existingFab = document.getElementById('pl-floating-group-chats-btn');
+    if (existingFab) existingFab.remove();
+
     const dmHost =
         document.getElementById('tab-dm') ||
         document.getElementById('dm-section') ||
@@ -164,34 +167,6 @@ export function injectGroupChatsAccessPoints() {
             </button>
         `;
         dmHost.prepend(banner);
-    }
-
-    if (!document.getElementById('pl-floating-group-chats-btn')) {
-        const fab = document.createElement('button');
-        fab.id = 'pl-floating-group-chats-btn';
-        fab.type = 'button';
-        fab.setAttribute('aria-label', 'Vorlesungs-Gruppenchats öffnen');
-        fab.onclick = () => openLectureGroupChatsModal();
-        fab.style.cssText = [
-            'position: fixed',
-            'left: 14px',
-            'bottom: 74px',
-            'z-index: 9980',
-            'background: linear-gradient(135deg, #4f46e5, #9333ea)',
-            'border: 1px solid rgba(199, 210, 254, 0.45)',
-            'color: #ffffff',
-            'font-size: 12px',
-            'font-weight: 900',
-            'padding: 9px 13px',
-            'border-radius: 999px',
-            'box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45)',
-            'cursor: pointer',
-            'display: inline-flex',
-            'align-items: center',
-            'gap: 6px'
-        ].join(';');
-        fab.innerHTML = '<span>🎓</span><span>Gruppen</span>';
-        document.body.appendChild(fab);
     }
 }
 
@@ -235,7 +210,7 @@ function ensureGroupChatModal() {
                         + Neue Gruppe
                     </button>
                     <button type="button" onclick="closeLectureGroupChatsModal()" aria-label="Gruppenchats schließen" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.14); color: #f8fafc; width: 32px; height: 32px; border-radius: 10px; font-size: 18px; line-height: 1; cursor: pointer;">
-                        &times;
+                        ×
                     </button>
                 </div>
             </div>

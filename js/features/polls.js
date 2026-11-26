@@ -337,10 +337,41 @@ export async function voteInPoll(pollId, optionId) {
     }
 }
 
+export async function deletePoll(pollId) {
+    if (!pollId) return;
+    const myEmail = getCurrentEmail();
+    const poll = pollsCache.find((p) => String(p.id) === String(pollId));
+    if (!poll) return;
+
+    if (!myEmail || String(poll.creator_email || '').toLowerCase() !== myEmail) {
+        alert('Nur die Person, die diese Umfrage erstellt hat, kann sie löschen.');
+        return;
+    }
+
+    pollsCache = pollsCache.filter((p) => String(p.id) !== String(pollId));
+    saveLocalPolls(pollsCache);
+    if (votesMap[pollId]) {
+        delete votesMap[pollId];
+        saveLocalVotes(votesMap);
+    }
+    renderAllPollWidgets();
+
+    if (canUseNetwork()) {
+        try {
+            await _supabase
+                .from('campus_polls')
+                .delete()
+                .eq('id', pollId);
+        } catch (_e) {}
+    }
+}
+
 function buildPollCardHtml(poll) {
     const options = Array.isArray(poll.options) ? poll.options : [];
     const { countsByOption, totalVotes, myChoice } = getPollResults(poll.id);
     const badgeLabel = poll.context_type === 'story' ? '⚡ Story-Umfrage' : '📝 Beitrags-Umfrage';
+    const myEmail = getCurrentEmail();
+    const isCreator = myEmail && String(poll.creator_email || '').toLowerCase() === myEmail;
 
     const optionsHtml = options.map((opt) => {
         const count = countsByOption[opt.id] || 0;
@@ -366,7 +397,10 @@ function buildPollCardHtml(poll) {
                 <span style="background: rgba(99, 102, 241, 0.18); color: #a5b4fc; font-weight: 800; padding: 2px 8px; border-radius: 999px;">
                     ${badgeLabel}
                 </span>
-                <span>von ${escapeHtml(getShortName(poll.creator_email))} • ${totalVotes} ${totalVotes === 1 ? 'Stimme' : 'Stimmen'}</span>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span>von ${escapeHtml(getShortName(poll.creator_email))} • ${totalVotes} ${totalVotes === 1 ? 'Stimme' : 'Stimmen'}</span>
+                    ${isCreator ? `<button type="button" onclick="deletePoll('${escapeHtml(poll.id)}')" aria-label="Umfrage löschen" style="background: rgba(239,68,68,0.16); border: 1px solid rgba(239,68,68,0.35); color: #fca5a5; border-radius: 6px; padding: 1px 6px; font-size: 10px; font-weight: 800; cursor: pointer;">✕</button>` : ''}
+                </div>
             </div>
             <div style="font-size: 13px; font-weight: 800; color: #f8fafc; line-height: 1.35;">
                 ${escapeHtml(poll.question)}
@@ -407,7 +441,7 @@ export function injectPollWidgets() {
     if (reelsTab && !document.getElementById('campus-story-polls-box')) {
         const storyBox = document.createElement('div');
         storyBox.id = 'campus-story-polls-box';
-        storyBox.style.cssText = 'margin: 0 12px 10px 12px; padding: 10px 12px; border-radius: 14px; background: rgba(15, 23, 42, 0.72); border: 1px solid rgba(148, 163, 184, 0.16); flex-shrink: 0;';
+        storyBox.style.cssText = 'margin: 10px 12px; padding: 10px 12px; border-radius: 14px; background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(148, 163, 184, 0.22); flex-shrink: 0;';
         reelsTab.appendChild(storyBox);
     }
 
@@ -415,7 +449,7 @@ export function injectPollWidgets() {
     if (feedTab && !document.getElementById('campus-post-polls-box')) {
         const postBox = document.createElement('div');
         postBox.id = 'campus-post-polls-box';
-        postBox.style.cssText = 'margin: 8px 0 12px 0; padding: 10px 12px; border-radius: 14px; background: rgba(15, 23, 42, 0.72); border: 1px solid rgba(148, 163, 184, 0.16); flex-shrink: 0;';
+        postBox.style.cssText = 'margin: 8px 0 12px 0; padding: 10px 12px; border-radius: 14px; background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(148, 163, 184, 0.22); flex-shrink: 0;';
         const feedList = document.getElementById('feed-list');
         if (feedList && feedList.parentElement === feedTab) {
             feedTab.insertBefore(postBox, feedList);
@@ -506,6 +540,7 @@ window.closeCreatePollModal = closeCreatePollModal;
 window.addPollOptionInput = addPollOptionInput;
 window.submitNewPoll = submitNewPoll;
 window.voteInPoll = voteInPoll;
+window.deletePoll = deletePoll;
 window.loadCampusPolls = loadCampusPolls;
 window.injectPollWidgets = injectPollWidgets;
 
