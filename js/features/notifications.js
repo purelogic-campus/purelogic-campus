@@ -13,11 +13,11 @@ const recentEventKeys = new Set();
 
 function escapeHtml(str) {
     return String(str || '')
-        .replace(/&/g, '&')
-        .replace(/</g, '<')
-        .replace(/>/g, '>')
-        .replace(/"/g, '"')
-        .replace(/'/g, ''');
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }
 
 function getDisplayNameFromEmail(email) {
@@ -563,7 +563,7 @@ export async function sendInteractionPush({
     } else if (type === 'comment') {
         title = 'Neuer Kommentar 💬';
         const snippet = previewText ? `: „${previewText.slice(0, 80)}“` : ' hat deinen Beitrag kommentiert.';
-        body = previewText ? `${actorName}${snippet}` : `${actorName}${snippet}`;
+        body = `${actorName}${snippet}`;
         if (postId && typeof window.openCommentsModal === 'function') {
             onClick = () => window.openCommentsModal(postId);
         }
