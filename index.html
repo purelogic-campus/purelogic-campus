@@ -69,8 +69,6 @@
         </div>
       </div>
 
-      <button type="button" class="header-top-link-btn" id="header-group-chats-btn" data-open-group-chats onclick="openLectureGroupChatsModal()" title="Vorlesungs- & Studiengang-Gruppenchats öffnen" style="background: rgba(99,102,241,0.18); border: 1px solid rgba(129,140,248,0.45); color: #c7d2fe;">🎓 Gruppen</button>
-
       <button type="button" class="theme-toggle-btn" id="theme-toggle-btn" onclick="toggleTheme()" aria-label="Design-Modus wechseln (Dark, Light Dark, Soft Light, Light)" title="Design-Modus wechseln">
         <span class="theme-toggle-icon" id="theme-toggle-icon" aria-hidden="true">🌑</span>
         <span class="theme-toggle-label" id="theme-toggle-label">Dark</span>
@@ -333,9 +331,15 @@
         </div>
       </div>
 
-      <!-- 6. Globaler Chat Tab -->
+      <!-- 6. Globaler Chat Tab (inkl. integrierter Vorlesungs-Gruppenchats) -->
       <div id="tab-global" class="tab-content hidden">
-        <div class="chat-container container-box" style="height: 100%; padding: 0; overflow: hidden;">
+        <div class="chat-container container-box" style="height: 100%; padding: 0; overflow: hidden; display: flex; flex-direction: column;">
+          <div style="padding: 10px 14px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-shrink: 0; background: rgba(255, 255, 255, 0.02);">
+            <span style="font-size: 13px; font-weight: 800; color: var(--text);">⚡ Campus-Chat</span>
+            <button type="button" id="chat-group-chats-btn" data-open-group-chats onclick="openLectureGroupChatsModal()" title="Vorlesungs- & Studiengang-Gruppenchats öffnen" style="background: rgba(99,102,241,0.18); border: 1px solid rgba(129,140,248,0.45); color: #c7d2fe; border-radius: 10px; padding: 6px 12px; font-size: 11px; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;">
+              🎓 Gruppen
+            </button>
+          </div>
           <div class="messages-list" id="global-chat-list">
             <p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;">Lade Campus-Chat...</p>
           </div>
