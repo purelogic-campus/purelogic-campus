@@ -1,10 +1,10 @@
-// js/features/notifications.js - Push-, In-App-Benachrichtigungen & lokale Activity-Historie (PURE LOGIC)
+// js/features/notifications.js - Push-, In-App-Benachrichtigungen & vollständige Activity-Historie (PURE LOGIC)
 import { _supabase } from '../config.js';
 import { state } from '../state.js';
 
 const NOTIF_PREF_KEY = 'pure_logic_push_enabled_v1';
 const ACTIVITY_HISTORY_KEY_PREFIX = 'pure_logic_activity_history_v1_';
-const MAX_ACTIVITY_HISTORY_ITEMS = 100;
+const MAX_ACTIVITY_HISTORY_ITEMS = 120;
 
 let realtimeChannel = null;
 let activeChannelEmail = '';
@@ -35,14 +35,18 @@ function isDuplicateEvent(key) {
     return false;
 }
 
-function getActiveHistoryUserKey() {
-    const email = (state?.currentUserEmail || 'guest').trim().toLowerCase();
+function getCurrentUserEmailNormalized() {
+    return (state?.currentUserEmail || '').trim().toLowerCase();
+}
+
+function getActiveHistoryUserKey(emailOverride = '') {
+    const email = (emailOverride || getCurrentUserEmailNormalized() || 'guest').trim().toLowerCase();
     return `${ACTIVITY_HISTORY_KEY_PREFIX}${encodeURIComponent(email)}`;
 }
 
-export function getActivityHistory() {
+export function getActivityHistory(emailOverride = '') {
     try {
-        const raw = localStorage.getItem(getActiveHistoryUserKey());
+        const raw = localStorage.getItem(getActiveHistoryUserKey(emailOverride));
         const parsed = raw ? JSON.parse(raw) : [];
         return Array.isArray(parsed) ? parsed : [];
     } catch (_e) {
@@ -50,58 +54,186 @@ export function getActivityHistory() {
     }
 }
 
-function saveActivityHistory(items) {
+function saveActivityHistory(items, emailOverride = '') {
     try {
         const trimmed = Array.isArray(items) ? items.slice(0, MAX_ACTIVITY_HISTORY_ITEMS) : [];
-        localStorage.setItem(getActiveHistoryUserKey(), JSON.stringify(trimmed));
+        localStorage.setItem(getActiveHistoryUserKey(emailOverride), JSON.stringify(trimmed));
     } catch (_e) {}
 }
 
 export function recordActivityHistoryEntry({
+    id = null,
     type = 'info',
     title = 'Aktivität',
     body = '',
     actorEmail = '',
-    postId = null
+    postId = null,
+    read = false,
+    createdAt = null
 }) {
     const cleanTitle = String(title || 'Aktivität').trim();
     const cleanBody = String(body || '').trim();
     if (!cleanTitle && !cleanBody) return null;
 
     const existing = getActivityHistory();
+    if (id && existing.some((item) => String(item.id) === String(id))) {
+        return existing.find((item) => String(item.id) === String(id)) || null;
+    }
+
     const entry = {
-        id: (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function')
-            ? crypto.randomUUID()
-            : `act_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-        type,
+        id: id
+            ? String(id)
+            : (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function')
+                ? crypto.randomUUID()
+                : `act_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        type: type || 'info',
         title: cleanTitle,
         body: cleanBody,
         actorEmail: actorEmail || '',
         postId: postId || null,
-        read: false,
-        createdAt: new Date().toISOString()
+        read: Boolean(read),
+        createdAt: createdAt || new Date().toISOString()
     };
 
     const updated = [entry, ...existing];
     saveActivityHistory(updated);
+    updateUnreadActivityBadges();
     renderActivityHistoryFeed();
     return entry;
 }
 
-export function markAllActivityAsRead() {
+export function markActivityItemAsRead(itemId) {
+    if (!itemId) return;
+    const updated = getActivityHistory().map((item) =>
+        String(item.id) === String(itemId) ? { ...item, read: true } : item
+    );
+    saveActivityHistory(updated);
+    updateUnreadActivityBadges();
+    renderActivityHistoryFeed();
+}
+
+export async function markAllActivityAsRead() {
     const updated = getActivityHistory().map((item) => ({ ...item, read: true }));
     saveActivityHistory(updated);
+    updateUnreadActivityBadges();
     renderActivityHistoryFeed();
+
+    const currentEmail = getCurrentUserEmailNormalized();
+    if (currentEmail) {
+        try {
+            await _supabase
+                .from('notifications')
+                .update({ is_read: true })
+                .eq('recipient_email', currentEmail)
+                .eq('is_read', false);
+        } catch (_e) {}
+    }
 }
 
 export function clearActivityHistory() {
     saveActivityHistory([]);
+    updateUnreadActivityBadges();
     renderActivityHistoryFeed();
 }
 
 export function setActivityHistoryFilter(filter = 'all') {
     currentActivityFilter = filter || 'all';
     renderActivityHistoryFeed();
+}
+
+export function handleActivityItemClick(itemId) {
+    const item = getActivityHistory().find((entry) => String(entry.id) === String(itemId));
+    if (!item) return;
+
+    markActivityItemAsRead(itemId);
+
+    if ((item.type === 'like' || item.type === 'comment') && item.postId && typeof window.openCommentsModal === 'function') {
+        window.openCommentsModal(item.postId);
+        return;
+    }
+
+    if (item.type === 'dm') {
+        if (typeof window.openDmTab === 'function') {
+            window.openDmTab(item.actorEmail || undefined);
+            return;
+        }
+        const dmTabTrigger = document.querySelector('[data-tab="dm"], [onclick*="dm"], #nav-dm');
+        if (dmTabTrigger instanceof HTMLElement) {
+            dmTabTrigger.click();
+            return;
+        }
+    }
+
+    if (item.actorEmail && typeof window.openPublicProfile === 'function') {
+        window.openPublicProfile(item.actorEmail);
+    }
+}
+
+export function getUnreadActivityCount() {
+    return getActivityHistory().filter((item) => !item.read).length;
+}
+
+export function updateUnreadActivityBadges() {
+    const count = getUnreadActivityCount();
+    const badges = document.querySelectorAll('[data-activity-unread-badge], #profile-activity-unread-badge');
+    badges.forEach((badge) => {
+        badge.textContent = count > 99 ? '99+' : String(count);
+        if (badge instanceof HTMLElement) {
+            badge.style.display = count > 0 ? 'inline-flex' : 'none';
+        }
+    });
+}
+
+export async function syncActivityHistoryFromBackend(emailOverride = '') {
+    const targetEmail = (emailOverride || getCurrentUserEmailNormalized()).trim().toLowerCase();
+    if (!targetEmail) return;
+
+    try {
+        const { data: rows, error } = await _supabase
+            .from('notifications')
+            .select('id, actor_email, type, post_id, message, is_read, created_at')
+            .eq('recipient_email', targetEmail)
+            .order('created_at', { ascending: false })
+            .limit(50);
+
+        if (error || !Array.isArray(rows) || rows.length === 0) return;
+
+        const existing = getActivityHistory(targetEmail);
+        const existingMap = new Map(existing.map((item) => [String(item.id), item]));
+
+        rows.forEach((row) => {
+            const rowId = String(row.id);
+            const actorName = getDisplayNameFromEmail(row.actor_email);
+            const fallbackTitle =
+                row.type === 'like' ? 'Neuer Like ❤️' :
+                row.type === 'comment' ? 'Neuer Kommentar 💬' :
+                row.type === 'follow' ? 'Neuer Follower 🚀' :
+                row.type === 'dm' ? `Neue Nachricht von ${actorName} ✉️` :
+                'Neue Aktivität 🔔';
+
+            const prev = existingMap.get(rowId);
+            existingMap.set(rowId, {
+                id: rowId,
+                type: row.type || prev?.type || 'info',
+                title: prev?.title || fallbackTitle,
+                body: row.message || prev?.body || '',
+                actorEmail: row.actor_email || prev?.actorEmail || '',
+                postId: row.post_id || prev?.postId || null,
+                read: Boolean(prev?.read || row.is_read),
+                createdAt: row.created_at || prev?.createdAt || new Date().toISOString()
+            });
+        });
+
+        const merged = Array.from(existingMap.values()).sort(
+            (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+
+        saveActivityHistory(merged, targetEmail);
+        updateUnreadActivityBadges();
+        renderActivityHistoryFeed();
+    } catch (_err) {
+        // Backend-Tabelle 'notifications' ist optional
+    }
 }
 
 function formatActivityTime(isoString) {
@@ -128,6 +260,13 @@ function getActivityBadgeLabel(type) {
     }
 }
 
+function getActivityActionHint(item) {
+    if ((item.type === 'like' || item.type === 'comment') && item.postId) return 'Beitrag öffnen →';
+    if (item.type === 'dm') return 'Nachrichten öffnen →';
+    if (item.actorEmail) return 'Profil ansehen →';
+    return '';
+}
+
 function findProfileActivityContainer() {
     return (
         document.getElementById('profile-activity-feed') ||
@@ -148,15 +287,15 @@ export function renderActivityHistoryFeed(targetContainer = null) {
         : allItems.filter((i) => i.type === currentActivityFilter);
 
     const filters = [
-        { key: 'all', label: 'Alle' },
-        { key: 'like', label: 'Likes' },
-        { key: 'comment', label: 'Kommentare' },
-        { key: 'follow', label: 'Follower' },
-        { key: 'dm', label: 'DMs' }
+        { key: 'all', label: 'Alle', count: allItems.length },
+        { key: 'like', label: 'Likes', count: allItems.filter((i) => i.type === 'like').length },
+        { key: 'comment', label: 'Kommentare', count: allItems.filter((i) => i.type === 'comment').length },
+        { key: 'follow', label: 'Follower', count: allItems.filter((i) => i.type === 'follow').length },
+        { key: 'dm', label: 'DMs', count: allItems.filter((i) => i.type === 'dm').length }
     ];
 
     container.innerHTML = `
-        <div style="background: rgba(19, 27, 46, 0.72); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 10px;">
+        <div style="background: rgba(19, 27, 46, 0.78); border: 1px solid rgba(148, 163, 184, 0.22); border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 10px; box-sizing: border-box;">
             <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
                 <div style="display: flex; align-items: center; gap: 8px;">
                     <h3 style="margin: 0; font-size: 14px; font-weight: 800; color: #f8fafc;">🕒 Aktivitäten-Verlauf</h3>
@@ -177,23 +316,34 @@ export function renderActivityHistoryFeed(targetContainer = null) {
             <div style="display: flex; gap: 6px; flex-wrap: wrap;">
                 ${filters.map((f) => {
                     const active = currentActivityFilter === f.key;
-                    return `<button type="button" onclick="setActivityHistoryFilter('${f.key}')" style="padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; cursor: pointer; border: 1px solid ${active ? '#818cf8' : 'rgba(255,255,255,0.12)'}; background: ${active ? 'rgba(99,102,241,0.28)' : 'rgba(255,255,255,0.04)'}; color: ${active ? '#fff' : '#94a3b8'};">${f.label}</button>`;
+                    return `<button type="button" onclick="setActivityHistoryFilter('${f.key}')" style="padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; cursor: pointer; border: 1px solid ${active ? '#818cf8' : 'rgba(255,255,255,0.12)'}; background: ${active ? 'rgba(99,102,241,0.28)' : 'rgba(255,255,255,0.04)'}; color: ${active ? '#fff' : '#94a3b8'};">${f.label} (${f.count})</button>`;
                 }).join('')}
             </div>
 
-            <div style="display: flex; flex-direction: column; gap: 8px; max-height: 320px; overflow-y: auto;">
+            <div style="display: flex; flex-direction: column; gap: 8px; max-height: 340px; overflow-y: auto;">
                 ${filteredItems.length === 0
                     ? `<div style="text-align: center; padding: 18px 10px; font-size: 12px; color: #94a3b8;">Noch keine Aktivitäten in dieser Ansicht vorhanden.</div>`
-                    : filteredItems.map((item) => `
-                        <div style="padding: 10px 12px; border-radius: 12px; background: ${item.read ? 'rgba(255,255,255,0.025)' : 'rgba(99,102,241,0.10)'}; border: 1px solid ${item.read ? 'rgba(255,255,255,0.06)' : 'rgba(129,140,248,0.35)'}; display: flex; flex-direction: column; gap: 4px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
-                                <span style="font-size: 11px; font-weight: 800; color: #a5b4fc;">${escapeHtml(getActivityBadgeLabel(item.type))}</span>
-                                <span style="font-size: 10px; color: #94a3b8;">${escapeHtml(formatActivityTime(item.createdAt))}</span>
+                    : filteredItems.map((item) => {
+                        const actionHint = getActivityActionHint(item);
+                        const isInteractive = Boolean(actionHint);
+                        return `
+                            <div
+                                role="${isInteractive ? 'button' : 'article'}"
+                                tabindex="${isInteractive ? '0' : '-1'}"
+                                onclick="handleActivityItemClick('${escapeHtml(item.id)}')"
+                                onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();handleActivityItemClick('${escapeHtml(item.id)}');}"
+                                style="padding: 10px 12px; border-radius: 12px; background: ${item.read ? 'rgba(255,255,255,0.025)' : 'rgba(99,102,241,0.11)'}; border: 1px solid ${item.read ? 'rgba(255,255,255,0.06)' : 'rgba(129,140,248,0.38)'}; display: flex; flex-direction: column; gap: 4px; cursor: ${isInteractive ? 'pointer' : 'default'};"
+                            >
+                                <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+                                    <span style="font-size: 11px; font-weight: 800; color: #a5b4fc;">${escapeHtml(getActivityBadgeLabel(item.type))}</span>
+                                    <span style="font-size: 10px; color: #94a3b8;">${escapeHtml(formatActivityTime(item.createdAt))}</span>
+                                </div>
+                                <div style="font-size: 12px; font-weight: 800; color: #f8fafc;">${escapeHtml(item.title)}</div>
+                                ${item.body ? `<div style="font-size: 11px; color: #cbd5e1; line-height: 1.35; word-break: break-word;">${escapeHtml(item.body)}</div>` : ''}
+                                ${actionHint ? `<div style="font-size: 10px; font-weight: 700; color: #818cf8; margin-top: 2px;">${escapeHtml(actionHint)}</div>` : ''}
                             </div>
-                            <div style="font-size: 12px; font-weight: 800; color: #f8fafc;">${escapeHtml(item.title)}</div>
-                            ${item.body ? `<div style="font-size: 11px; color: #cbd5e1; line-height: 1.35; word-break: break-word;">${escapeHtml(item.body)}</div>` : ''}
-                        </div>
-                    `).join('')
+                        `;
+                    }).join('')
                 }
             </div>
         </div>
@@ -428,7 +578,12 @@ export async function sendInteractionPush({
         body = previewText ? previewText.slice(0, 100) : 'Dir wurde eine neue Direktnachricht gesendet.';
     }
 
+    const eventId = (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function')
+        ? crypto.randomUUID()
+        : `evt_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
     recordActivityHistoryEntry({
+        id: eventId,
         type,
         title,
         body,
@@ -436,16 +591,14 @@ export async function sendInteractionPush({
         postId
     });
 
-    // Eigene ausgelöste Aktion lokal bestätigen, falls der Empfänger derselbe Browser-Kontext ist
     if (state.currentUserEmail && state.currentUserEmail.toLowerCase() === recipientEmail.toLowerCase()) {
         await triggerSystemNotification(title, body, `pl-${type}`, onClick);
     }
 
-    // Optionaler Insert in eine 'notifications'-Tabelle, falls vorhanden (Fehler werden still abgefangen)
     try {
         await _supabase.from('notifications').insert([
             {
-                id: crypto.randomUUID(),
+                id: eventId,
                 recipient_email: recipientEmail,
                 actor_email: actorEmail,
                 type,
@@ -469,9 +622,29 @@ export async function notifyDirectMessage(recipientEmail, senderEmail, messageTe
     });
 }
 
+function handleFollowInsertPayload(payload, targetEmail) {
+    const row = payload?.new;
+    if (!row) return;
+    if (String(row.following_email || '').toLowerCase() === targetEmail) {
+        const follower = row.follower_email || '';
+        if (follower && follower.toLowerCase() !== targetEmail) {
+            sendInteractionPush({
+                type: 'follow',
+                recipientEmail: row.following_email,
+                actorEmail: follower
+            });
+        }
+    }
+}
+
 export function initRealtimePushListeners(currentEmail) {
     const targetEmail = (currentEmail || state.currentUserEmail || '').trim().toLowerCase();
     if (!targetEmail) return;
+
+    updateUnreadActivityBadges();
+    renderActivityHistoryFeed();
+    syncActivityHistoryFromBackend(targetEmail);
+
     if (realtimeChannel && activeChannelEmail === targetEmail) return;
 
     if (realtimeChannel && typeof _supabase.removeChannel === 'function') {
@@ -487,20 +660,12 @@ export function initRealtimePushListeners(currentEmail) {
             .on(
                 'postgres_changes',
                 { event: 'INSERT', schema: 'public', table: 'follows' },
-                (payload) => {
-                    const row = payload?.new;
-                    if (!row) return;
-                    if (String(row.following_email || '').toLowerCase() === targetEmail) {
-                        const follower = row.follower_email || '';
-                        if (follower.toLowerCase() !== targetEmail) {
-                            sendInteractionPush({
-                                type: 'follow',
-                                recipientEmail: row.following_email,
-                                actorEmail: follower
-                            });
-                        }
-                    }
-                }
+                (payload) => handleFollowInsertPayload(payload, targetEmail)
+            )
+            .on(
+                'postgres_changes',
+                { event: 'INSERT', schema: 'public', table: 'user_follows' },
+                (payload) => handleFollowInsertPayload(payload, targetEmail)
             )
             .on(
                 'postgres_changes',
@@ -582,6 +747,7 @@ export function updatePushStatusUi() {
 
 document.addEventListener('DOMContentLoaded', () => {
     updatePushStatusUi();
+    updateUnreadActivityBadges();
     renderActivityHistoryFeed();
     if (state.currentUserEmail) {
         initRealtimePushListeners(state.currentUserEmail);
@@ -595,7 +761,12 @@ window.notifyDirectMessage = notifyDirectMessage;
 window.initRealtimePushListeners = initRealtimePushListeners;
 window.getActivityHistory = getActivityHistory;
 window.recordActivityHistoryEntry = recordActivityHistoryEntry;
+window.markActivityItemAsRead = markActivityItemAsRead;
 window.markAllActivityAsRead = markAllActivityAsRead;
 window.clearActivityHistory = clearActivityHistory;
 window.setActivityHistoryFilter = setActivityHistoryFilter;
+window.handleActivityItemClick = handleActivityItemClick;
+window.getUnreadActivityCount = getUnreadActivityCount;
+window.updateUnreadActivityBadges = updateUnreadActivityBadges;
+window.syncActivityHistoryFromBackend = syncActivityHistoryFromBackend;
 window.renderActivityHistoryFeed = renderActivityHistoryFeed;

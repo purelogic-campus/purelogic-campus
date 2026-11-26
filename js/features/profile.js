@@ -1,12 +1,16 @@
-// js/features/profile.js - Eigenes Profil-Modul mit direkter Anbindung der lokalen Activity-Historie (Punkt 27)
+// js/features/profile.js - Eigenes Profil-Modul mit vollständiger Activity-Historie & Push-Anbindung (Punkt 27)
 import { _supabase } from '../config.js';
 import { state } from '../state.js';
 import {
     renderActivityHistoryFeed,
     initRealtimePushListeners,
     updatePushStatusUi,
-    requestPushPermission
+    requestPushPermission,
+    syncActivityHistoryFromBackend,
+    updateUnreadActivityBadges
 } from './notifications.js';
+
+let profileVisibilityObserver = null;
 
 function escapeHtml(str) {
     return String(str || '')
@@ -44,6 +48,7 @@ export function mountProfileActivityFeed() {
     }
 
     updatePushStatusUi();
+    updateUnreadActivityBadges();
 }
 
 export async function loadProfileData(targetEmail = '') {
@@ -61,6 +66,7 @@ export async function loadProfileData(targetEmail = '') {
     }
 
     initRealtimePushListeners(email);
+    await syncActivityHistoryFromBackend(email);
 
     try {
         const { data: userRow, error } = await _supabase
@@ -71,6 +77,7 @@ export async function loadProfileData(targetEmail = '') {
 
         if (error) {
             console.warn('Profil konnte nicht aus Supabase geladen werden:', error);
+            mountProfileActivityFeed();
             return null;
         }
 
@@ -142,8 +149,28 @@ export async function openProfileView(targetEmail = '') {
     await loadProfileData(targetEmail);
 }
 
+function observeProfileContainerVisibility() {
+    const profileHost = getProfileHostContainer();
+    if (!profileHost || profileVisibilityObserver) return;
+
+    profileVisibilityObserver = new MutationObserver(() => {
+        if (!profileHost.classList.contains('hidden')) {
+            mountProfileActivityFeed();
+            if (state.currentUserEmail) {
+                syncActivityHistoryFromBackend(state.currentUserEmail);
+            }
+        }
+    });
+
+    profileVisibilityObserver.observe(profileHost, {
+        attributes: true,
+        attributeFilter: ['class', 'style']
+    });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     mountProfileActivityFeed();
+    observeProfileContainerVisibility();
     if (state.currentUserEmail) {
         loadProfileData(state.currentUserEmail);
     }
@@ -164,6 +191,7 @@ document.addEventListener('click', (event) => {
     }
 });
 
+window.requestPushPermission = requestPushPermission;
 window.mountProfileActivityFeed = mountProfileActivityFeed;
 window.loadProfileData = loadProfileData;
 window.openProfileView = openProfileView;
