@@ -1,1083 +1,918 @@
-<!DOCTYPE html>
-<html lang="de">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <meta name="theme-color" content="#1a0512">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>PURE LOGIC • GenZ Campus</title>
-  
-  <link rel="manifest" href="manifest.json">
-  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
-  <link rel="apple-touch-icon" href="icons/icon-512.png">
-
-  <!-- Sofortiges Theme-Setup vor dem ersten Rendern (Standard: dark, 4 Modes: dark, light-dark, soft-light, light) -->
-  <script>
-    (function () {
-      try {
-        var allowed = ['dark', 'light-dark', 'soft-light', 'light'];
-        var saved = localStorage.getItem('pure_logic_theme');
-        if (saved === 'strong-light') saved = 'soft-light';
-        var theme = allowed.indexOf(saved) !== -1 ? saved : 'dark';
-        document.documentElement.setAttribute('data-theme', theme);
-        document.documentElement.classList.add('theme-' + theme);
-        if (document.body) {
-          document.body.classList.add('theme-' + theme);
-          if (theme === 'light') {
-            document.body.classList.add('light-mode');
-          }
-        }
-      } catch (e) {}
-    })();
-  </script>
-
-  <!-- Externe Bibliotheken (Supabase, Leaflet Karten, jsPDF) -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-
-  <link rel="stylesheet" href="style.css?v=6" />
-</head>
-<body>
-
-<!-- Hauptcontainer der App-Karte -->
-<div class="app-card">
-  
-  <!-- Header Bereich: PURE LOGIC Banner oben zentriert, Leiste direkt darunter + Sprachwähler rechts oben -->
-  <div class="header" id="app-header">
-    <div class="brand-banner-bar">
-      <button type="button" class="logo" onclick="switchTab('reels')" title="Zur Startseite" aria-label="PURE LOGIC Startseite">PURE LOGIC</button>
-    </div>
-    
-    <div class="header-right" id="header-right-container">
-      <button type="button" class="header-top-link-btn hidden" id="header-admin-tab-btn" onclick="switchTab('admin')" style="background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.4); color: #f59e0b;">⚡ Admin</button>
-
-      <div style="position: relative;">
-        <button type="button" class="points-badge" id="score" onclick="togglePointsDropdown(event)" aria-label="Punktestand und Campus-Menü öffnen">0 P</button>
-        <div id="points-dropdown-menu" class="points-dropdown hidden">
-          <button type="button" class="points-dropdown-item" onclick="openCampusCalendar()">📅 Campus-Event-Kalender</button>
-          <button type="button" class="points-dropdown-item" onclick="openActiveSpotsModal()">📍 Aktuelle Partner-Spots</button>
-          <button type="button" class="points-dropdown-item" onclick="openProfGuideModal()">📚 Prof-Rating & Survival Guide</button>
-          <button type="button" class="points-dropdown-item" onclick="openBlackboardModal()">📌 Schwarzes Brett (Marktplatz)</button>
-          <button type="button" class="points-dropdown-item" data-open-group-chats onclick="openLectureGroupChatsModal()">🎓 Vorlesungs-Gruppenchats</button>
-          <button type="button" class="points-dropdown-item" onclick="toggleLectureMode()">🎓 Lecture Mode (Fokus)</button>
-          <button type="button" class="points-dropdown-item" onclick="openMorePointsModal()">🎁 Mehr Punkte sammeln</button>
-          <button type="button" class="points-dropdown-item hidden" id="install-app-dropdown-btn" onclick="installPWA()" style="background: rgba(99, 102, 241, 0.15); color: #818cf8;">📲 App auf Gerät installieren</button>
-        </div>
-      </div>
-
-      <button type="button" class="header-top-link-btn" id="header-group-chats-btn" data-open-group-chats onclick="openLectureGroupChatsModal()" title="Vorlesungs- & Studiengang-Gruppenchats öffnen" style="background: rgba(99,102,241,0.18); border: 1px solid rgba(129,140,248,0.45); color: #c7d2fe;">🎓 Gruppen</button>
-
-      <button type="button" class="theme-toggle-btn" id="theme-toggle-btn" onclick="toggleTheme()" aria-label="Design-Modus wechseln (Dark, Light Dark, Soft Light, Light)" title="Design-Modus wechseln">
-        <span class="theme-toggle-icon" id="theme-toggle-icon" aria-hidden="true">🌑</span>
-        <span class="theme-toggle-label" id="theme-toggle-label">Dark</span>
-      </button>
-
-      <button type="button" class="header-profile-btn hidden" id="header-profile-btn" onclick="switchTab('profile')">
-        <img id="header-avatar-preview" class="header-avatar-sm" src="" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'24\' height=\'24\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%2394a3b8\' stroke-width=\'2\'><path d=\'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2\'></path><circle cx=\'12\' cy=\'7\' r=\'4\'></circle></svg>'" alt="Profil">
-        <span class="header-profile-text">Profil</span>
-        <span id="header-activity-unread-badge" class="badge-count" data-activity-unread-badge style="display: none; background: #ec4899; color: #fff; font-size: 10px; font-weight: 900; padding: 1px 6px; border-radius: 999px;">0</span>
-      </button>
-
-      <button type="button" class="btn-logout hidden" id="logout-btn" onclick="resetUser()" title="Abmelden">🚪 Logout</button>
-
-      <div class="lang-switcher-wrap" id="lang-switcher-wrap" title="Sprache auswählen">
-        <button type="button" class="lang-current-btn" id="lang-current-btn" aria-haspopup="listbox" aria-expanded="false" onclick="toggleLanguageMenu(event)">
-          <img id="lang-flag-img" class="lang-flag-img" src="icons/flags/de.svg" alt="DE" onerror="this.style.display='none'">
-          <span class="lang-code-badge" id="lang-code-badge">DE</span>
-          <span class="lang-caret" aria-hidden="true">▾</span>
-        </button>
-
-        <div class="lang-dropdown-list hidden" id="lang-dropdown-list" role="listbox" aria-label="Sprache auswählen">
-          <button type="button" class="lang-option-item active" data-lang="de" onclick="selectLanguageOption('de')">
-            <img class="lang-flag-img" src="icons/flags/de.svg" alt="DE">
-            <span class="lang-option-code">DE</span>
-          </button>
-          <button type="button" class="lang-option-item" data-lang="en" onclick="selectLanguageOption('en')">
-            <img class="lang-flag-img" src="icons/flags/en.svg" alt="EN">
-            <span class="lang-option-code">EN</span>
-          </button>
-          <button type="button" class="lang-option-item" data-lang="it" onclick="selectLanguageOption('it')">
-            <img class="lang-flag-img" src="icons/flags/it.svg" alt="IT">
-            <span class="lang-option-code">IT</span>
-          </button>
-          <button type="button" class="lang-option-item" data-lang="bks" onclick="selectLanguageOption('bks')">
-            <img class="lang-flag-img" src="icons/flags/bks.svg" alt="BKS">
-            <span class="lang-option-code">BKS</span>
-          </button>
-          <button type="button" class="lang-option-item" data-lang="tr" onclick="selectLanguageOption('tr')">
-            <img class="lang-flag-img" src="icons/flags/tr.svg" alt="TR">
-            <span class="lang-option-code">TR</span>
-          </button>
-          <button type="button" class="lang-option-item" data-lang="es" onclick="selectLanguageOption('es')">
-            <img class="lang-flag-img" src="icons/flags/es.svg" alt="ES">
-            <span class="lang-option-code">ES</span>
-          </button>
-          <button type="button" class="lang-option-item" data-lang="fr" onclick="selectLanguageOption('fr')">
-            <img class="lang-flag-img" src="icons/flags/fr.svg" alt="FR">
-            <span class="lang-option-code">FR</span>
-          </button>
-          <button type="button" class="lang-option-item" data-lang="pl" onclick="selectLanguageOption('pl')">
-            <img class="lang-flag-img" src="icons/flags/pl.svg" alt="PL">
-            <span class="lang-option-code">PL</span>
-          </button>
-          <button type="button" class="lang-option-item" data-lang="hu" onclick="selectLanguageOption('hu')">
-            <img class="lang-flag-img" src="icons/flags/hu.svg" alt="HU">
-            <span class="lang-option-code">HU</span>
-          </button>
-          <button type="button" class="lang-option-item" data-lang="uk" onclick="selectLanguageOption('uk')">
-            <img class="lang-flag-img" src="icons/flags/uk.svg" alt="UK">
-            <span class="lang-option-code">UK</span>
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Auth Gate / Login-Bereich -->
-  <div id="auth-gate" class="tab-content auth-gate-container">
-    <div class="container-box" style="max-width: 420px; width: 100%;">
-      <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 4px;">
-        <h2 style="font-size: 22px; font-weight: 800;">Hey there 👋</h2>
-        <button type="button" class="theme-toggle-btn auth-theme-toggle" id="auth-theme-toggle-btn" onclick="toggleTheme()" aria-label="Design-Modus wechseln (Dark, Light Dark, Soft Light, Light)" title="Design-Modus wechseln">
-          <span class="theme-toggle-icon" id="auth-theme-toggle-icon" aria-hidden="true">🌑</span>
-          <span class="theme-toggle-label" id="auth-theme-toggle-label">Dark</span>
-        </button>
-      </div>
-      <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 14px;">Logge dich in dein Campus-Konto ein:</p>
-      
-      <div id="auth-msg" class="msg-box hidden"></div>
-
-      <label for="email" style="font-size: 11px; font-weight: 600; color: var(--text-muted);">E-Mail-Adresse:</label>
-      <input type="email" id="email" placeholder="name@uni.ac.at">
-      
-      <label for="password" style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Passwort:</label>
-      <div class="password-container">
-        <input type="password" id="password" placeholder="Dein Passwort">
-        <button type="button" class="password-toggle" id="toggle-pw-btn" aria-label="Passwort anzeigen oder verbergen" onclick="togglePasswordVisibility()">👁️</button>
-      </div>
-      
-      <button type="button" class="forgot-password" onclick="handleForgotPassword()">Passwort vergessen?</button>
-
-      <button type="button" class="btn" onclick="handleLogin()">Einloggen</button>
-      
-      <button type="button" class="btn btn-secondary" onclick="openRegisterModal()" style="margin-top: 8px; background: rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.4); color: #818cf8; font-weight: 800;">+ Registrieren (Neuer Account)</button>
-      
-      <button type="button" class="btn btn-secondary hidden" id="install-app-auth-btn" onclick="installPWA()" style="margin-top: 10px; background: rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.4); color: #818cf8; font-weight: 800;">📲 App für Homescreen herunterladen</button>
-      
-      <button type="button" class="btn btn-secondary" onclick="openReportModal()" style="margin-top: 10px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444; font-size: 11px;">⚠️ Fehler / Problem melden (+5 Gratis-Punkte)</button>
-    </div>
-  </div>
-
-  <!-- Registrierungs-Modal -->
-  <div id="register-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.95); z-index: 250; padding: 20px;">
-    <div class="container-box" style="width: 100%; max-width: 440px; padding: 24px; border: 1px solid rgba(99, 102, 241, 0.4); box-shadow: 0 15px 35px rgba(0,0,0,0.8);">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-        <h3 style="font-size: 18px; font-weight: 900; color: #818cf8;">🎓 PURE LOGIC • Registrierung</h3>
-        <button type="button" onclick="closeRegisterModal()" aria-label="Registrierung schließen" style="background: transparent; border: none; color: var(--text-muted); font-size: 16px; cursor: pointer;">✕</button>
-      </div>
-      <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 14px;">Erstelle deinen verifizierten Studenten-Account mit deiner offiziellen Uni-Adresse.</p>
-
-      <div id="reg-msg" class="msg-box hidden" style="margin-bottom: 10px;"></div>
-
-      <label for="reg-fullname" style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Dein Name:</label>
-      <input type="text" id="reg-fullname" placeholder="Max Mustermann" style="margin-bottom: 10px;">
-
-      <label for="reg-email" style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Offizielle Uni-E-Mail-Adresse (.ac.at):</label>
-      <input type="email" id="reg-email" placeholder="name@uni.ac.at" style="margin-bottom: 10px;">
-
-      <label for="reg-password" style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Passwort (min. 8 Zeichen, 1 Zahl, 1 Sonderzeichen):</label>
-      <div class="password-container" style="margin-bottom: 4px;">
-        <input type="password" id="reg-password" placeholder="••••••••">
-        <button type="button" class="password-toggle" id="reg-toggle-pw-btn" aria-label="Registrierungs-Passwort anzeigen oder verbergen" onclick="toggleRegisterPasswordVisibility()">👁️</button>
-      </div>
-      <div style="font-size: 10px; color: var(--text-muted); margin-bottom: 14px; line-height: 1.3;">
-        Muss mindestens 8 Zeichen lang sein sowie eine Zahl und ein Sonderzeichen enthalten.
-      </div>
-
-      <div style="display: flex; gap: 8px;">
-        <button type="button" class="btn" onclick="submitRegistration()" style="margin-top: 0; background: var(--gradient-main); font-weight: 900;">Account erstellen 🚀</button>
-        <button type="button" class="btn btn-secondary" onclick="closeRegisterModal()" style="margin-top: 0; width: auto;">Abbrechen</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Haupt-App-Layout nach erfolgreichem Login -->
-  <div id="main-app" class="hidden main-app-layout">
-    
-    <div id="campus-drop-banner" class="flash-banner-active" style="display:none; width: 100%; background: linear-gradient(135deg, #f59e0b, #ec4899); color: white; padding: 10px 14px; border-radius: 12px; margin-bottom: 6px; text-align: center; cursor: pointer; flex-shrink: 0; border: 2px solid rgba(255, 255, 255, 0.6);" onclick="claimActiveDrop()">
-      <div style="font-weight: 900; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">⚡ FLASH DROP: 50 Extra-Punkte!</div>
-      <div style="font-size: 10px; opacity: 0.95; margin-top: 2px; font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,0.2);">Nur für kurze Zeit verfügbar! [Jetzt tippen 🎁]</div>
-    </div>
-
-    <!-- Sektion für die verschiedenen App-Tabs -->
-    <div class="tab-content-wrapper">
-      
-      <!-- 1. Lecture Mode Tab -->
-      <div id="tab-lecture-mode" class="lecture-mode-view tab-content hidden">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-          <div>
-            <h3 style="font-size: 15px; font-weight: 800; color: #94a3b8;">🎓 Hörsaal-Fokusmodus</h3>
-            <span style="font-size: 10px; color: #64748b;">Ablenkungsfrei & Akku-schonend</span>
-          </div>
-          <button type="button" class="btn btn-secondary" style="width: auto; margin-top: 0; padding: 6px 12px; font-size: 11px;" onclick="toggleLectureMode()">Modus beenden ✕</button>
-        </div>
-
-        <textarea id="lecture-notes-input" class="lecture-notepad" placeholder="Schreibe hier deine Vorlesungsnotizen mit..."></textarea>
-
-        <div class="container-box" style="margin-top: 8px; padding: 10px; flex-shrink: 0;">
-          <div style="font-size: 11px; font-weight: 700; color: #cbd5e1; margin-bottom: 6px;">💾 Notiz auf Gerät speichern:</div>
-          <div style="display: flex; gap: 6px; margin-bottom: 6px;">
-            <input type="text" id="lecture-file-name" placeholder="Dateiname (z.B. Vorlesung_Mathe)" style="margin: 0; flex: 2; font-size: 11px; padding: 8px 10px;">
-            <input type="date" id="lecture-file-date" style="margin: 0; flex: 1; font-size: 11px; padding: 8px 10px; background: var(--card); color: var(--text); border: 1px solid var(--border); border-radius: 12px;">
-          </div>
-          
-          <div style="display: flex; gap: 6px; margin-bottom: 6px; align-items: center;">
-            <label for="lecture-file-format" style="font-size: 11px; font-weight: 600; color: var(--text-muted); white-space: nowrap;">Format:</label>
-            <select id="lecture-file-format" style="margin: 0; font-size: 11px; padding: 8px 10px; background: var(--card); color: var(--text); border: 1px solid var(--border); border-radius: 12px;">
-              <option value="txt">.txt (Textdatei)</option>
-              <option value="pdf">.pdf (Dokument)</option>
-            </select>
-          </div>
-
-          <button type="button" class="btn" onclick="saveLectureNotesToFile()" style="margin: 0; padding: 9px; font-size: 11px; font-weight: 800;">📥 Als Datei herunterladen</button>
-        </div>
-      </div>
-
-      <!-- 2. Live Streams Tab -->
-      <div id="tab-live" class="tab-content hidden">
-        <div style="padding: 10px 16px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; background: rgba(0,0,0,0.2);">
-          <div class="category-group" id="live-filter-group" style="margin: 0; overflow-x: auto;">
-            <button type="button" class="cat-pill active" onclick="setLiveFilter(this, 'Alle')">Alle</button>
-            <button type="button" class="cat-pill" onclick="setLiveFilter(this, '💬 Plaudern')">💬 Plaudern</button>
-            <button type="button" class="cat-pill" onclick="setLiveFilter(this, '🎮 Gaming')">🎮 Gaming</button>
-            <button type="button" class="cat-pill" onclick="setLiveFilter(this, '🎵 Musik')">🎵 Musik</button>
-            <button type="button" class="cat-pill" onclick="setLiveFilter(this, '📚 Lernen')">📚 Lernen</button>
-          </div>
-          <button type="button" class="btn" id="start-stream-btn" style="width: auto; margin: 0; padding: 6px 12px; font-size: 11px;" onclick="handlePreLiveCheck()">+ Start</button>
-        </div>
-
-        <div class="reel-card-wrapper" id="live-streams-list" style="flex: 1; overflow-y: auto; scroll-snap-type: y mandatory; padding: 10px 0;">
-          <p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;">Lade aktive Live-Streams...</p>
-        </div>
-      </div>
-
-      <!-- 3. Reels / Campus Feed Tab -->
-      <div id="tab-reels" class="tab-content">
-        <div class="feed-filter-bar" id="feed-filter-bar" role="tablist" aria-label="Feed-Ansichten">
-          <div class="feed-specials-row">
-            <button type="button" class="feed-subtab-btn feed-subtab-duell" id="subtab-uni-duell" onclick="switchTab('ranking'); if(window.loadRankingData) loadRankingData();" title="Wiener Uni-Duell & Rangliste öffnen">🏆 Wiener Uni-Duell</button>
-            <button type="button" class="feed-subtab-btn feed-subtab-match" id="subtab-match-mittwoch" onclick="openCrushModal()" title="Match Mittwoch & Crush Radar öffnen">💖 Match Mittwoch</button>
-          </div>
-
-          <div class="feed-tabs-row">
-            <button type="button" class="feed-subtab-btn active" style="font-size: 12px; font-weight: 800; cursor: pointer; color: var(--primary);" id="subtab-foryou" onclick="setReelFilter('foryou')">✨ Für dich</button>
-            <button type="button" class="feed-subtab-btn" style="font-size: 12px; font-weight: 800; cursor: pointer; color: var(--text-muted);" id="subtab-discover" onclick="setReelFilter('discover')">🔥 Entdecken</button>
-            <button type="button" class="feed-subtab-btn" style="font-size: 12px; font-weight: 800; cursor: pointer; color: var(--text-muted);" id="subtab-following" onclick="setReelFilter('following')">👥 Gefolgt</button>
-            <button type="button" class="feed-subtab-btn" style="font-size: 12px; font-weight: 800; cursor: pointer; color: var(--danger);" id="subtab-live" onclick="switchTab('live')">🔴 LIVE</button>
-          </div>
-        </div>
-
-        <div class="reel-card-wrapper" id="reels-list" style="flex: 1; overflow-y: auto; scroll-snap-type: y mandatory; padding: 0 12px 10px 12px;">
-          <p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;">Lade Campus-Feeds...</p>
-        </div>
-      </div>
-
-      <!-- 4. Spontane Treffen Tab -->
-      <div id="tab-feed" class="tab-content hidden">
-        <div class="container-box" style="margin-bottom: 12px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px; gap: 6px; flex-wrap: wrap;">
-            <h3 style="font-size: 16px; font-weight: 800;">Spontane Treffen</h3>
-            <div style="display:flex; gap: 6px; align-items: center;">
-              <button type="button" class="btn btn-secondary" style="width:auto; margin-top:0; padding: 6px 10px; font-size: 11px;" onclick="openCampusCalendar()">📅 Kalender</button>
-              <button type="button" class="btn" style="width:auto; margin-top:0; padding: 6px 12px; font-size: 12px;" onclick="openUploadModal()">+ Erstellen</button>
-            </div>
-          </div>
-
-          <div class="category-group" id="filter-group">
-            <button type="button" class="cat-pill active" onclick="setFilter(this, 'Alle')">Alle</button>
-            <button type="button" class="cat-pill" onclick="setFilter(this, '☕ Kaffee')">☕ Kaffee</button>
-            <button type="button" class="cat-pill" onclick="setFilter(this, '📖 Lernen')">📖 Lernen</button>
-            <button type="button" class="cat-pill" onclick="setFilter(this, '🍺 Bier')">🍺 Bier</button>
-            <button type="button" class="cat-pill" onclick="setFilter(this, '🏀 Sport')">🏀 Sport</button>
-          </div>
-        </div>
-
-        <div id="feed-list" style="overflow-y:auto; flex:1;">
-          <p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;">Lade Treffen...</p>
-        </div>
-      </div>
-
-      <!-- 5. Ranking & Uni-Duell Tab -->
-      <div id="tab-ranking" class="tab-content hidden">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px; flex-shrink:0;">
-          <h3 style="font-size: 16px; font-weight: 800;">🏆 Uni-Duell & Top 100</h3>
-          <button type="button" class="btn btn-secondary" onclick="if(window.loadRankingData) loadRankingData();" style="width: auto; margin-top: 0; padding: 4px 10px; font-size: 10px;">🔄 Aktualisieren</button>
-        </div>
-
-        <div style="overflow-y: auto; flex: 1; padding-bottom: 20px;">
-          <div class="container-box" style="margin-bottom: 12px;">
-            <h4 style="font-size: 13px; font-weight: 800; margin-bottom: 8px; color: #818cf8;">🎓 Wiener Uni-Duell (Pro-Kopf)</h4>
-            <div id="uni-duell-list" style="display: flex; flex-direction: column; gap: 8px;">
-              <p style="color: var(--text-muted); font-size: 12px;">Berechne Uni-Wertung...</p>
-            </div>
-          </div>
-
-          <h4 style="font-size: 13px; font-weight: 800; margin-bottom: 6px;">⭐ Wall of Fame (Top Creator)</h4>
-          <div id="top-creators-list" class="container-box" style="display: flex; flex-direction: column; gap: 6px;">
-            <p style="color: var(--text-muted); font-size: 12px;">Lade Top Creator...</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- 6. Globaler Chat Tab -->
-      <div id="tab-global" class="tab-content hidden">
-        <div class="chat-container container-box" style="height: 100%; padding: 0; overflow: hidden;">
-          <div class="messages-list" id="global-chat-list">
-            <p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;">Lade Campus-Chat...</p>
-          </div>
-          <div class="chat-input-area">
-            <input type="text" id="global-chat-input" placeholder="Nachricht an alle..." onkeydown="if(event.key==='Enter') sendGlobalMessage()">
-            <button type="button" class="btn" style="width: auto; margin:0; padding: 0 16px;" onclick="sendGlobalMessage()">Senden</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- 7. Postfach / Direktnachrichten Tab -->
-      <div id="tab-inbox" class="tab-content hidden">
-        <div class="chat-container container-box" style="height: 100%; padding: 12px; overflow: hidden; display: flex; flex-direction: column; gap: 8px;">
-          <div id="dm-inbox-shell" style="display: grid; grid-template-columns: minmax(210px, 280px) minmax(0, 1fr); gap: 12px; flex: 1; min-height: 0; overflow: hidden;">
-            <div id="dm-conversations-sidebar" style="display: flex; flex-direction: column; background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; min-height: 0;">
-              <div style="padding: 10px 12px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 6px; flex-shrink: 0;">
-                <span style="font-size: 12px; font-weight: 800; color: #fff;">💬 Konversationen</span>
-                <button type="button" onclick="if(window.loadConversationsList) loadConversationsList()" aria-label="Konversationen aktualisieren" style="background: rgba(255,255,255,0.06); border: 1px solid var(--border); color: var(--text-muted); border-radius: 8px; padding: 3px 8px; font-size: 10px; font-weight: 700; cursor: pointer;">↻</button>
-              </div>
-              <div id="dm-conversations-list" style="flex: 1; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 6px;">
-                <p style="color: var(--text-muted); font-size: 11px; text-align: center; padding: 14px;">Lade Konversationen...</p>
-              </div>
-            </div>
-
-            <div id="dm-thread-pane" style="display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden;">
-              <label for="dm-recipient" style="font-size: 10px; font-weight: 600; color: var(--text-muted); flex-shrink:0;">Empfänger (E-Mail):</label>
-              <input type="email" id="dm-recipient" placeholder="kommilitone@uni.at" style="margin-bottom: 6px; flex-shrink:0; max-width: 400px;" onchange="loadDirectMessages()">
-              
-              <div class="messages-list" id="dm-chat-list">
-                <p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;">Wähle links eine Konversation aus oder gib oben eine E-Mail ein.</p>
-              </div>
-              <div class="chat-input-area">
-                <input type="text" id="dm-input" placeholder="Direktnachricht..." onkeydown="if(event.key==='Enter') sendDirectMessage()">
-                <button type="button" class="btn" style="width: auto; margin:0; padding: 0 16px;" onclick="sendDirectMessage()">Senden</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 8. Profil Tab -->
-      <div id="tab-profile" class="tab-content hidden">
-        <div style="overflow-y: auto; flex: 1; padding: 4px; min-height: 0; height: 100%;">
-          <div class="profile-header-card container-box" style="margin-bottom: 12px;">
-            <div style="display:flex; align-items:center; gap:12px;">
-              <img id="my-profile-avatar-preview" class="profile-avatar-lg" src="" onclick="changeAvatarDirectly()" title="Klicken, um das Profilbild zu ändern" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'64\' height=\'64\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%2394a3b8\' stroke-width=\'2\'><path d=\'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2\'></path><circle cx=\'12\' cy=\'7\' r=\'4\'></circle></svg>'" alt="Avatar">
-              <div>
-                <h3 id="my-profile-display-name" style="font-size: 16px; font-weight: 800; margin-bottom: 2px;">Dein Name</h3>
-                <p id="my-profile-handle-preview" style="font-size: 12px; color: #818cf8; font-weight: 700;">@benutzername</p>
-                <div id="verified-student-badge-container" style="margin-top: 4px;"></div>
-                <div id="profile-rank-badge" style="display: inline-block; background: rgba(99,102,241,0.2); color: #818cf8; border: 1px solid rgba(99,102,241,0.4); padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 800; margin-top: 3px;">☕ Frischer Erstie</div>
-                <div style="font-size: 10px; color: var(--text-muted); margin-top: 3px; font-weight: 600;" id="follower-stats">0 Follower • 0 Gefolgt</div>
-              </div>
-            </div>
-          </div>
-
-          <div class="container-box" style="background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(236,72,153,0.15)); margin-bottom: 12px; max-width: 600px; text-align: center;">
-            <h4 style="font-size: 13px; font-weight: 800; margin-bottom: 4px; color: var(--text);">🚀 Zeig dein Campus-Level!</h4>
-            <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 10px;">Teile deinen Status in deiner WhatsApp-Status oder Insta-Story und hol dir Extrapunkte!</p>
-            <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
-              <button type="button" class="btn" onclick="shareProfileCard()" style="margin-top: 0; width: auto; background: var(--gradient-main); font-size: 12px; padding: 8px 14px;">📲 Profil in WhatsApp / Insta teilen</button>
-              <button type="button" class="btn btn-secondary" data-open-group-chats onclick="openLectureGroupChatsModal()" style="margin-top: 0; width: auto; font-size: 12px; padding: 8px 14px;">🎓 Vorlesungs-Gruppenchats</button>
-              <button type="button" class="btn btn-secondary" id="push-permission-btn" onclick="requestPushPermission()" style="margin-top: 0; width: auto; font-size: 12px; padding: 8px 14px;">🔔 Push aktivieren</button>
-            </div>
-          </div>
-
-          <!-- Punkt 27: Lokale Benachrichtigungs-Historie / Activity Feed -->
-          <div id="profile-activity-feed" style="max-width: 600px; margin-bottom: 14px;"></div>
-
-          <div class="container-box" style="max-width: 600px; margin-bottom: 20px;">
-            <label for="profile-username" style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Benutzername (Handle):</label>
-            <input type="text" id="profile-username" placeholder="z. B. johndoe">
-
-            <label for="profile-fullname" style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Anzeigename:</label>
-            <input type="text" id="profile-fullname" placeholder="z. B. John Doe">
-
-            <label for="profile-university" style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Deine Universität:</label>
-            <select id="profile-university">
-              <option value="Universität Wien">Universität Wien</option>
-              <option value="TU Wien">TU Wien</option>
-              <option value="Wirtschaftsuniversität Wien (WU)">WU Wien</option>
-              <option value="MedUni Wien">MedUni Wien</option>
-              <option value="boku">BOKU Wien</option>
-              <option value="FH Wien">FH Wien</option>
-            </select>
-
-            <label for="profile-bio" style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Bio / Über mich:</label>
-            <textarea id="profile-bio" rows="2" placeholder="Dein Studiengang, Vibe, Hobbys..."></textarea>
-
-            <label for="profile-avatar" style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Profilbild URL:</label>
-            <input type="text" id="profile-avatar" placeholder="https://beispiel.de/bild.jpg" oninput="document.getElementById('my-profile-avatar-preview').src = this.value; document.getElementById('header-avatar-preview').src = this.value;">
-
-            <label for="profile-interests" style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Interessen (mit Komma getrennt):</label>
-            <input type="text" id="profile-interests" placeholder="Programmieren, Kaffee, Fitness, Musik">
-
-            <button type="button" class="btn" onclick="saveMyProfile()" style="margin-bottom: 14px;">Profil speichern (+10 P)</button>
-
-            <h4 style="font-size: 14px; font-weight: 800; margin-top: 14px; margin-bottom: 6px;">Deine Beiträge</h4>
-            <div id="my-profile-posts-grid" class="profile-grid"></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 9. Admin Dashboard Tab -->
-      <div id="tab-admin" class="tab-content hidden">
-        <div class="container-box" style="max-width: 600px; padding-bottom: 20px;">
-          <h3 style="font-size: 16px; font-weight: 800; margin-bottom: 4px; color: var(--admin);">⚡ Admin-Interface: Campus-Drops & Test-Tools</h3>
-          <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;">Verwalte hier Drops und teste dein Punktekonto im Admin-Modus.</p>
-
-          <div style="background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); border-radius: 12px; padding: 12px; margin-bottom: 14px;">
-            <h4 style="font-size: 13px; font-weight: 800; color: var(--admin); margin-bottom: 4px;">🧪 Admin Test-Modus: Punkte simulieren</h4>
-            <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">Da du als Admin bist, kannst du hier deinen Test-Punktestand direkt anpassen:</p>
-            <div style="display: flex; gap: 8px;">
-              <input type="number" id="admin-test-points-input" placeholder="z. B. 45" style="margin: 0; flex: 1;">
-              <button type="button" class="btn" onclick="adminSetTestPoints()" style="margin: 0; width: auto; background: var(--admin); color: #000; font-weight: 800; padding: 0 14px;">Punkte setzen</button>
-            </div>
-          </div>
-
-          <h4 style="font-size: 14px; font-weight: 800; margin-bottom: 6px; color: var(--admin);">📍 Neuen Campus-Drop erstellen</h4>
-          <label for="admin-drop-title" style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Drop Titel / Info:</label>
-          <input type="text" id="admin-drop-title" placeholder="z. B. 50 Punkte im Lokal X!">
-
-          <label for="admin-drop-reward-type" style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Belohnungs-Typ:</label>
-          <select id="admin-drop-reward-type">
-            <option value="points">Punkte (z. B. 50)</option>
-            <option value="badge">Spezial-Badge</option>
-          </select>
-
-          <label for="admin-drop-reward-value" style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Wert (Punktzahl oder Badge-Name):</label>
-          <input type="text" id="admin-drop-reward-value" placeholder="50">
-
-          <label for="admin-drop-start-time" style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Startzeitpunkt (Datum & Uhrzeit):</label>
-          <input type="datetime-local" id="admin-drop-start-time">
-
-          <label style="font-size: 11px; font-weight: 600; color: var(--text-muted); display: block; margin-top: 6px;">📍 Spot auf Karte auswählen (Klick setzt Marker):</label>
-          <div id="admin-map" style="width: 100%; height: 220px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 8px; z-index: 1;"></div>
-
-          <div style="display: flex; gap: 8px;">
-            <div style="flex: 1;">
-              <label for="admin-drop-lat" style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Latitude (Breitengrad):</label>
-              <input type="number" step="any" id="admin-drop-lat" placeholder="48.2082">
-            </div>
-            <div style="flex: 1;">
-              <label for="admin-drop-lng" style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Longitude (Längengrad):</label>
-              <input type="number" step="any" id="admin-drop-lng" placeholder="16.3738">
-            </div>
-          </div>
-
-          <label for="admin-drop-radius" style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Radius in Metern (z. B. 100m vor Ort):</label>
-          <input type="number" id="admin-drop-radius" placeholder="100" value="100">
-
-          <button type="button" class="btn" onclick="handleCreateCampusDrop()" style="background: var(--admin); color: #000; font-weight: 900;">Drop mit GPS-Bindung freigeben 🚀</button>
-        </div>
-      </div>
-
-    </div>
-
-    <!-- Untere Navigation & Footer Links -->
-    <div class="bottom-controls-wrapper">
-      <nav class="nav-tabs" id="bottom-nav-bar" aria-label="Hauptnavigation">
-        <button type="button" class="tab-btn active" onclick="switchTab('reels')" id="btn-tab-reels">✨ Feed</button>
-        <button type="button" class="tab-btn" onclick="switchTab('feed')" id="btn-tab-feed">💬 Treffen</button>
-
-        <div class="tab-btn-action-container">
-          <button type="button" class="tab-btn-action" onclick="openUploadModal()" title="Beitrag erstellen" aria-label="Neuen Beitrag erstellen">+</button>
-        </div>
-
-        <button type="button" class="tab-btn" onclick="switchTab('global')" id="btn-tab-global">⚡ Chat</button>
-        <button type="button" class="tab-btn" onclick="switchTab('inbox')" id="btn-tab-inbox">📬 Postfach</button>
-      </nav>
-
-      <div class="footer-links">
-        <button type="button" class="footer-link-btn" onclick="openReportModal()">🚨 Inhalt melden</button>
-        <span aria-hidden="true">•</span>
-        <button type="button" class="footer-link-btn" onclick="openImpressumModal()">Impressum</button>
-        <span aria-hidden="true">•</span>
-        <button type="button" class="footer-link-btn" onclick="openAgbModal()">AGB</button>
-        <span aria-hidden="true">•</span>
-        <button type="button" class="footer-link-btn" onclick="openReportModal()" style="color: #ef4444; font-weight: 700;">⚠️ Fehler melden</button>
-      </div>
-    </div>
-
-  </div>
-
-  <!-- VOLLSTÄNDIG FLEXIBLES & OPTIMIERTES LIVE FULLSCREEN MODAL -->
-  <div id="live-fullscreen-modal" class="hidden tab-content" style="position: absolute; top:0; left:0; width:100%; height:100%; background: #000; z-index: 200; display: flex; flex-direction: column; overflow: hidden;">
-    
-    <!-- Modal Header -->
-    <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: rgba(9,13,22,0.95); border-bottom: 1px solid var(--border); flex-shrink: 0; z-index: 210;">
-      <div>
-        <h2 id="active-live-title-display" style="font-size: 14px; font-weight: 800; color: #fff; margin: 0;">🔴 Live Stream</h2>
-        <p id="active-live-host-display" style="font-size: 10px; color: var(--text-muted); margin: 0;">Standort wird geladen...</p>
-      </div>
-      <button type="button" class="btn btn-secondary" onclick="closeLiveFullscreen()" style="padding: 4px 10px; font-size: 11px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); width: auto; margin:0;">✕ Schließen</button>
-    </div>
-    
-    <!-- Video Player Container -->
-    <div id="live-stream-player-container" style="flex: 1; position: relative; width: 100%; background: #000; display: flex; align-items: center; justify-content: center; overflow: hidden; min-height: 0;">
-      <!-- Dynamischer Inhalt -->
-    </div>
-
-    <!-- Unterer Bereich für Chat & Geschenke -->
-    <div style="width: 100%; background: rgba(9,13,22,0.98); border-top: 1px solid var(--border); display: flex; flex-direction: column; padding: 8px 12px; box-sizing: border-box; flex-shrink: 0; max-height: 42vh;">
-      
-      <!-- Chat Nachrichten -->
-      <div id="live-chat-messages" style="height: 65px; min-height: 50px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; margin-bottom: 4px; font-size: 11px; padding-right: 4px;">
-        <div style="color: var(--text-muted); text-align: center;">Willkommen im Live-Chat! 💬</div>
-      </div>
-
-      <!-- Eingabe & Steuerungsbereich -->
-      <div id="live-chat-input-container" style="display: flex; flex-direction: column; gap: 4px; width: 100%;">
-        <!-- Wird dynamisch befüllt -->
-      </div>
-    </div>
-  </div>
-
-  <div id="more-points-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.92); z-index: 100;">
-    <div class="container-box" style="width: 100%; max-width: 400px; margin: 10px;">
-      <h3 style="margin-bottom: 4px; font-weight: 900; color: var(--primary);">🎁 Mehr Punkte sammeln</h3>
-      <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 14px; line-height: 1.4;">Wähle eine Methode, um deinen Punktestand und dein Uni-Ranking zu pushen:</p>
-      
-      <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px;">
-        <button type="button" onclick="closeMorePointsModal(); openCampusQuizModal();" style="text-align: left; width: 100%; background: rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.3); padding: 12px; border-radius: 12px; cursor: pointer;">
-          <div style="font-weight: 800; font-size: 13px; color: #818cf8; margin-bottom: 2px;">🧠 Tägliches Campus- & Allgemein-Quiz</div>
-          <div style="font-size: 11px; color: var(--text-muted);">Teste dein Wissen in 15 Sek. pro Frage & hol dir Bonuspunkte!</div>
-        </button>
-
-        <button type="button" onclick="closeMorePointsModal(); openActiveSpotsModal();" style="text-align: left; width: 100%; background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.3); padding: 12px; border-radius: 12px; cursor: pointer;">
-          <div style="font-weight: 800; font-size: 13px; color: var(--admin); margin-bottom: 2px;">📍 Vor-Ort Campus-Drops</div>
-          <div style="font-size: 11px; color: var(--text-muted);">Checke aktive Partner-Spots in Wien ab.</div>
-        </button>
-
-        <button type="button" onclick="closeMorePointsModal(); openBlackboardModal();" style="text-align: left; width: 100%; background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); padding: 12px; border-radius: 12px; cursor: pointer;">
-          <div style="font-weight: 800; font-size: 13px; color: #10b981; margin-bottom: 2px;">📌 Schwarzes Brett (Marktplatz)</div>
-          <div style="font-size: 11px; color: var(--text-muted);">Finde WG-Zimmer, Lernpartner und Skripten.</div>
-        </button>
-
-        <button type="button" onclick="closeMorePointsModal(); switchTab('profile');" style="text-align: left; width: 100%; background: rgba(236,72,153,0.15); border: 1px solid rgba(236,72,153,0.3); padding: 12px; border-radius: 12px; cursor: pointer;">
-          <div style="font-weight: 800; font-size: 13px; color: var(--accent); margin-bottom: 2px;">📲 Profil & Social Sharing</div>
-          <div style="font-size: 11px; color: var(--text-muted);">Teile deine Erfolge in WhatsApp / Insta für Hype-Punkte.</div>
-        </button>
-      </div>
-      <button type="button" class="btn btn-secondary" onclick="closeMorePointsModal()">Schließen</button>
-    </div>
-  </div>
-
-  <div id="prof-guide-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.95); z-index: 120;">
-    <div class="container-box" style="width: 100%; max-width: 480px; margin: 10px; max-height: 85vh; display: flex; flex-direction: column;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-        <h3 style="font-weight: 900; color: #818cf8; font-size: 16px;">📚 Prof-Rating & Survival Guide</h3>
-        <button type="button" class="btn btn-secondary" style="width: auto; padding: 4px 10px; font-size: 11px; margin-top: 0;" onclick="toggleProfForm()">+ Review schreiben</button>
-      </div>
-      <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;">Altklausuren-Tipps, Prof-Erfahrungen und Schwierigkeitsgrade.</p>
-      
-      <div id="prof-review-form-container" class="hidden" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 12px;">
-        <h4 style="font-size: 13px; font-weight: 800; margin-bottom: 6px; color: var(--text);">✍️ Neue Erfahrung teilen</h4>
-        <input type="text" id="prof-name-input" placeholder="Name des Professors (z. B. Prof. Müller)" style="margin-bottom: 6px;">
-        <input type="text" id="prof-subject-input" placeholder="Modul / Vorlesung (z. B. Analysis 1)" style="margin-bottom: 6px;">
-        
-        <div style="display: flex; gap: 8px; margin-bottom: 6px;">
-          <div style="flex: 1;">
-            <label for="prof-rating-select" style="font-size: 10px; color: var(--text-muted);">Bewertung:</label>
-            <select id="prof-rating-select" style="margin: 2px 0 6px 0;">
-              <option value="5">⭐⭐⭐⭐⭐ (Top)</option>
-              <option value="4">⭐⭐⭐⭐ (Gut)</option>
-              <option value="3">⭐⭐⭐ (Okay)</option>
-              <option value="2">⭐⭐ (Schwer)</option>
-              <option value="1">⭐ (Vorsicht!)</option>
-            </select>
-          </div>
-          <div style="flex: 1;">
-            <label for="prof-difficulty-select" style="font-size: 10px; color: var(--text-muted);">Schwierigkeit:</label>
-            <select id="prof-difficulty-select" style="margin: 2px 0 6px 0;">
-              <option value="1">1 - Chillig</option>
-              <option value="2">2 - Machbar</option>
-              <option value="3">3 - Mittel</option>
-              <option value="4">4 - Anspruchsvoll</option>
-              <option value="5">5 - Killer-Klausur</option>
-            </select>
-          </div>
-        </div>
-        <textarea id="prof-comment-input" rows="3" placeholder="Insider-Tipps, Altklausuren..." style="margin-bottom: 8px; resize: none;"></textarea>
-        <div style="display: flex; gap: 6px;">
-          <button type="button" class="btn" onclick="submitProfReview()" style="margin-top: 0; padding: 8px;">Abschicken (+15 P) 🚀</button>
-          <button type="button" class="btn btn-secondary" onclick="toggleProfForm()" style="margin-top: 0; padding: 8px; width: auto;">Abbrechen</button>
-        </div>
-      </div>
-
-      <input type="text" id="prof-search-input" placeholder="🔍 Nach Prof oder Fach suchen..." oninput="filterProfReviews()" style="margin-bottom: 10px;">
-      <div id="prof-reviews-list" style="overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;">
-        <p style="font-size: 12px; color: var(--text-muted); text-align: center; padding: 20px;">Lade Bewertungen...</p>
-      </div>
-      <button type="button" class="btn btn-secondary" onclick="closeProfGuideModal()">Schließen</button>
-    </div>
-  </div>
-
-  <div id="quiz-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.95); z-index: 110;">
-    <div class="container-box" style="width: 100%; max-width: 400px; margin: 10px;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-        <h3 style="font-weight: 900; color: #818cf8; font-size: 15px;" id="quiz-title">🧠 Campus & Allgemein Quiz</h3>
-        <span id="quiz-timer-badge" style="background: rgba(236,72,153,0.2); color: var(--accent); border: 1px solid rgba(236,72,153,0.4); padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 800;">⏱️ 15s</span>
-      </div>
-      <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;" id="quiz-subtitle">Frage laden...</p>
-      <div id="quiz-question-container" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 12px; font-size: 13px; font-weight: 700; line-height: 1.4;">Lade Fragen...</div>
-      <div id="quiz-options-container" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px;"></div>
-      <button type="button" class="btn btn-secondary" onclick="closeCampusQuizModal()">Abbrechen</button>
-    </div>
-  </div>
-
-  <div id="active-spots-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.92); z-index: 100;">
-    <div class="container-box" style="width: 100%; max-width: 400px; margin: 10px; max-height: 80vh; display: flex; flex-direction: column;">
-      <h3 style="margin-bottom: 4px; font-weight: 900; color: var(--admin);">📍 Aktuelle Campus- & Partner-Spots</h3>
-      <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px; line-height: 1.4;">Gehe zum Spot vor Ort, um Punkte einzusammeln!</p>
-      <div id="modal-active-spots-list" style="overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;"></div>
-      <button type="button" class="btn btn-secondary" onclick="closeActiveSpotsModal()">Schließen</button>
-    </div>
-  </div>
-
-  <div id="crush-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.92); z-index: 100;">
-    <div class="container-box" style="width: 100%; max-width: 400px; margin: 10px;">
-      <h3 style="margin-bottom: 4px; font-weight: 900; color: var(--accent);">💖 Anonymes Crush Radar</h3>
-      <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px; line-height: 1.4;">Trage deinen Campus-Crush ein. Bei gegenseitigem Match gibt es ein Blind-Date!</p>
-      <label for="crush-target-input" style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Crush (E-Mail oder @handle):</label>
-      <input type="text" id="crush-target-input" placeholder="crush@uni.at oder @username">
-      <label for="crush-hint-input" style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Geheimer Hinweis (optional):</label>
-      <input type="text" id="crush-hint-input" placeholder="z.b. Bib Reihe 4...">
-      <button type="button" class="btn" onclick="submitCrush()">Abschicken & Hoffen 💘</button>
-      <div id="crush-matches-box" style="margin-top: 12px; font-size: 11px;"></div>
-      <button type="button" class="btn btn-secondary" onclick="closeCrushModal()">Schließen</button>
-    </div>
-  </div>
-
-  <div id="media-upload-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.95); z-index: 150; backdrop-filter: blur(8px);">
-    <div class="container-box" style="width: 100%; max-width: 440px; margin: 16px; border: 1px solid rgba(99, 102, 241, 0.4); box-shadow: 0 15px 35px rgba(0, 0, 0, 0.8), 0 0 20px rgba(99, 102, 241, 0.15);">
-      
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-        <h3 style="font-size: 16px; font-weight: 900; background: var(--gradient-main); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">🎬 Cyberpunk Media Uploader</h3>
-        <button type="button" onclick="closeMediaUploadModal()" aria-label="Upload-Modal schließen" style="background: transparent; border: none; color: var(--text-muted); font-size: 16px; cursor: pointer;">✕</button>
-      </div>
-      
-      <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 14px; line-height: 1.4;">Teile deine Confession oder Clips im Campus-Feed. Videos werden automatisch auf max. 30 Sekunden optimiert.</p>
-      
-      <label for="media-file-input" style="font-size: 11px; font-weight: 700; color: #818cf8; display: block; margin-bottom: 6px;">Mediendatei auswählen (Video / Foto):</label>
-      <div style="border: 2px dashed rgba(99, 102, 241, 0.3); background: rgba(99, 102, 241, 0.03); padding: 16px; border-radius: 12px; text-align: center; margin-bottom: 12px;">
-        <input type="file" id="media-file-input" accept="video/*,image/*" onchange="handleMediaSelection(event)" style="font-size: 11px; color: var(--text-muted); width: 100%; cursor: pointer;">
-      </div>
-
-      <div id="trimmer-container" class="hidden" style="margin-bottom: 12px; background: rgba(0,0,0,0.4); padding: 8px; border-radius: 10px; border: 1px solid var(--border);">
-        <video id="trim-video-preview" controls style="width: 100%; max-height: 160px; border-radius: 8px; background: #000; margin-bottom: 6px;"></video>
-        <div style="font-size: 10px; font-weight: 700; text-align: center;" id="video-duration-info">Dauer: 0s</div>
-      </div>
-
-      <label for="media-caption-input" style="font-size: 11px; font-weight: 700; color: #818cf8; display: block; margin-bottom: 6px;">Bild- / Video-Untertitel:</label>
-      <input type="text" id="media-caption-input" placeholder="Schreibe eine fesselnde Confession..." style="margin-bottom: 16px;">
-
-      <div style="display: flex; gap: 8px;">
-        <button type="button" class="btn" onclick="uploadTrimmedMedia()" style="margin-top: 0; background: var(--gradient-main); font-weight: 900; box-shadow: 0 4px 15px rgba(99,102,241,0.4);">Beitrag veröffentlichen 🚀</button>
-        <button type="button" class="btn btn-secondary" onclick="closeMediaUploadModal()" style="margin-top: 0; width: auto;">Abbrechen</button>
-      </div>
-
-    </div>
-  </div>
-
-  <div id="public-profile-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.95); z-index: 220;">
-    <div class="container-box" style="width: 100%; max-width: 450px; max-height: 90vh; overflow-y: auto; margin: 10px; position: relative;">
-      <button type="button" onclick="closePublicProfileModal()" aria-label="Profilansicht schließen" style="position: absolute; top: 16px; right: 16px; background: rgba(255,255,255,0.1); border: none; color: #fff; width: 32px; height: 32px; border-radius: 50%; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center;">✕</button>
-      
-      <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 20px;">
-        <img id="pub-profile-avatar" src="" style="width: 70px; height: 70px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent); background: #000;" alt="Avatar">
-        <div>
-          <h3 id="pub-profile-fullname" style="font-size: 18px; font-weight: 800; color: #fff; margin: 0 0 4px 0;">Name</h3>
-          <div id="pub-profile-handle" style="font-size: 13px; color: var(--text-muted); margin-bottom: 4px;">@handle</div>
-          <div id="pub-profile-badge-container"></div>
-        </div>
-      </div>
-
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;">
-        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); padding: 10px; border-radius: 10px; text-align: center;">
-          <div style="font-size: 10px; color: var(--text-muted);">Universität</div>
-          <div id="pub-profile-uni" style="font-size: 12px; font-weight: 700; color: #fff; margin-top: 2px;">-</div>
-        </div>
-        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); padding: 10px; border-radius: 10px; text-align: center;">
-          <div style="font-size: 10px; color: var(--text-muted);">Logic Score</div>
-          <div id="pub-profile-score" style="font-size: 12px; font-weight: 800; color: #818cf8; margin-top: 2px;">0 P</div>
-        </div>
-      </div>
-
-      <div style="margin-bottom: 20px;">
-        <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">Bio</div>
-        <p id="pub-profile-bio" style="font-size: 13px; color: var(--text); background: rgba(255,255,255,0.02); padding: 10px; border-radius: 8px; border: 1px solid var(--border); margin: 0; min-height: 40px;">-</p>
-      </div>
-
-      <div>
-        <div style="font-size: 12px; font-weight: 700; color: #fff; margin-bottom: 10px;">Beiträge von diesem Nutzer</div>
-        <div id="pub-profile-posts-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;"></div>
-      </div>
-    </div>
-  </div>
-
-  <div id="impressum-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: #090d16; z-index: 250; padding: 20px;">
-    <div class="container-box" style="width: 100%; max-width: 500px; padding: 24px;">
-      <h2 style="font-size: 20px; font-weight: 900; color: var(--primary); margin-bottom: 12px;">Impressum</h2>
-      <div style="font-size: 13px; color: var(--text); line-height: 1.6; margin-bottom: 18px;">
-        <p><strong>Angaben gemäß § 5 ECG / Offenlegung gem. § 25 Mediengesetz:</strong></p><br>
-        <p><strong>Medieninhaber & Herausgeber:</strong><br>Domenic Zöchling<br>PURE LOGIC<br>3051 St. Christophen, Österreich</p><br>
-        <p><strong>Kontakt:</strong><br>E-Mail: <a href="mailto:office@pure-logic.at" style="color: #818cf8;">office@pure-logic.at</a></p>
-      </div>
-      <button type="button" class="btn" onclick="document.getElementById('impressum-modal').classList.add('hidden')">Zurück zur App ↩️</button>
-    </div>
-  </div>
-
-  <div id="agb-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: #090d16; z-index: 250; padding: 20px;">
-    <div class="container-box" style="width: 100%; max-width: 500px; padding: 24px;">
-      <h2 style="font-size: 20px; font-weight: 900; color: var(--primary); margin-bottom: 12px;">AGB & Nutzungsbedingungen</h2>
-      <div style="font-size: 12px; color: var(--text-muted); line-height: 1.6; margin-bottom: 18px; max-height: 300px; overflow-y: auto;">
-        <p><strong>1. Geltungsbereich:</strong> Diese Bedingungen gelten für alle Nutzer der Plattform.</p><br>
-        <p><strong>2. Verhaltensregeln:</strong> Strikter Ausschluss von Diskriminierung und Spam.</p>
-      </div>
-      <button type="button" class="btn" onclick="document.getElementById('agb-modal').classList.add('hidden')">Gelesen & Zurück ↩️</button>
-    </div>
-  </div>
-
-  <div id="report-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.95); z-index: 250; padding: 20px;">
-    <div class="container-box" style="width: 100%; max-width: 450px; padding: 20px; border: 1px solid rgba(239, 68, 68, 0.4);">
-      <h3 style="font-size: 18px; font-weight: 900; color: #ef4444; margin-bottom: 6px;">⚠️ Problem / Fehler melden</h3>
-      <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;">Beschreibe uns das Problem. Als Dankeschön erhältst du direkt **5 Gratis-Punkte** auf dein Konto! 🎁</p>
-      
-      <label for="bug-report-email" style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Deine E-Mail-Adresse (für Rückmeldung):</label>
-      <input type="email" id="bug-report-email" placeholder="deine.mail@uni.at" style="margin-bottom: 10px;">
-
-      <label for="bug-report-details" style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Fehlerbeschreibung / Anliegen:</label>
-      <textarea id="bug-report-details" rows="4" placeholder="Was ist passiert? Welcher Fehler tritt auf?" style="margin-bottom: 10px; resize: none;"></textarea>
-      
-      <label for="bug-report-screenshot" style="font-size: 11px; font-weight: 600; color: #818cf8; display: block; margin-bottom: 4px;">Screenshot hochladen (optional):</label>
-      <input type="file" id="bug-report-screenshot" accept="image/*" style="font-size: 11px; color: var(--text-muted); margin-bottom: 14px; width: 100%;">
-
-      <div id="bug-report-msg" class="hidden" style="font-size: 11px; padding: 8px; border-radius: 8px; margin-bottom: 10px; background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3);">
-        Dein Anliegen ist uns sehr wichtig und bei der nächsten Prüfung werden wir es genau unter die Lupe nehmen ! Danke für dein Feedback! (+5 Punkte gutgeschrieben ✨)
-      </div>
-
-      <div style="display: flex; gap: 8px;">
-        <button type="button" class="btn" onclick="submitBugReport()" style="margin-top:0; background: #ef4444; font-weight: 800;">Meldung abschicken 🚀</button>
-        <button type="button" class="btn btn-secondary" onclick="document.getElementById('report-modal').classList.add('hidden')" style="margin-top:0; width:auto;">Schließen</button>
-      </div>
-    </div>
-  </div>
-
-</div>
-
-<!-- Modul-Skripte Einbindung -->
-<script type="module" src="js/config.js?v=6"></script>
-<script type="module" src="js/state.js?v=6"></script>
-<script type="module" src="js/i18n.js?v=6"></script>
-<script type="module" src="js/auth.js?v=6"></script>
-<script type="module" src="js/features/notifications.js?v=6"></script>
-<script type="module" src="js/features/lecture.js?v=6"></script>
-<script type="module" src="js/features/quiz.js?v=6"></script>
-<script type="module" src="js/features/profguide.js?v=6"></script>
-<script type="module" src="js/features/live.js?v=6"></script>
-<script type="module" src="js/features/crush.js?v=6"></script>
-<script type="module" src="js/features/feed.js?v=6"></script>
-<script type="module" src="js/features/dm.js?v=6"></script>
-<script type="module" src="js/features/board.js?v=6"></script>
-<script type="module" src="js/features/ranking.js?v=6"></script>
-<script type="module" src="js/features/global-chat.js?v=6"></script>
-<script type="module" src="js/features/calendar.js?v=6"></script>
-<script type="module" src="js/features/group-chats.js?v=6"></script>
-
-<!-- Inline-Logik für Custom-Sprachmenü rechts oben, Flaggen-Dateien, Feed-Special-Leiste & Bug-Reports -->
-<script type="module">
-  import { _supabase } from './js/config.js?v=6';
-  import { state } from './js/state.js?v=6';
-
-  const LANG_META = {
-    de:  { icon: 'icons/flags/de.svg',  code: 'DE' },
-    en:  { icon: 'icons/flags/en.svg',  code: 'EN' },
-    it:  { icon: 'icons/flags/it.svg',  code: 'IT' },
-    bks: { icon: 'icons/flags/bks.svg', code: 'BKS' },
-    tr:  { icon: 'icons/flags/tr.svg',  code: 'TR' },
-    es:  { icon: 'icons/flags/es.svg',  code: 'ES' },
-    fr:  { icon: 'icons/flags/fr.svg',  code: 'FR' },
-    pl:  { icon: 'icons/flags/pl.svg',  code: 'PL' },
-    hu:  { icon: 'icons/flags/hu.svg',  code: 'HU' },
-    uk:  { icon: 'icons/flags/uk.svg',  code: 'UK' }
-  };
-
-  function updateLanguageBadge(lang) {
-    const flagImg = document.getElementById('lang-flag-img');
-    const codeEl = document.getElementById('lang-code-badge');
-    const key = (lang || 'de').toLowerCase();
-    const meta = LANG_META[key] || LANG_META.de;
-
-    if (flagImg) {
-      flagImg.style.display = 'inline-block';
-      flagImg.src = meta.icon;
-      flagImg.alt = meta.code;
+// js/features/group-chats.js - Gruppenchats für Vorlesungen und Studiengänge (Punkt 32 • PURE LOGIC)
+import { _supabase } from '../config.js';
+import { state } from '../state.js';
+import { validateInputOrAlert } from './moderation.js';
+import { renderOfflineBanner, isNetworkError } from '../network.js';
+
+const LOCAL_GROUPS_KEY = 'pure_logic_lecture_groups_v1';
+const LOCAL_GROUP_MSGS_PREFIX = 'pure_logic_lecture_group_msgs_v1_';
+const GROUP_POLL_MS = 3000;
+
+const DEFAULT_SAMPLE_GROUPS = [
+    {
+        id: 'default-steop-inf',
+        title: 'STEOP Informatik & Programmierung',
+        course_code: 'VO-INF-101',
+        study_program: 'Informatik (Uni Wien / TU)',
+        university: 'Universität Wien',
+        description: 'Austausch zu Übungsblättern, Altfragen und Tutorien.',
+        creator_email: 'office@pure-logic.at',
+        members: ['office@pure-logic.at'],
+        created_at: new Date(Date.now() - 86400000 * 3).toISOString()
+    },
+    {
+        id: 'default-wu-bwl',
+        title: 'BWL & Mikroökonomie Lerngruppe',
+        course_code: 'STEOP-BWL',
+        study_program: 'Wirtschafts- und Sozialwissenschaften',
+        university: 'Wirtschaftsuniversität Wien (WU)',
+        description: 'Zusammenfassungen, Prüfungstermine und Lernsessions im LC.',
+        creator_email: 'office@pure-logic.at',
+        members: ['office@pure-logic.at'],
+        created_at: new Date(Date.now() - 86400000 * 2).toISOString()
+    },
+    {
+        id: 'default-med-sip',
+        title: 'SIP 1 Vorbereitung & Anatomie',
+        course_code: 'MED-SIP1',
+        study_program: 'Humanmedizin',
+        university: 'MedUni Wien',
+        description: 'Klinik-Tipps, Sezierkurs-Orga und Lernkarten-Tausch.',
+        creator_email: 'office@pure-logic.at',
+        members: ['office@pure-logic.at'],
+        created_at: new Date(Date.now() - 86400000).toISOString()
     }
-    if (codeEl) {
-      codeEl.textContent = meta.code;
-    }
+];
 
-    document.querySelectorAll('.lang-option-item').forEach(item => {
-      item.classList.toggle('active', item.getAttribute('data-lang') === key);
-    });
-  }
+let allGroupsCache = [];
+let activeGroupId = null;
+let groupRealtimeChannel = null;
+let groupPollTimer = null;
+let currentSearchQuery = '';
+let currentUniFilter = 'Alle';
+let showOnlyMyGroups = false;
+let previousFocusElement = null;
 
-  window.toggleLanguageMenu = function(event) {
-    if (event) event.stopPropagation();
-    const list = document.getElementById('lang-dropdown-list');
-    const btn = document.getElementById('lang-current-btn');
-    if (!list) return;
-    const isHidden = list.classList.contains('hidden');
-    list.classList.toggle('hidden', !isHidden);
-    if (btn) btn.setAttribute('aria-expanded', String(isHidden));
-  };
+function escapeHtml(str) {
+    return String(str || '')
+        .replace(/&/g, '&')
+        .replace(/</g, '<')
+        .replace(/>/g, '>')
+        .replace(/"/g, '"')
+        .replace(/'/g, ''');
+}
 
-  window.selectLanguageOption = function(lang) {
-    const key = (lang || 'de').toLowerCase();
+function canUseNetwork() {
+    return typeof navigator === 'undefined' || navigator.onLine !== false;
+}
+
+function getCurrentEmail() {
+    return (state?.currentUserEmail || '').trim().toLowerCase();
+}
+
+function getShortName(email) {
+    if (!email) return 'Gast';
+    return String(email).split('@')[0];
+}
+
+function formatTimeShort(isoString) {
+    if (!isoString) return '';
+    const d = new Date(isoString);
+    if (Number.isNaN(d.getTime())) return '';
+    return d.toLocaleTimeString('de-AT', { hour: '2-digit', minute: '2-digit' });
+}
+
+function getLocalGroups() {
     try {
-      localStorage.setItem('pure_logic_lang', key);
-      localStorage.setItem('lang', key);
-    } catch (e) {}
-
-    updateLanguageBadge(key);
-
-    const list = document.getElementById('lang-dropdown-list');
-    const btn = document.getElementById('lang-current-btn');
-    if (list) list.classList.add('hidden');
-    if (btn) btn.setAttribute('aria-expanded', 'false');
-
-    if (typeof window.changeLanguage === 'function') {
-      window.changeLanguage(key);
-    } else if (typeof window.handleLanguageChange === 'function') {
-      window.handleLanguageChange(key);
-    }
-  };
-
-  window.handleLanguageChange = function(lang) {
-    window.selectLanguageOption(lang);
-  };
-
-  document.addEventListener('click', (event) => {
-    const wrap = document.getElementById('lang-switcher-wrap');
-    const list = document.getElementById('lang-dropdown-list');
-    const btn = document.getElementById('lang-current-btn');
-    if (wrap && list && !wrap.contains(event.target)) {
-      list.classList.add('hidden');
-      if (btn) btn.setAttribute('aria-expanded', 'false');
-    }
-  });
-
-  function placeLanguageSwitcherRightOfLogout() {
-    const headerRight = document.getElementById('header-right-container');
-    const logoutBtn = document.getElementById('logout-btn');
-    const wrap = document.getElementById('lang-switcher-wrap');
-    if (!headerRight || !wrap) return;
-
-    if (logoutBtn && logoutBtn.parentElement === headerRight) {
-      if (logoutBtn.nextElementSibling !== wrap) {
-        logoutBtn.insertAdjacentElement('afterend', wrap);
-      }
-    } else if (wrap.parentElement !== headerRight) {
-      headerRight.appendChild(wrap);
-    }
-
-    const savedLang = localStorage.getItem('pure_logic_lang') || localStorage.getItem('lang') || 'de';
-    updateLanguageBadge(savedLang);
-  }
-
-  function syncFeedSpecialButtons() {
-    const bar = document.getElementById('feed-filter-bar');
-    if (bar) {
-      let specialsRow = bar.querySelector('.feed-specials-row');
-      let tabsRow = bar.querySelector('.feed-tabs-row');
-
-      if (!specialsRow) {
-        specialsRow = document.createElement('div');
-        specialsRow.className = 'feed-specials-row';
-        bar.prepend(specialsRow);
-      }
-      if (!tabsRow) {
-        tabsRow = document.createElement('div');
-        tabsRow.className = 'feed-tabs-row';
-        bar.appendChild(tabsRow);
-      }
-
-      ['subtab-foryou', 'subtab-discover', 'subtab-following', 'subtab-live'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el && el.parentElement !== tabsRow) tabsRow.appendChild(el);
-      });
-
-      let duellBtn = document.getElementById('subtab-uni-duell');
-      if (!duellBtn) {
-        duellBtn = document.createElement('button');
-        duellBtn.type = 'button';
-        duellBtn.id = 'subtab-uni-duell';
-        duellBtn.className = 'feed-subtab-btn feed-subtab-duell';
-        duellBtn.title = 'Wiener Uni-Duell & Rangliste öffnen';
-        duellBtn.textContent = '🏆 Wiener Uni-Duell';
-        duellBtn.onclick = function () {
-          if (typeof window.switchTab === 'function') window.switchTab('ranking');
-          if (typeof window.loadRankingData === 'function') window.loadRankingData();
-        };
-      }
-      if (duellBtn.parentElement !== specialsRow) specialsRow.prepend(duellBtn);
-
-      let matchBtn = document.getElementById('subtab-match-mittwoch');
-      if (!matchBtn) {
-        matchBtn = document.createElement('button');
-        matchBtn.type = 'button';
-        matchBtn.id = 'subtab-match-mittwoch';
-        matchBtn.className = 'feed-subtab-btn feed-subtab-match';
-        matchBtn.title = 'Match Mittwoch & Crush Radar öffnen';
-        matchBtn.textContent = '💖 Match Mittwoch';
-        matchBtn.onclick = function () {
-          if (typeof window.openCrushModal === 'function') window.openCrushModal();
-        };
-      }
-      if (matchBtn.parentElement !== specialsRow) specialsRow.appendChild(matchBtn);
-    }
-
-    document.querySelectorAll('button, div, a').forEach(el => {
-      if (el.id === 'subtab-uni-duell' || el.id === 'subtab-match-mittwoch') return;
-      const txt = (el.textContent || '').trim();
-      if (
-        txt.includes('Zum Wiener Uni-Duell & Rangliste') ||
-        txt.includes('MATCH-MITTWOCH • FIND YOUR CRUSH!')
-      ) {
-        el.remove();
-      }
-    });
-  }
-
-  document.addEventListener('DOMContentLoaded', () => {
-    placeLanguageSwitcherRightOfLogout();
-    syncFeedSpecialButtons();
-  });
-
-  window.addEventListener('load', () => {
-    placeLanguageSwitcherRightOfLogout();
-    syncFeedSpecialButtons();
-    setTimeout(() => {
-      placeLanguageSwitcherRightOfLogout();
-      syncFeedSpecialButtons();
-    }, 300);
-    setTimeout(() => {
-      placeLanguageSwitcherRightOfLogout();
-      syncFeedSpecialButtons();
-    }, 1000);
-  });
-
-  window.openReportModal = function() {
-    document.getElementById('report-modal')?.classList.remove('hidden');
-    const emailInput = document.getElementById('bug-report-email');
-    if (emailInput && state.currentUserEmail) {
-      emailInput.value = state.currentUserEmail;
-    }
-  };
-
-  window.submitBugReport = async function() {
-    const email = document.getElementById('bug-report-email')?.value.trim();
-    const details = document.getElementById('bug-report-details')?.value.trim();
-    const fileInput = document.getElementById('bug-report-screenshot');
-    const msgBox = document.getElementById('bug-report-msg');
-
-    if (!email || !details) {
-      alert('Bitte gib deine E-Mail und eine kurze Beschreibung ein.');
-      return;
-    }
-
-    let screenshotUrl = null;
-
-    if (fileInput && fileInput.files[0]) {
-      const file = fileInput.files[0];
-      const fileExt = file.name.split('.').pop();
-      const fileName = `bug_${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
-      const filePath = `bug-reports/${fileName}`;
-
-      try {
-        const { error: uploadError } = await _supabase.storage
-          .from('media')
-          .upload(filePath, file);
-
-        if (!uploadError) {
-          const { data: publicURLData } = _supabase.storage
-            .from('media')
-            .getPublicUrl(filePath);
-          screenshotUrl = publicURLData.publicUrl;
+        const raw = localStorage.getItem(LOCAL_GROUPS_KEY);
+        if (!raw) {
+            localStorage.setItem(LOCAL_GROUPS_KEY, JSON.stringify(DEFAULT_SAMPLE_GROUPS));
+            return [...DEFAULT_SAMPLE_GROUPS];
         }
-      } catch (err) {
-        console.warn('Screenshot-Upload fehlgeschlagen:', err);
-      }
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) && parsed.length > 0 ? parsed : [...DEFAULT_SAMPLE_GROUPS];
+    } catch (_e) {
+        return [...DEFAULT_SAMPLE_GROUPS];
+    }
+}
+
+function saveLocalGroups(groups) {
+    try {
+        localStorage.setItem(LOCAL_GROUPS_KEY, JSON.stringify(groups));
+    } catch (_e) {}
+}
+
+function getLocalMessages(groupId) {
+    try {
+        const raw = localStorage.getItem(`${LOCAL_GROUP_MSGS_PREFIX}${groupId}`);
+        const parsed = raw ? JSON.parse(raw) : [];
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    } catch (_e) {}
+
+    return [
+        {
+            id: `welcome-${groupId}`,
+            group_id: groupId,
+            sender_email: 'office@pure-logic.at',
+            message_text: 'Willkommen im Vorlesungs-Gruppenchat! Teilt hier Skripte, Fragen und Lerntreffen.',
+            created_at: new Date(Date.now() - 3600000).toISOString()
+        }
+    ];
+}
+
+function saveLocalMessages(groupId, messages) {
+    try {
+        const trimmed = Array.isArray(messages) ? messages.slice(-200) : [];
+        localStorage.setItem(`${LOCAL_GROUP_MSGS_PREFIX}${groupId}`, JSON.stringify(trimmed));
+    } catch (_e) {}
+}
+
+export function injectGroupChatsAccessPoints() {
+    if (typeof document === 'undefined' || !document.body) return;
+
+    const dmHost =
+        document.getElementById('tab-dm') ||
+        document.getElementById('dm-section') ||
+        document.getElementById('dm-view') ||
+        document.querySelector('[data-dm-view]');
+
+    if (dmHost && !document.getElementById('dm-group-chats-banner')) {
+        const banner = document.createElement('div');
+        banner.id = 'dm-group-chats-banner';
+        banner.style.cssText = [
+            'margin: 0 0 12px 0',
+            'padding: 10px 14px',
+            'border-radius: 14px',
+            'background: linear-gradient(135deg, rgba(99, 102, 241, 0.22), rgba(236, 72, 153, 0.16))',
+            'border: 1px solid rgba(129, 140, 248, 0.45)',
+            'display: flex',
+            'align-items: center',
+            'justify-content: space-between',
+            'gap: 10px',
+            'flex-wrap: wrap'
+        ].join(';');
+        banner.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 18px;">🎓</span>
+                <div>
+                    <div style="font-size: 12px; font-weight: 900; color: #f8fafc;">Vorlesungs- & Studiengang-Gruppenchats</div>
+                    <div style="font-size: 11px; color: #cbd5e1;">Lern-Räume nach LV-Kürzel & Universität</div>
+                </div>
+            </div>
+            <button type="button" onclick="openLectureGroupChatsModal()" style="background: linear-gradient(135deg, #6366f1, #ec4899); border: none; color: #fff; font-size: 11px; font-weight: 900; padding: 7px 12px; border-radius: 10px; cursor: pointer;">
+                Gruppen öffnen →
+            </button>
+        `;
+        dmHost.prepend(banner);
     }
 
-    try {
-      await _supabase.from('bug_reports').insert([{
-        email: email,
-        details: details,
-        screenshot_url: screenshotUrl,
+    if (!document.getElementById('pl-floating-group-chats-btn')) {
+        const fab = document.createElement('button');
+        fab.id = 'pl-floating-group-chats-btn';
+        fab.type = 'button';
+        fab.setAttribute('aria-label', 'Vorlesungs-Gruppenchats öffnen');
+        fab.onclick = () => openLectureGroupChatsModal();
+        fab.style.cssText = [
+            'position: fixed',
+            'left: 14px',
+            'bottom: 74px',
+            'z-index: 9980',
+            'background: linear-gradient(135deg, #4f46e5, #9333ea)',
+            'border: 1px solid rgba(199, 210, 254, 0.45)',
+            'color: #ffffff',
+            'font-size: 12px',
+            'font-weight: 900',
+            'padding: 9px 13px',
+            'border-radius: 999px',
+            'box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45)',
+            'cursor: pointer',
+            'display: inline-flex',
+            'align-items: center',
+            'gap: 6px'
+        ].join(';');
+        fab.innerHTML = '<span>🎓</span><span>Gruppen</span>';
+        document.body.appendChild(fab);
+    }
+}
+
+function ensureGroupChatModal() {
+    let modal = document.getElementById('lecture-group-chats-modal');
+    if (modal) return modal;
+
+    modal = document.createElement('div');
+    modal.id = 'lecture-group-chats-modal';
+    modal.className = 'hidden';
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-label', 'Gruppenchats für Vorlesungen und Studiengänge');
+    modal.style.cssText = [
+        'position: fixed',
+        'inset: 0',
+        'z-index: 10040',
+        'background: rgba(7, 11, 20, 0.92)',
+        'backdrop-filter: blur(8px)',
+        'display: flex',
+        'align-items: center',
+        'justify-content: center',
+        'padding: 12px',
+        'box-sizing: border-box'
+    ].join(';');
+
+    modal.innerHTML = `
+        <div style="width: 100%; max-width: 980px; height: min(88vh, 760px); background: #0f172a; border: 1px solid rgba(148, 163, 184, 0.24); border-radius: 20px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.75);">
+            <div style="padding: 14px 18px; border-bottom: 1px solid rgba(148, 163, 184, 0.18); display: flex; align-items: center; justify-content: space-between; gap: 10px; background: rgba(15, 23, 42, 0.96); flex-shrink: 0;">
+                <div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
+                    <span style="font-size: 20px;">🎓</span>
+                    <div style="min-width: 0;">
+                        <h2 style="margin: 0; font-size: 15px; font-weight: 900; color: #f8fafc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                            Vorlesungs- & Studiengang-Gruppenchats
+                        </h2>
+                        <div style="font-size: 11px; color: #94a3b8;">Vernetze dich mit Kommiliton:innen aus deiner LV</div>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
+                    <button type="button" onclick="toggleCreateGroupChatForm()" style="background: linear-gradient(135deg, #6366f1, #ec4899); border: none; color: #fff; font-size: 11px; font-weight: 900; padding: 7px 12px; border-radius: 10px; cursor: pointer; white-space: nowrap;">
+                        + Neue Gruppe
+                    </button>
+                    <button type="button" onclick="closeLectureGroupChatsModal()" aria-label="Gruppenchats schließen" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.14); color: #f8fafc; width: 32px; height: 32px; border-radius: 10px; font-size: 18px; line-height: 1; cursor: pointer;">
+                        ×
+                    </button>
+                </div>
+            </div>
+
+            <div id="create-group-chat-panel" class="hidden" style="padding: 14px 18px; border-bottom: 1px solid rgba(148, 163, 184, 0.2); background: rgba(30, 41, 59, 0.65); flex-shrink: 0;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 8px; margin-bottom: 8px;">
+                    <input type="text" id="new-group-title-input" placeholder="Vorlesung / Gruppenname *" style="margin: 0; padding: 8px 10px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.16); background: rgba(15,23,42,0.85); color: #fff; font-size: 12px;">
+                    <input type="text" id="new-group-code-input" placeholder="LV-Kürzel (z. B. VO-101)" style="margin: 0; padding: 8px 10px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.16); background: rgba(15,23,42,0.85); color: #fff; font-size: 12px;">
+                    <input type="text" id="new-group-program-input" placeholder="Studiengang (z. B. Informatik)" style="margin: 0; padding: 8px 10px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.16); background: rgba(15,23,42,0.85); color: #fff; font-size: 12px;">
+                    <select id="new-group-uni-select" style="margin: 0; padding: 8px 10px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.16); background: #0f172a; color: #fff; font-size: 12px;">
+                        <option value="Universität Wien">Universität Wien</option>
+                        <option value="TU Wien">TU Wien</option>
+                        <option value="Wirtschaftsuniversität Wien (WU)">WU Wien</option>
+                        <option value="MedUni Wien">MedUni Wien</option>
+                        <option value="BOKU Wien">BOKU Wien</option>
+                        <option value="FH Wien">FH Wien</option>
+                        <option value="Hochschulübergreifend">Hochschulübergreifend</option>
+                    </select>
+                </div>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <input type="text" id="new-group-desc-input" placeholder="Kurze Beschreibung (Prüfungstermin, Tutorium, etc.)" style="flex: 1; min-width: 200px; margin: 0; padding: 8px 10px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.16); background: rgba(15,23,42,0.85); color: #fff; font-size: 12px;">
+                    <button type="button" onclick="createNewLectureGroup()" style="background: #10b981; border: none; color: #fff; font-size: 12px; font-weight: 900; padding: 8px 14px; border-radius: 10px; cursor: pointer;">
+                        Gruppe erstellen 🚀
+                    </button>
+                    <button type="button" onclick="toggleCreateGroupChatForm(false)" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.16); color: #cbd5e1; font-size: 12px; font-weight: 700; padding: 8px 12px; border-radius: 10px; cursor: pointer;">
+                        Abbrechen
+                    </button>
+                </div>
+            </div>
+
+            <div id="group-chats-workspace" style="flex: 1; display: grid; grid-template-columns: minmax(260px, 340px) 1fr; min-height: 0; overflow: hidden;">
+                <div id="group-chats-sidebar" style="border-right: 1px solid rgba(148, 163, 184, 0.16); display: flex; flex-direction: column; min-height: 0; background: rgba(11, 17, 32, 0.7);">
+                    <div style="padding: 10px 12px; border-bottom: 1px solid rgba(148, 163, 184, 0.14); display: flex; flex-direction: column; gap: 8px; flex-shrink: 0;">
+                        <input type="text" id="group-chats-search-input" oninput="filterLectureGroups(this.value)" placeholder="🔍 Vorlesung, Kürzel oder Studiengang..." style="margin: 0; width: 100%; box-sizing: border-box; padding: 8px 10px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.14); background: rgba(255,255,255,0.05); color: #fff; font-size: 12px;">
+                        <div style="display: flex; gap: 6px; align-items: center;">
+                            <select id="group-chats-uni-filter" onchange="setLectureGroupUniFilter(this.value)" style="flex: 1; margin: 0; padding: 6px 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.14); background: #0f172a; color: #e2e8f0; font-size: 11px;">
+                                <option value="Alle">Alle Hochschulen</option>
+                                <option value="Universität Wien">Uni Wien</option>
+                                <option value="TU Wien">TU Wien</option>
+                                <option value="Wirtschaftsuniversität Wien (WU)">WU Wien</option>
+                                <option value="MedUni Wien">MedUni Wien</option>
+                                <option value="BOKU Wien">BOKU Wien</option>
+                                <option value="FH Wien">FH Wien</option>
+                            </select>
+                            <button type="button" id="group-chats-mine-toggle" onclick="toggleMyGroupsOnly()" style="padding: 6px 9px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.14); background: rgba(255,255,255,0.05); color: #cbd5e1; font-size: 11px; font-weight: 700; cursor: pointer; white-space: nowrap;">
+                                Meine
+                            </button>
+                        </div>
+                    </div>
+                    <div id="lecture-groups-list" style="flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px;"></div>
+                </div>
+
+                <div id="group-chat-room-pane" style="display: flex; flex-direction: column; min-height: 0; background: rgba(15, 23, 42, 0.45);">
+                    <div id="group-chat-room-header" style="padding: 12px 16px; border-bottom: 1px solid rgba(148, 163, 184, 0.16); display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-shrink: 0;">
+                        <div style="font-size: 12px; color: #94a3b8;">Wähle links eine Vorlesungsgruppe aus oder erstelle eine neue.</div>
+                    </div>
+
+                    <div id="group-chat-messages-list" style="flex: 1; overflow-y: auto; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px;">
+                        <div style="margin: auto; text-align: center; max-width: 320px; color: #94a3b8; font-size: 12px; line-height: 1.5;">
+                            📚 Hier erscheinen alle Nachrichten deiner Vorlesungs- und Studiengang-Gruppe in Echtzeit.
+                        </div>
+                    </div>
+
+                    <div id="group-chat-input-bar" style="padding: 12px 14px; border-top: 1px solid rgba(148, 163, 184, 0.16); background: rgba(11, 17, 32, 0.85); display: flex; gap: 8px; align-items: center; flex-shrink: 0;">
+                        <input type="text" id="group-chat-message-input" placeholder="Nachricht an die Vorlesungsgruppe schreiben..." disabled onkeydown="if(event.key==='Enter') sendGroupChatMessage()" style="flex: 1; margin: 0; padding: 9px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.14); background: rgba(255,255,255,0.06); color: #fff; font-size: 12px;">
+                        <button type="button" id="group-chat-send-btn" onclick="sendGroupChatMessage()" disabled style="background: linear-gradient(135deg, #6366f1, #8b5cf6); border: none; color: #fff; font-size: 12px; font-weight: 800; padding: 9px 14px; border-radius: 10px; cursor: pointer;">
+                            Senden
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    modal.addEventListener('click', (event) => {
+        if (event.target === modal) {
+            closeLectureGroupChatsModal();
+        }
+    });
+
+    document.body.appendChild(modal);
+    syncGroupChatResponsiveLayout();
+    return modal;
+}
+
+function syncGroupChatResponsiveLayout() {
+    const workspace = document.getElementById('group-chats-workspace');
+    const sidebar = document.getElementById('group-chats-sidebar');
+    const roomPane = document.getElementById('group-chat-room-pane');
+    if (!workspace || !sidebar || !roomPane) return;
+
+    const isMobile = window.innerWidth < 768;
+    if (isMobile) {
+        workspace.style.gridTemplateColumns = '1fr';
+        if (activeGroupId) {
+            sidebar.style.display = 'none';
+            roomPane.style.display = 'flex';
+        } else {
+            sidebar.style.display = 'flex';
+            roomPane.style.display = 'none';
+        }
+    } else {
+        workspace.style.gridTemplateColumns = 'minmax(260px, 340px) 1fr';
+        sidebar.style.display = 'flex';
+        roomPane.style.display = 'flex';
+    }
+}
+
+export async function openLectureGroupChatsModal(preselectGroupId = null) {
+    previousFocusElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    injectGroupChatsAccessPoints();
+    const modal = ensureGroupChatModal();
+    modal.classList.remove('hidden');
+
+    await loadLectureGroups();
+
+    if (preselectGroupId) {
+        await selectLectureGroup(preselectGroupId);
+    } else if (!activeGroupId && allGroupsCache.length > 0 && window.innerWidth >= 768) {
+        await selectLectureGroup(allGroupsCache[0].id);
+    } else {
+        syncGroupChatResponsiveLayout();
+    }
+}
+
+export function closeLectureGroupChatsModal() {
+    const modal = document.getElementById('lecture-group-chats-modal');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+    stopGroupRealtimeSync();
+    if (previousFocusElement && previousFocusElement.isConnected) {
+        previousFocusElement.focus();
+    }
+    previousFocusElement = null;
+}
+
+export function toggleCreateGroupChatForm(forceState = null) {
+    const panel = document.getElementById('create-group-chat-panel');
+    if (!panel) return;
+    if (typeof forceState === 'boolean') {
+        panel.classList.toggle('hidden', !forceState);
+    } else {
+        panel.classList.toggle('hidden');
+    }
+    if (!panel.classList.contains('hidden')) {
+        const titleInput = document.getElementById('new-group-title-input');
+        if (titleInput) titleInput.focus();
+    }
+}
+
+export async function loadLectureGroups() {
+    const listEl = document.getElementById('lecture-groups-list');
+    if (listEl) {
+        listEl.innerHTML = '<div style="text-align: center; padding: 18px; color: #94a3b8; font-size: 12px;">Lade Vorlesungsgruppen...</div>';
+    }
+
+    let groups = [];
+    if (canUseNetwork()) {
+        try {
+            const { data, error } = await _supabase
+                .from('lecture_group_chats')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (!error && Array.isArray(data) && data.length > 0) {
+                groups = data.map((row) => ({
+                    ...row,
+                    members: Array.isArray(row.members) ? row.members : [row.creator_email].filter(Boolean)
+                }));
+                saveLocalGroups(groups);
+            } else {
+                groups = getLocalGroups();
+            }
+        } catch (err) {
+            if (isNetworkError(err)) renderOfflineBanner(true);
+            groups = getLocalGroups();
+        }
+    } else {
+        groups = getLocalGroups();
+    }
+
+    allGroupsCache = groups;
+    renderLectureGroupsList();
+}
+
+function renderLectureGroupsList() {
+    const listEl = document.getElementById('lecture-groups-list');
+    if (!listEl) return;
+
+    const myEmail = getCurrentEmail();
+    const q = currentSearchQuery.trim().toLowerCase();
+
+    const filtered = allGroupsCache.filter((g) => {
+        const members = Array.isArray(g.members) ? g.members.map((m) => String(m).toLowerCase()) : [];
+        if (showOnlyMyGroups && (!myEmail || !members.includes(myEmail))) {
+            return false;
+        }
+        if (currentUniFilter !== 'Alle' && String(g.university || '').toLowerCase() !== currentUniFilter.toLowerCase()) {
+            return false;
+        }
+        if (!q) return true;
+        const haystack = [
+            g.title || '',
+            g.course_code || '',
+            g.study_program || '',
+            g.university || '',
+            g.description || ''
+        ].join(' ').toLowerCase();
+        return haystack.includes(q);
+    });
+
+    if (filtered.length === 0) {
+        listEl.innerHTML = `
+            <div style="text-align: center; padding: 24px 12px; color: #94a3b8; font-size: 12px;">
+                Keine passenden Gruppen gefunden.<br>
+                <span style="font-size: 11px;">Erstelle oben über „+ Neue Gruppe“ deinen eigenen Vorlesungschat!</span>
+            </div>
+        `;
+        return;
+    }
+
+    listEl.innerHTML = '';
+    filtered.forEach((group) => {
+        const isSelected = String(group.id) === String(activeGroupId);
+        const members = Array.isArray(group.members) ? group.members : [];
+        const isMember = myEmail && members.some((m) => String(m).toLowerCase() === myEmail);
+
+        const card = document.createElement('div');
+        card.style.cssText = [
+            'padding: 10px 12px',
+            'border-radius: 12px',
+            `background: ${isSelected ? 'rgba(99, 102, 241, 0.22)' : 'rgba(255, 255, 255, 0.035)'}`,
+            `border: 1px solid ${isSelected ? 'rgba(129, 140, 248, 0.65)' : 'rgba(255, 255, 255, 0.08)'}`,
+            'cursor: pointer',
+            'display: flex',
+            'flex-direction: column',
+            'gap: 4px',
+            'transition: border-color 0.15s ease, background 0.15s ease'
+        ].join(';');
+
+        card.onclick = () => selectLectureGroup(group.id);
+
+        card.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px;">
+                <span style="font-size: 10px; font-weight: 800; color: #a5b4fc; background: rgba(99,102,241,0.18); padding: 2px 7px; border-radius: 999px;">
+                    ${escapeHtml(group.course_code || 'LV-CHAT')}
+                </span>
+                <span style="font-size: 10px; color: ${isMember ? '#34d399' : '#94a3b8'}; font-weight: 700;">
+                    ${isMember ? '✓ Mitglied' : `👥 ${members.length}`}
+                </span>
+            </div>
+            <div style="font-size: 13px; font-weight: 800; color: #f8fafc; line-height: 1.3;">
+                ${escapeHtml(group.title)}
+            </div>
+            <div style="font-size: 11px; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                ${escapeHtml(group.study_program || 'Studiengang')} • ${escapeHtml(group.university || 'Campus')}
+            </div>
+        `;
+        listEl.appendChild(card);
+    });
+}
+
+export function filterLectureGroups(query) {
+    currentSearchQuery = String(query || '');
+    renderLectureGroupsList();
+}
+
+export function setLectureGroupUniFilter(uni) {
+    currentUniFilter = uni || 'Alle';
+    renderLectureGroupsList();
+}
+
+export function toggleMyGroupsOnly() {
+    showOnlyMyGroups = !showOnlyMyGroups;
+    const btn = document.getElementById('group-chats-mine-toggle');
+    if (btn) {
+        btn.style.background = showOnlyMyGroups ? 'rgba(99, 102, 241, 0.3)' : 'rgba(255, 255, 255, 0.05)';
+        btn.style.borderColor = showOnlyMyGroups ? '#818cf8' : 'rgba(255, 255, 255, 0.14)';
+        btn.style.color = showOnlyMyGroups ? '#fff' : '#cbd5e1';
+    }
+    renderLectureGroupsList();
+}
+
+export async function createNewLectureGroup() {
+    const myEmail = getCurrentEmail();
+    if (!myEmail) {
+        alert('Bitte logge dich zuerst ein, um einen Gruppenchat zu erstellen.');
+        return;
+    }
+
+    const title = document.getElementById('new-group-title-input')?.value.trim() || '';
+    const courseCode = document.getElementById('new-group-code-input')?.value.trim() || 'LV-GRUPPE';
+    const studyProgram = document.getElementById('new-group-program-input')?.value.trim() || 'Allgemeines Studium';
+    const university = document.getElementById('new-group-uni-select')?.value || 'Universität Wien';
+    const description = document.getElementById('new-group-desc-input')?.value.trim() || 'Gemeinsame Vorlesungsgruppe';
+
+    if (!title) {
+        alert('Bitte gib einen Namen für die Vorlesung oder den Studiengang ein.');
+        return;
+    }
+
+    if (!validateInputOrAlert(title) || !validateInputOrAlert(courseCode) || !validateInputOrAlert(studyProgram) || !validateInputOrAlert(description)) {
+        return;
+    }
+
+    const newGroup = {
+        id: (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function')
+            ? crypto.randomUUID()
+            : `grp_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        title,
+        course_code: courseCode.toUpperCase(),
+        study_program: studyProgram,
+        university,
+        description,
+        creator_email: myEmail,
+        members: [myEmail],
         created_at: new Date().toISOString()
-      }]);
-    } catch (e) {
-      console.log('Bug-Report DB Fallback:', e);
+    };
+
+    if (canUseNetwork()) {
+        try {
+            const { error } = await _supabase
+                .from('lecture_group_chats')
+                .insert([newGroup]);
+            if (error && isNetworkError(error)) {
+                renderOfflineBanner(true);
+            }
+        } catch (_e) {}
     }
 
-    if (state.currentUserEmail) {
-      try {
-        const { data: userData } = await _supabase
-          .from('users')
-          .select('logic_score')
-          .eq('email', state.currentUserEmail)
-          .single();
+    const updatedGroups = [newGroup, ...allGroupsCache];
+    allGroupsCache = updatedGroups;
+    saveLocalGroups(updatedGroups);
 
-        if (userData) {
-          const newScore = (userData.logic_score || 0) + 5;
-          await _supabase
-            .from('users')
-            .update({ logic_score: newScore })
-            .eq('email', state.currentUserEmail);
+    ['new-group-title-input', 'new-group-code-input', 'new-group-program-input', 'new-group-desc-input'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
 
-          const scoreBadge = document.getElementById('score');
-          if (scoreBadge) scoreBadge.textContent = `${newScore} P`;
+    toggleCreateGroupChatForm(false);
+    renderLectureGroupsList();
+    await selectLectureGroup(newGroup.id);
+}
+
+export async function selectLectureGroup(groupId) {
+    activeGroupId = String(groupId);
+    const group = allGroupsCache.find((g) => String(g.id) === activeGroupId);
+    renderLectureGroupsList();
+    syncGroupChatResponsiveLayout();
+
+    const headerEl = document.getElementById('group-chat-room-header');
+    const inputEl = document.getElementById('group-chat-message-input');
+    const sendBtn = document.getElementById('group-chat-send-btn');
+
+    if (!group || !headerEl) return;
+
+    const myEmail = getCurrentEmail();
+    const members = Array.isArray(group.members) ? group.members : [];
+    const isMember = myEmail && members.some((m) => String(m).toLowerCase() === myEmail);
+
+    headerEl.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
+            <button type="button" onclick="backToLectureGroupsList()" style="display: ${window.innerWidth < 768 ? 'inline-flex' : 'none'}; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.16); color: #fff; border-radius: 8px; padding: 5px 9px; font-size: 11px; font-weight: 800; cursor: pointer;">
+                ← Zurück
+            </button>
+            <div style="min-width: 0;">
+                <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                    <strong style="font-size: 14px; color: #f8fafc;">${escapeHtml(group.title)}</strong>
+                    <span style="font-size: 10px; font-weight: 800; color: #a5b4fc; background: rgba(99,102,241,0.2); padding: 2px 7px; border-radius: 999px;">
+                        ${escapeHtml(group.course_code || 'LV')}
+                    </span>
+                </div>
+                <div style="font-size: 11px; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    ${escapeHtml(group.study_program || '')} • ${members.length} Mitglieder
+                </div>
+            </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
+            <button type="button" onclick="copyLectureGroupInvite('${escapeHtml(group.id)}')" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.14); color: #e2e8f0; border-radius: 8px; padding: 6px 9px; font-size: 11px; font-weight: 700; cursor: pointer;">
+                🔗 Einladen
+            </button>
+            ${isMember
+                ? `<button type="button" onclick="leaveLectureGroup('${escapeHtml(group.id)}')" style="background: rgba(239,68,68,0.14); border: 1px solid rgba(239,68,68,0.35); color: #fca5a5; border-radius: 8px; padding: 6px 10px; font-size: 11px; font-weight: 800; cursor: pointer;">Verlassen</button>`
+                : `<button type="button" onclick="joinLectureGroup('${escapeHtml(group.id)}')" style="background: #10b981; border: none; color: #fff; border-radius: 8px; padding: 6px 11px; font-size: 11px; font-weight: 900; cursor: pointer;">Beitreten +</button>`
+            }
+        </div>
+    `;
+
+    if (inputEl && sendBtn) {
+        inputEl.disabled = !isMember;
+        sendBtn.disabled = !isMember;
+        inputEl.placeholder = isMember
+            ? `Nachricht in ${group.title} schreiben...`
+            : 'Tritt der Gruppe oben rechts bei, um mitzuschreiben...';
+    }
+
+    await loadGroupMessages(group.id);
+    startGroupRealtimeSync(group.id);
+}
+
+export function backToLectureGroupsList() {
+    activeGroupId = null;
+    stopGroupRealtimeSync();
+    syncGroupChatResponsiveLayout();
+    renderLectureGroupsList();
+}
+
+export async function joinLectureGroup(groupId) {
+    const myEmail = getCurrentEmail();
+    if (!myEmail) {
+        alert('Bitte logge dich zuerst ein, um der Gruppe beizutreten.');
+        return;
+    }
+
+    const group = allGroupsCache.find((g) => String(g.id) === String(groupId));
+    if (!group) return;
+
+    const currentMembers = Array.isArray(group.members) ? [...group.members] : [];
+    if (!currentMembers.some((m) => String(m).toLowerCase() === myEmail)) {
+        currentMembers.push(myEmail);
+    }
+    group.members = currentMembers;
+    saveLocalGroups(allGroupsCache);
+
+    if (canUseNetwork()) {
+        try {
+            await _supabase
+                .from('lecture_group_chats')
+                .update({ members: currentMembers })
+                .eq('id', groupId);
+        } catch (_e) {}
+    }
+
+    await selectLectureGroup(groupId);
+}
+
+export async function leaveLectureGroup(groupId) {
+    const myEmail = getCurrentEmail();
+    if (!myEmail) return;
+
+    const group = allGroupsCache.find((g) => String(g.id) === String(groupId));
+    if (!group) return;
+
+    const updatedMembers = (Array.isArray(group.members) ? group.members : []).filter(
+        (m) => String(m).toLowerCase() !== myEmail
+    );
+    group.members = updatedMembers;
+    saveLocalGroups(allGroupsCache);
+
+    if (canUseNetwork()) {
+        try {
+            await _supabase
+                .from('lecture_group_chats')
+                .update({ members: updatedMembers })
+                .eq('id', groupId);
+        } catch (_e) {}
+    }
+
+    await selectLectureGroup(groupId);
+}
+
+export async function copyLectureGroupInvite(groupId) {
+    const group = allGroupsCache.find((g) => String(g.id) === String(groupId));
+    if (!group) return;
+
+    const shareText = `Komm in unsere PURE LOGIC Vorlesungsgruppe „${group.title}“ (${group.course_code || 'LV'}) – ${group.university || 'Campus'}!`;
+    try {
+        if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+            await navigator.clipboard.writeText(shareText);
+            alert('Einladungstext in die Zwischenablage kopiert! 📋');
+            return;
         }
-      } catch (err) {
-        console.warn('Punkte-Gutschrift Fehler:', err);
-      }
+    } catch (_e) {}
+    prompt('Einladungstext kopieren:', shareText);
+}
+
+async function loadGroupMessages(groupId) {
+    const listEl = document.getElementById('group-chat-messages-list');
+    if (!listEl) return;
+
+    let messages = getLocalMessages(groupId);
+
+    if (canUseNetwork()) {
+        try {
+            const { data, error } = await _supabase
+                .from('lecture_group_messages')
+                .select('*')
+                .eq('group_id', groupId)
+                .order('created_at', { ascending: true })
+                .limit(150);
+
+            if (!error && Array.isArray(data) && data.length > 0) {
+                messages = data;
+                saveLocalMessages(groupId, data);
+            }
+        } catch (_e) {}
     }
 
-    if (msgBox) {
-      msgBox.classList.remove('hidden');
+    renderGroupMessages(messages);
+}
+
+function renderGroupMessages(messages) {
+    const listEl = document.getElementById('group-chat-messages-list');
+    if (!listEl) return;
+
+    const myEmail = getCurrentEmail();
+    listEl.innerHTML = '';
+
+    messages.forEach((msg) => {
+        const sender = String(msg.sender_email || 'student@uni.at');
+        const isMe = myEmail && sender.toLowerCase() === myEmail;
+        const bubble = document.createElement('div');
+        bubble.style.cssText = [
+            'max-width: 82%',
+            `align-self: ${isMe ? 'flex-end' : 'flex-start'}`,
+            `background: ${isMe ? 'linear-gradient(135deg, rgba(99,102,241,0.34), rgba(139,92,246,0.28))' : 'rgba(255,255,255,0.06)'}`,
+            `border: 1px solid ${isMe ? 'rgba(129,140,248,0.45)' : 'rgba(255,255,255,0.09)'}`,
+            'border-radius: 14px',
+            'padding: 8px 12px',
+            'display: flex',
+            'flex-direction: column',
+            'gap: 3px'
+        ].join(';');
+
+        bubble.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 10px;">
+                <strong style="color: ${isMe ? '#a5b4fc' : '#34d399'}; cursor: pointer;" onclick="if(typeof openPublicProfile==='function') openPublicProfile('${escapeHtml(sender)}')">
+                    ${escapeHtml(isMe ? 'Du' : getShortName(sender))}
+                </strong>
+                <span style="color: #94a3b8;">${escapeHtml(formatTimeShort(msg.created_at))}</span>
+            </div>
+            <div style="font-size: 12px; color: #f8fafc; line-height: 1.4; word-break: break-word;">
+                ${escapeHtml(msg.message_text)}
+            </div>
+        `;
+        listEl.appendChild(bubble);
+    });
+
+    listEl.scrollTop = listEl.scrollHeight;
+}
+
+export async function sendGroupChatMessage() {
+    if (!activeGroupId) return;
+    const myEmail = getCurrentEmail();
+    if (!myEmail) {
+        alert('Bitte logge dich ein, um im Gruppenchat zu schreiben.');
+        return;
     }
 
-    const mailSubject = encodeURIComponent(`Fehlermeldung von ${email}`);
-    const mailBody = encodeURIComponent(`Anliegen:\n${details}\n\nScreenshot: ${screenshotUrl || 'Keiner'}`);
-    
-    setTimeout(() => {
-      window.location.href = `mailto:office@pure-logic.at?subject=${mailSubject}&body=${mailBody}`;
-    }, 1500);
-  };
-</script>
+    const inputEl = document.getElementById('group-chat-message-input');
+    if (!inputEl) return;
 
-<!-- Zentrales Hauptskript -->
-<script type="module" src="js/main.js?v=6"></script>
-</body>
-</html>
+    const text = inputEl.value.trim();
+    if (!text) return;
+
+    if (!validateInputOrAlert(text)) return;
+
+    const newMsg = {
+        id: (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function')
+            ? crypto.randomUUID()
+            : `gmsg_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        group_id: activeGroupId,
+        sender_email: myEmail,
+        message_text: text,
+        created_at: new Date().toISOString()
+    };
+
+    inputEl.value = '';
+
+    const currentMsgs = [...getLocalMessages(activeGroupId), newMsg];
+    saveLocalMessages(activeGroupId, currentMsgs);
+    renderGroupMessages(currentMsgs);
+
+    if (canUseNetwork()) {
+        try {
+            const { error } = await _supabase
+                .from('lecture_group_messages')
+                .insert([newMsg]);
+            if (error && isNetworkError(error)) {
+                renderOfflineBanner(true);
+            }
+        } catch (_e) {}
+    }
+}
+
+function stopGroupRealtimeSync() {
+    if (groupPollTimer) {
+        clearInterval(groupPollTimer);
+        groupPollTimer = null;
+    }
+    if (groupRealtimeChannel && typeof _supabase.removeChannel === 'function') {
+        _supabase.removeChannel(groupRealtimeChannel);
+        groupRealtimeChannel = null;
+    }
+}
+
+function startGroupRealtimeSync(groupId) {
+    stopGroupRealtimeSync();
+
+    if (canUseNetwork()) {
+        try {
+            groupRealtimeChannel = _supabase
+                .channel(`lecture-group-${groupId}`)
+                .on(
+                    'postgres_changes',
+                    {
+                        event: 'INSERT',
+                        schema: 'public',
+                        table: 'lecture_group_messages',
+                        filter: `group_id=eq.${groupId}`
+                    },
+                    (payload) => {
+                        const row = payload?.new;
+                        if (!row) return;
+                        const existing = getLocalMessages(groupId);
+                        if (!existing.some((m) => String(m.id) === String(row.id))) {
+                            const updated = [...existing, row];
+                            saveLocalMessages(groupId, updated);
+                            if (String(activeGroupId) === String(groupId)) {
+                                renderGroupMessages(updated);
+                            }
+                        }
+                    }
+                )
+                .subscribe();
+        } catch (_e) {}
+    }
+
+    groupPollTimer = setInterval(() => {
+        if (activeGroupId && String(activeGroupId) === String(groupId)) {
+            loadGroupMessages(groupId);
+        }
+    }, GROUP_POLL_MS);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    injectGroupChatsAccessPoints();
+});
+
+document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape') return;
+    const modal = document.getElementById('lecture-group-chats-modal');
+    if (modal && !modal.classList.contains('hidden')) {
+        closeLectureGroupChatsModal();
+    }
+});
+
+window.addEventListener('resize', () => {
+    const modal = document.getElementById('lecture-group-chats-modal');
+    if (modal && !modal.classList.contains('hidden')) {
+        syncGroupChatResponsiveLayout();
+    }
+});
+
+document.addEventListener('click', (event) => {
+    const trigger = event.target instanceof Element
+        ? event.target.closest('[data-open-group-chats], [onclick*="openLectureGroupChatsModal"]')
+        : null;
+    if (trigger) {
+        event.preventDefault();
+        openLectureGroupChatsModal();
+    }
+});
+
+window.injectGroupChatsAccessPoints = injectGroupChatsAccessPoints;
+window.openLectureGroupChatsModal = openLectureGroupChatsModal;
+window.closeLectureGroupChatsModal = closeLectureGroupChatsModal;
+window.toggleCreateGroupChatForm = toggleCreateGroupChatForm;
+window.createNewLectureGroup = createNewLectureGroup;
+window.loadLectureGroups = loadLectureGroups;
+window.filterLectureGroups = filterLectureGroups;
+window.setLectureGroupUniFilter = setLectureGroupUniFilter;
+window.toggleMyGroupsOnly = toggleMyGroupsOnly;
+window.selectLectureGroup = selectLectureGroup;
+window.backToLectureGroupsList = backToLectureGroupsList;
+window.joinLectureGroup = joinLectureGroup;
+window.leaveLectureGroup = leaveLectureGroup;
+window.copyLectureGroupInvite = copyLectureGroupInvite;
+window.sendGroupChatMessage = sendGroupChatMessage;

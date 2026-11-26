@@ -62,11 +62,14 @@
           <button type="button" class="points-dropdown-item" onclick="openActiveSpotsModal()">📍 Aktuelle Partner-Spots</button>
           <button type="button" class="points-dropdown-item" onclick="openProfGuideModal()">📚 Prof-Rating & Survival Guide</button>
           <button type="button" class="points-dropdown-item" onclick="openBlackboardModal()">📌 Schwarzes Brett (Marktplatz)</button>
+          <button type="button" class="points-dropdown-item" data-open-group-chats onclick="openLectureGroupChatsModal()">🎓 Vorlesungs-Gruppenchats</button>
           <button type="button" class="points-dropdown-item" onclick="toggleLectureMode()">🎓 Lecture Mode (Fokus)</button>
           <button type="button" class="points-dropdown-item" onclick="openMorePointsModal()">🎁 Mehr Punkte sammeln</button>
           <button type="button" class="points-dropdown-item hidden" id="install-app-dropdown-btn" onclick="installPWA()" style="background: rgba(99, 102, 241, 0.15); color: #818cf8;">📲 App auf Gerät installieren</button>
         </div>
       </div>
+
+      <button type="button" class="header-top-link-btn" id="header-group-chats-btn" data-open-group-chats onclick="openLectureGroupChatsModal()" title="Vorlesungs- & Studiengang-Gruppenchats öffnen" style="background: rgba(99,102,241,0.18); border: 1px solid rgba(129,140,248,0.45); color: #c7d2fe;">🎓 Gruppen</button>
 
       <button type="button" class="theme-toggle-btn" id="theme-toggle-btn" onclick="toggleTheme()" aria-label="Design-Modus wechseln (Dark, Light Dark, Soft Light, Light)" title="Design-Modus wechseln">
         <span class="theme-toggle-icon" id="theme-toggle-icon" aria-hidden="true">🌑</span>
@@ -76,6 +79,7 @@
       <button type="button" class="header-profile-btn hidden" id="header-profile-btn" onclick="switchTab('profile')">
         <img id="header-avatar-preview" class="header-avatar-sm" src="" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'24\' height=\'24\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%2394a3b8\' stroke-width=\'2\'><path d=\'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2\'></path><circle cx=\'12\' cy=\'7\' r=\'4\'></circle></svg>'" alt="Profil">
         <span class="header-profile-text">Profil</span>
+        <span id="header-activity-unread-badge" class="badge-count" data-activity-unread-badge style="display: none; background: #ec4899; color: #fff; font-size: 10px; font-weight: 900; padding: 1px 6px; border-radius: 999px;">0</span>
       </button>
 
       <button type="button" class="btn-logout hidden" id="logout-btn" onclick="resetUser()" title="Abmelden">🚪 Logout</button>
@@ -391,8 +395,15 @@
           <div class="container-box" style="background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(236,72,153,0.15)); margin-bottom: 12px; max-width: 600px; text-align: center;">
             <h4 style="font-size: 13px; font-weight: 800; margin-bottom: 4px; color: var(--text);">🚀 Zeig dein Campus-Level!</h4>
             <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 10px;">Teile deinen Status in deiner WhatsApp-Status oder Insta-Story und hol dir Extrapunkte!</p>
-            <button type="button" class="btn" onclick="shareProfileCard()" style="margin-top: 0; background: var(--gradient-main); font-size: 12px; padding: 8px 14px;">📲 Profil in WhatsApp / Insta teilen</button>
+            <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
+              <button type="button" class="btn" onclick="shareProfileCard()" style="margin-top: 0; width: auto; background: var(--gradient-main); font-size: 12px; padding: 8px 14px;">📲 Profil in WhatsApp / Insta teilen</button>
+              <button type="button" class="btn btn-secondary" data-open-group-chats onclick="openLectureGroupChatsModal()" style="margin-top: 0; width: auto; font-size: 12px; padding: 8px 14px;">🎓 Vorlesungs-Gruppenchats</button>
+              <button type="button" class="btn btn-secondary" id="push-permission-btn" onclick="requestPushPermission()" style="margin-top: 0; width: auto; font-size: 12px; padding: 8px 14px;">🔔 Push aktivieren</button>
+            </div>
           </div>
+
+          <!-- Punkt 27: Lokale Benachrichtigungs-Historie / Activity Feed -->
+          <div id="profile-activity-feed" style="max-width: 600px; margin-bottom: 14px;"></div>
 
           <div class="container-box" style="max-width: 600px; margin-bottom: 20px;">
             <label for="profile-username" style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Benutzername (Handle):</label>
@@ -791,6 +802,7 @@
 <script type="module" src="js/features/ranking.js?v=6"></script>
 <script type="module" src="js/features/global-chat.js?v=6"></script>
 <script type="module" src="js/features/calendar.js?v=6"></script>
+<script type="module" src="js/features/group-chats.js?v=6"></script>
 
 <!-- Inline-Logik für Custom-Sprachmenü rechts oben, Flaggen-Dateien, Feed-Special-Leiste & Bug-Reports -->
 <script type="module">
