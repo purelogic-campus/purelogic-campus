@@ -13,6 +13,7 @@ import { openCrushModal, closeCrushModal, submitCrush } from './features/crush.j
 import { openBlackboardModal, closeBlackboardModal } from './features/board.js';
 import { loadRankingData } from './features/ranking.js';
 import { initMatchMittwochTheme } from './features/match-mittwoch.js';
+import { openCampusCalendar, loadCampusEvents } from './features/calendar.js';
 import { changeLanguage } from './i18n.js';
 
 const AVATAR_BUCKET = 'avatars';
@@ -45,6 +46,7 @@ window.retryNetworkSync = async function() {
         loadCampusFeed(state.currentReelFilter || 'foryou');
         loadLiveStreams();
         loadMyProfilePosts();
+        loadCampusEvents(true);
 
         const rankingTab = document.getElementById('tab-ranking');
         if (rankingTab && !rankingTab.classList.contains('hidden') && typeof window.loadRankingData === 'function') {
@@ -617,6 +619,7 @@ async function initMainAppSession() {
     loadCampusFeed('foryou');
     loadLiveStreams();
     loadMyProfilePosts();
+    loadCampusEvents();
     updatePushStatusUi();
 }
 
@@ -673,6 +676,8 @@ function setupGlobalWindowHandlers() {
             if (typeof window.loadRankingData === 'function') {
                 window.loadRankingData();
             }
+        } else if (tabName === 'calendar') {
+            loadCampusEvents();
         }
     };
 
@@ -857,6 +862,7 @@ function setupGlobalWindowHandlers() {
         }
     };
 
+    window.openCampusCalendar = openCampusCalendar;
     window.changeLanguage = changeLanguage;
 }
 

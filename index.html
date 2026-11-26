@@ -58,6 +58,7 @@
       <div style="position: relative;">
         <button type="button" class="points-badge" id="score" onclick="togglePointsDropdown(event)" aria-label="Punktestand und Campus-Menü öffnen">0 P</button>
         <div id="points-dropdown-menu" class="points-dropdown hidden">
+          <button type="button" class="points-dropdown-item" onclick="openCampusCalendar()">📅 Campus-Event-Kalender</button>
           <button type="button" class="points-dropdown-item" onclick="openActiveSpotsModal()">📍 Aktuelle Partner-Spots</button>
           <button type="button" class="points-dropdown-item" onclick="openProfGuideModal()">📚 Prof-Rating & Survival Guide</button>
           <button type="button" class="points-dropdown-item" onclick="openBlackboardModal()">📌 Schwarzes Brett (Marktplatz)</button>
@@ -284,9 +285,12 @@
       <!-- 4. Spontane Treffen Tab -->
       <div id="tab-feed" class="tab-content hidden">
         <div class="container-box" style="margin-bottom: 12px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px; gap: 6px; flex-wrap: wrap;">
             <h3 style="font-size: 16px; font-weight: 800;">Spontane Treffen</h3>
-            <button type="button" class="btn" style="width:auto; margin-top:0; padding: 6px 12px; font-size: 12px;" onclick="openUploadModal()">+ Erstellen</button>
+            <div style="display:flex; gap: 6px; align-items: center;">
+              <button type="button" class="btn btn-secondary" style="width:auto; margin-top:0; padding: 6px 10px; font-size: 11px;" onclick="openCampusCalendar()">📅 Kalender</button>
+              <button type="button" class="btn" style="width:auto; margin-top:0; padding: 6px 12px; font-size: 12px;" onclick="openUploadModal()">+ Erstellen</button>
+            </div>
           </div>
 
           <div class="category-group" id="filter-group">
@@ -786,6 +790,7 @@
 <script type="module" src="js/features/board.js?v=6"></script>
 <script type="module" src="js/features/ranking.js?v=6"></script>
 <script type="module" src="js/features/global-chat.js?v=6"></script>
+<script type="module" src="js/features/calendar.js?v=6"></script>
 
 <!-- Inline-Logik für Custom-Sprachmenü rechts oben, Flaggen-Dateien, Feed-Special-Leiste & Bug-Reports -->
 <script type="module">
