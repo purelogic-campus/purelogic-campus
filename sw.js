@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pure-logic-v1.4.6';
+const CACHE_NAME = 'pure-logic-v1.4.7';
 
 // Definition aller statischen Assets inkl. aller 10 Länderflaggen mit relativen Pfaden
 const STATIC_ASSETS = [
