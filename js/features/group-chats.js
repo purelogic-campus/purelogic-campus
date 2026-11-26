@@ -55,11 +55,11 @@ let previousFocusElement = null;
 
 function escapeHtml(str) {
     return String(str || '')
-        .replace(/&/g, '&')
-        .replace(/</g, '<')
-        .replace(/>/g, '>')
-        .replace(/"/g, '"')
-        .replace(/'/g, ''');
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }
 
 function canUseNetwork() {
@@ -235,7 +235,7 @@ function ensureGroupChatModal() {
                         + Neue Gruppe
                     </button>
                     <button type="button" onclick="closeLectureGroupChatsModal()" aria-label="Gruppenchats schließen" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.14); color: #f8fafc; width: 32px; height: 32px; border-radius: 10px; font-size: 18px; line-height: 1; cursor: pointer;">
-                        ×
+                        &times;
                     </button>
                 </div>
             </div>
@@ -872,9 +872,29 @@ function startGroupRealtimeSync(groupId) {
     }, GROUP_POLL_MS);
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+window.injectGroupChatsAccessPoints = injectGroupChatsAccessPoints;
+window.openLectureGroupChatsModal = openLectureGroupChatsModal;
+window.closeLectureGroupChatsModal = closeLectureGroupChatsModal;
+window.toggleCreateGroupChatForm = toggleCreateGroupChatForm;
+window.createNewLectureGroup = createNewLectureGroup;
+window.loadLectureGroups = loadLectureGroups;
+window.filterLectureGroups = filterLectureGroups;
+window.setLectureGroupUniFilter = setLectureGroupUniFilter;
+window.toggleMyGroupsOnly = toggleMyGroupsOnly;
+window.selectLectureGroup = selectLectureGroup;
+window.backToLectureGroupsList = backToLectureGroupsList;
+window.joinLectureGroup = joinLectureGroup;
+window.leaveLectureGroup = leaveLectureGroup;
+window.copyLectureGroupInvite = copyLectureGroupInvite;
+window.sendGroupChatMessage = sendGroupChatMessage;
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        injectGroupChatsAccessPoints();
+    });
+} else {
     injectGroupChatsAccessPoints();
-});
+}
 
 document.addEventListener('keydown', (event) => {
     if (event.key !== 'Escape') return;
@@ -900,19 +920,3 @@ document.addEventListener('click', (event) => {
         openLectureGroupChatsModal();
     }
 });
-
-window.injectGroupChatsAccessPoints = injectGroupChatsAccessPoints;
-window.openLectureGroupChatsModal = openLectureGroupChatsModal;
-window.closeLectureGroupChatsModal = closeLectureGroupChatsModal;
-window.toggleCreateGroupChatForm = toggleCreateGroupChatForm;
-window.createNewLectureGroup = createNewLectureGroup;
-window.loadLectureGroups = loadLectureGroups;
-window.filterLectureGroups = filterLectureGroups;
-window.setLectureGroupUniFilter = setLectureGroupUniFilter;
-window.toggleMyGroupsOnly = toggleMyGroupsOnly;
-window.selectLectureGroup = selectLectureGroup;
-window.backToLectureGroupsList = backToLectureGroupsList;
-window.joinLectureGroup = joinLectureGroup;
-window.leaveLectureGroup = leaveLectureGroup;
-window.copyLectureGroupInvite = copyLectureGroupInvite;
-window.sendGroupChatMessage = sendGroupChatMessage;
