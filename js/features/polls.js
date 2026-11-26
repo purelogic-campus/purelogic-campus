@@ -44,11 +44,11 @@ let pollRealtimeChannel = null;
 
 function escapeHtml(str) {
     return String(str || '')
-        .replace(/&/g, '&')
-        .replace(/</g, '<')
-        .replace(/>/g, '>')
-        .replace(/"/g, '"')
-        .replace(/'/g, ''');
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }
 
 function canUseNetwork() {
@@ -117,6 +117,11 @@ function getPollResults(pollId) {
     return { countsByOption, totalVotes, myChoice };
 }
 
+function removeUnwantedFloatingButtons() {
+    const fab = document.getElementById('pl-floating-group-chats-btn');
+    if (fab) fab.remove();
+}
+
 function ensureCreatePollModal() {
     let modal = document.getElementById('campus-poll-create-modal');
     if (modal) return modal;
@@ -147,7 +152,7 @@ function ensureCreatePollModal() {
                     <h3 id="poll-modal-heading" style="margin: 0; font-size: 16px; font-weight: 900; color: #f8fafc;">📊 Neue Umfrage erstellen</h3>
                     <div id="poll-modal-subtext" style="font-size: 11px; color: #94a3b8; margin-top: 2px;">Für Beiträge & Stories</div>
                 </div>
-                <button type="button" onclick="closeCreatePollModal()" aria-label="Umfrage-Dialog schließen" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.16); color: #fff; width: 32px; height: 32px; border-radius: 10px; font-size: 18px; line-height: 1; cursor: pointer;">×</button>
+                <button type="button" onclick="closeCreatePollModal()" aria-label="Umfrage-Dialog schließen" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.16); color: #fff; width: 32px; height: 32px; border-radius: 10px; font-size: 18px; line-height: 1; cursor: pointer;">&times;</button>
             </div>
 
             <div style="display: flex; flex-direction: column; gap: 8px;">
@@ -392,9 +397,9 @@ function buildPollCardHtml(poll) {
     }).join('');
 
     return `
-        <div style="background: rgba(19, 27, 46, 0.88); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 14px; padding: 12px; display: flex; flex-direction: column; gap: 8px;">
+        <div style="background: rgba(19, 27, 46, 0.92); border: 1px solid rgba(148, 163, 184, 0.24); border-radius: 14px; padding: 12px; display: flex; flex-direction: column; gap: 8px;">
             <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: 10px; color: #94a3b8;">
-                <span style="background: rgba(99, 102, 241, 0.18); color: #a5b4fc; font-weight: 800; padding: 2px 8px; border-radius: 999px;">
+                <span style="background: rgba(99, 102, 241, 0.22); color: #a5b4fc; font-weight: 800; padding: 2px 8px; border-radius: 999px;">
                     ${badgeLabel}
                 </span>
                 <div style="display: flex; align-items: center; gap: 8px;">
@@ -420,15 +425,15 @@ function renderPollsIntoContainer(container, contextType) {
 
     const headerHtml = `
         <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px;">
-            <span style="font-size: 12px; font-weight: 900; color: #e2e8f0;">📊 ${label}</span>
-            <button type="button" onclick="openCreatePollModal('${ctxArg}')" style="background: linear-gradient(135deg, #6366f1, #ec4899); border: none; color: #fff; font-size: 11px; font-weight: 800; padding: 5px 10px; border-radius: 8px; cursor: pointer;">
-                + Umfrage
+            <span style="font-size: 12px; font-weight: 900; color: #f8fafc;">📊 ${label} (${matching.length})</span>
+            <button type="button" onclick="openCreatePollModal('${ctxArg}')" style="background: linear-gradient(135deg, #6366f1, #ec4899); border: none; color: #fff; font-size: 11px; font-weight: 800; padding: 6px 11px; border-radius: 8px; cursor: pointer;">
+                + Umfrage erstellen
             </button>
         </div>
     `;
 
     const bodyHtml = matching.length > 0
-        ? `<div style="display: flex; flex-direction: column; gap: 8px;">${matching.map(buildPollCardHtml).join('')}</div>`
+        ? `<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 8px;">${matching.map(buildPollCardHtml).join('')}</div>`
         : `<div style="font-size: 11px; color: #94a3b8; padding: 8px 4px;">Noch keine ${label} vorhanden. Starte die erste!</div>`;
 
     container.innerHTML = headerHtml + bodyHtml;
@@ -436,25 +441,31 @@ function renderPollsIntoContainer(container, contextType) {
 
 export function injectPollWidgets() {
     if (typeof document === 'undefined' || !document.body) return;
+    removeUnwantedFloatingButtons();
 
     const reelsTab = document.getElementById('tab-reels');
     if (reelsTab && !document.getElementById('campus-story-polls-box')) {
         const storyBox = document.createElement('div');
         storyBox.id = 'campus-story-polls-box';
-        storyBox.style.cssText = 'margin: 10px 12px; padding: 10px 12px; border-radius: 14px; background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(148, 163, 184, 0.22); flex-shrink: 0;';
-        reelsTab.appendChild(storyBox);
+        storyBox.style.cssText = 'margin: 8px 12px 10px 12px; padding: 10px 12px; border-radius: 14px; background: rgba(15, 23, 42, 0.92); border: 1px solid rgba(129, 140, 248, 0.35); flex-shrink: 0;';
+        const filterBar = document.getElementById('feed-filter-bar');
+        if (filterBar && filterBar.parentElement === reelsTab) {
+            filterBar.insertAdjacentElement('afterend', storyBox);
+        } else {
+            reelsTab.prepend(storyBox);
+        }
     }
 
     const feedTab = document.getElementById('tab-feed');
     if (feedTab && !document.getElementById('campus-post-polls-box')) {
         const postBox = document.createElement('div');
         postBox.id = 'campus-post-polls-box';
-        postBox.style.cssText = 'margin: 8px 0 12px 0; padding: 10px 12px; border-radius: 14px; background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(148, 163, 184, 0.22); flex-shrink: 0;';
+        postBox.style.cssText = 'margin: 8px 0 12px 0; padding: 10px 12px; border-radius: 14px; background: rgba(15, 23, 42, 0.92); border: 1px solid rgba(129, 140, 248, 0.35); flex-shrink: 0;';
         const feedList = document.getElementById('feed-list');
         if (feedList && feedList.parentElement === feedTab) {
             feedTab.insertBefore(postBox, feedList);
         } else {
-            feedTab.appendChild(postBox);
+            feedTab.prepend(postBox);
         }
     }
 }
