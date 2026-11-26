@@ -1,0 +1,1083 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#1a0512">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>PURE LOGIC • GenZ Campus</title>
+  
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-512.png">
+
+  <!-- Sofortiges Theme-Setup vor dem ersten Rendern (Standard: dark, 4 Modes: dark, light-dark, soft-light, light) -->
+  <script>
+    (function () {
+      try {
+        var allowed = ['dark', 'light-dark', 'soft-light', 'light'];
+        var saved = localStorage.getItem('pure_logic_theme');
+        if (saved === 'strong-light') saved = 'soft-light';
+        var theme = allowed.indexOf(saved) !== -1 ? saved : 'dark';
+        document.documentElement.setAttribute('data-theme', theme);
+        document.documentElement.classList.add('theme-' + theme);
+        if (document.body) {
+          document.body.classList.add('theme-' + theme);
+          if (theme === 'light') {
+            document.body.classList.add('light-mode');
+          }
+        }
+      } catch (e) {}
+    })();
+  </script>
+
+  <!-- Externe Bibliotheken (Supabase, Leaflet Karten, jsPDF) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+  <link rel="stylesheet" href="style.css?v=6" />
+</head>
+<body>
+
+<!-- Hauptcontainer der App-Karte -->
+<div class="app-card">
+  
+  <!-- Header Bereich: PURE LOGIC Banner oben zentriert, Leiste direkt darunter + Sprachwähler rechts oben -->
+  <div class="header" id="app-header">
+    <div class="brand-banner-bar">
+      <button type="button" class="logo" onclick="switchTab('reels')" title="Zur Startseite" aria-label="PURE LOGIC Startseite">PURE LOGIC</button>
+    </div>
+    
+    <div class="header-right" id="header-right-container">
+      <button type="button" class="header-top-link-btn hidden" id="header-admin-tab-btn" onclick="switchTab('admin')" style="background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.4); color: #f59e0b;">⚡ Admin</button>
+
+      <div style="position: relative;">
+        <button type="button" class="points-badge" id="score" onclick="togglePointsDropdown(event)" aria-label="Punktestand und Campus-Menü öffnen">0 P</button>
+        <div id="points-dropdown-menu" class="points-dropdown hidden">
+          <button type="button" class="points-dropdown-item" onclick="openCampusCalendar()">📅 Campus-Event-Kalender</button>
+          <button type="button" class="points-dropdown-item" onclick="openActiveSpotsModal()">📍 Aktuelle Partner-Spots</button>
+          <button type="button" class="points-dropdown-item" onclick="openProfGuideModal()">📚 Prof-Rating & Survival Guide</button>
+          <button type="button" class="points-dropdown-item" onclick="openBlackboardModal()">📌 Schwarzes Brett (Marktplatz)</button>
+          <button type="button" class="points-dropdown-item" data-open-group-chats onclick="openLectureGroupChatsModal()">🎓 Vorlesungs-Gruppenchats</button>
+          <button type="button" class="points-dropdown-item" onclick="toggleLectureMode()">🎓 Lecture Mode (Fokus)</button>
+          <button type="button" class="points-dropdown-item" onclick="openMorePointsModal()">🎁 Mehr Punkte sammeln</button>
+          <button type="button" class="points-dropdown-item hidden" id="install-app-dropdown-btn" onclick="installPWA()" style="background: rgba(99, 102, 241, 0.15); color: #818cf8;">📲 App auf Gerät installieren</button>
+        </div>
+      </div>
+
+      <button type="button" class="header-top-link-btn" id="header-group-chats-btn" data-open-group-chats onclick="openLectureGroupChatsModal()" title="Vorlesungs- & Studiengang-Gruppenchats öffnen" style="background: rgba(99,102,241,0.18); border: 1px solid rgba(129,140,248,0.45); color: #c7d2fe;">🎓 Gruppen</button>
+
+      <button type="button" class="theme-toggle-btn" id="theme-toggle-btn" onclick="toggleTheme()" aria-label="Design-Modus wechseln (Dark, Light Dark, Soft Light, Light)" title="Design-Modus wechseln">
+        <span class="theme-toggle-icon" id="theme-toggle-icon" aria-hidden="true">🌑</span>
+        <span class="theme-toggle-label" id="theme-toggle-label">Dark</span>
+      </button>
+
+      <button type="button" class="header-profile-btn hidden" id="header-profile-btn" onclick="switchTab('profile')">
+        <img id="header-avatar-preview" class="header-avatar-sm" src="" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'24\' height=\'24\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%2394a3b8\' stroke-width=\'2\'><path d=\'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2\'></path><circle cx=\'12\' cy=\'7\' r=\'4\'></circle></svg>'" alt="Profil">
+        <span class="header-profile-text">Profil</span>
+        <span id="header-activity-unread-badge" class="badge-count" data-activity-unread-badge style="display: none; background: #ec4899; color: #fff; font-size: 10px; font-weight: 900; padding: 1px 6px; border-radius: 999px;">0</span>
+      </button>
+
+      <button type="button" class="btn-logout hidden" id="logout-btn" onclick="resetUser()" title="Abmelden">🚪 Logout</button>
+
+      <div class="lang-switcher-wrap" id="lang-switcher-wrap" title="Sprache auswählen">
+        <button type="button" class="lang-current-btn" id="lang-current-btn" aria-haspopup="listbox" aria-expanded="false" onclick="toggleLanguageMenu(event)">
+          <img id="lang-flag-img" class="lang-flag-img" src="icons/flags/de.svg" alt="DE" onerror="this.style.display='none'">
+          <span class="lang-code-badge" id="lang-code-badge">DE</span>
+          <span class="lang-caret" aria-hidden="true">▾</span>
+        </button>
+
+        <div class="lang-dropdown-list hidden" id="lang-dropdown-list" role="listbox" aria-label="Sprache auswählen">
+          <button type="button" class="lang-option-item active" data-lang="de" onclick="selectLanguageOption('de')">
+            <img class="lang-flag-img" src="icons/flags/de.svg" alt="DE">
+            <span class="lang-option-code">DE</span>
+          </button>
+          <button type="button" class="lang-option-item" data-lang="en" onclick="selectLanguageOption('en')">
+            <img class="lang-flag-img" src="icons/flags/en.svg" alt="EN">
+            <span class="lang-option-code">EN</span>
+          </button>
+          <button type="button" class="lang-option-item" data-lang="it" onclick="selectLanguageOption('it')">
+            <img class="lang-flag-img" src="icons/flags/it.svg" alt="IT">
+            <span class="lang-option-code">IT</span>
+          </button>
+          <button type="button" class="lang-option-item" data-lang="bks" onclick="selectLanguageOption('bks')">
+            <img class="lang-flag-img" src="icons/flags/bks.svg" alt="BKS">
+            <span class="lang-option-code">BKS</span>
+          </button>
+          <button type="button" class="lang-option-item" data-lang="tr" onclick="selectLanguageOption('tr')">
+            <img class="lang-flag-img" src="icons/flags/tr.svg" alt="TR">
+            <span class="lang-option-code">TR</span>
+          </button>
+          <button type="button" class="lang-option-item" data-lang="es" onclick="selectLanguageOption('es')">
+            <img class="lang-flag-img" src="icons/flags/es.svg" alt="ES">
+            <span class="lang-option-code">ES</span>
+          </button>
+          <button type="button" class="lang-option-item" data-lang="fr" onclick="selectLanguageOption('fr')">
+            <img class="lang-flag-img" src="icons/flags/fr.svg" alt="FR">
+            <span class="lang-option-code">FR</span>
+          </button>
+          <button type="button" class="lang-option-item" data-lang="pl" onclick="selectLanguageOption('pl')">
+            <img class="lang-flag-img" src="icons/flags/pl.svg" alt="PL">
+            <span class="lang-option-code">PL</span>
+          </button>
+          <button type="button" class="lang-option-item" data-lang="hu" onclick="selectLanguageOption('hu')">
+            <img class="lang-flag-img" src="icons/flags/hu.svg" alt="HU">
+            <span class="lang-option-code">HU</span>
+          </button>
+          <button type="button" class="lang-option-item" data-lang="uk" onclick="selectLanguageOption('uk')">
+            <img class="lang-flag-img" src="icons/flags/uk.svg" alt="UK">
+            <span class="lang-option-code">UK</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Auth Gate / Login-Bereich -->
+  <div id="auth-gate" class="tab-content auth-gate-container">
+    <div class="container-box" style="max-width: 420px; width: 100%;">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 4px;">
+        <h2 style="font-size: 22px; font-weight: 800;">Hey there 👋</h2>
+        <button type="button" class="theme-toggle-btn auth-theme-toggle" id="auth-theme-toggle-btn" onclick="toggleTheme()" aria-label="Design-Modus wechseln (Dark, Light Dark, Soft Light, Light)" title="Design-Modus wechseln">
+          <span class="theme-toggle-icon" id="auth-theme-toggle-icon" aria-hidden="true">🌑</span>
+          <span class="theme-toggle-label" id="auth-theme-toggle-label">Dark</span>
+        </button>
+      </div>
+      <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 14px;">Logge dich in dein Campus-Konto ein:</p>
+      
+      <div id="auth-msg" class="msg-box hidden"></div>
+
+      <label for="email" style="font-size: 11px; font-weight: 600; color: var(--text-muted);">E-Mail-Adresse:</label>
+      <input type="email" id="email" placeholder="name@uni.ac.at">
+      
+      <label for="password" style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Passwort:</label>
+      <div class="password-container">
+        <input type="password" id="password" placeholder="Dein Passwort">
+        <button type="button" class="password-toggle" id="toggle-pw-btn" aria-label="Passwort anzeigen oder verbergen" onclick="togglePasswordVisibility()">👁️</button>
+      </div>
+      
+      <button type="button" class="forgot-password" onclick="handleForgotPassword()">Passwort vergessen?</button>
+
+      <button type="button" class="btn" onclick="handleLogin()">Einloggen</button>
+      
+      <button type="button" class="btn btn-secondary" onclick="openRegisterModal()" style="margin-top: 8px; background: rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.4); color: #818cf8; font-weight: 800;">+ Registrieren (Neuer Account)</button>
+      
+      <button type="button" class="btn btn-secondary hidden" id="install-app-auth-btn" onclick="installPWA()" style="margin-top: 10px; background: rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.4); color: #818cf8; font-weight: 800;">📲 App für Homescreen herunterladen</button>
+      
+      <button type="button" class="btn btn-secondary" onclick="openReportModal()" style="margin-top: 10px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444; font-size: 11px;">⚠️ Fehler / Problem melden (+5 Gratis-Punkte)</button>
+    </div>
+  </div>
+
+  <!-- Registrierungs-Modal -->
+  <div id="register-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.95); z-index: 250; padding: 20px;">
+    <div class="container-box" style="width: 100%; max-width: 440px; padding: 24px; border: 1px solid rgba(99, 102, 241, 0.4); box-shadow: 0 15px 35px rgba(0,0,0,0.8);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <h3 style="font-size: 18px; font-weight: 900; color: #818cf8;">🎓 PURE LOGIC • Registrierung</h3>
+        <button type="button" onclick="closeRegisterModal()" aria-label="Registrierung schließen" style="background: transparent; border: none; color: var(--text-muted); font-size: 16px; cursor: pointer;">✕</button>
+      </div>
+      <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 14px;">Erstelle deinen verifizierten Studenten-Account mit deiner offiziellen Uni-Adresse.</p>
+
+      <div id="reg-msg" class="msg-box hidden" style="margin-bottom: 10px;"></div>
+
+      <label for="reg-fullname" style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Dein Name:</label>
+      <input type="text" id="reg-fullname" placeholder="Max Mustermann" style="margin-bottom: 10px;">
+
+      <label for="reg-email" style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Offizielle Uni-E-Mail-Adresse (.ac.at):</label>
+      <input type="email" id="reg-email" placeholder="name@uni.ac.at" style="margin-bottom: 10px;">
+
+      <label for="reg-password" style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Passwort (min. 8 Zeichen, 1 Zahl, 1 Sonderzeichen):</label>
+      <div class="password-container" style="margin-bottom: 4px;">
+        <input type="password" id="reg-password" placeholder="••••••••">
+        <button type="button" class="password-toggle" id="reg-toggle-pw-btn" aria-label="Registrierungs-Passwort anzeigen oder verbergen" onclick="toggleRegisterPasswordVisibility()">👁️</button>
+      </div>
+      <div style="font-size: 10px; color: var(--text-muted); margin-bottom: 14px; line-height: 1.3;">
+        Muss mindestens 8 Zeichen lang sein sowie eine Zahl und ein Sonderzeichen enthalten.
+      </div>
+
+      <div style="display: flex; gap: 8px;">
+        <button type="button" class="btn" onclick="submitRegistration()" style="margin-top: 0; background: var(--gradient-main); font-weight: 900;">Account erstellen 🚀</button>
+        <button type="button" class="btn btn-secondary" onclick="closeRegisterModal()" style="margin-top: 0; width: auto;">Abbrechen</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Haupt-App-Layout nach erfolgreichem Login -->
+  <div id="main-app" class="hidden main-app-layout">
+    
+    <div id="campus-drop-banner" class="flash-banner-active" style="display:none; width: 100%; background: linear-gradient(135deg, #f59e0b, #ec4899); color: white; padding: 10px 14px; border-radius: 12px; margin-bottom: 6px; text-align: center; cursor: pointer; flex-shrink: 0; border: 2px solid rgba(255, 255, 255, 0.6);" onclick="claimActiveDrop()">
+      <div style="font-weight: 900; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">⚡ FLASH DROP: 50 Extra-Punkte!</div>
+      <div style="font-size: 10px; opacity: 0.95; margin-top: 2px; font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,0.2);">Nur für kurze Zeit verfügbar! [Jetzt tippen 🎁]</div>
+    </div>
+
+    <!-- Sektion für die verschiedenen App-Tabs -->
+    <div class="tab-content-wrapper">
+      
+      <!-- 1. Lecture Mode Tab -->
+      <div id="tab-lecture-mode" class="lecture-mode-view tab-content hidden">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <div>
+            <h3 style="font-size: 15px; font-weight: 800; color: #94a3b8;">🎓 Hörsaal-Fokusmodus</h3>
+            <span style="font-size: 10px; color: #64748b;">Ablenkungsfrei & Akku-schonend</span>
+          </div>
+          <button type="button" class="btn btn-secondary" style="width: auto; margin-top: 0; padding: 6px 12px; font-size: 11px;" onclick="toggleLectureMode()">Modus beenden ✕</button>
+        </div>
+
+        <textarea id="lecture-notes-input" class="lecture-notepad" placeholder="Schreibe hier deine Vorlesungsnotizen mit..."></textarea>
+
+        <div class="container-box" style="margin-top: 8px; padding: 10px; flex-shrink: 0;">
+          <div style="font-size: 11px; font-weight: 700; color: #cbd5e1; margin-bottom: 6px;">💾 Notiz auf Gerät speichern:</div>
+          <div style="display: flex; gap: 6px; margin-bottom: 6px;">
+            <input type="text" id="lecture-file-name" placeholder="Dateiname (z.B. Vorlesung_Mathe)" style="margin: 0; flex: 2; font-size: 11px; padding: 8px 10px;">
+            <input type="date" id="lecture-file-date" style="margin: 0; flex: 1; font-size: 11px; padding: 8px 10px; background: var(--card); color: var(--text); border: 1px solid var(--border); border-radius: 12px;">
+          </div>
+          
+          <div style="display: flex; gap: 6px; margin-bottom: 6px; align-items: center;">
+            <label for="lecture-file-format" style="font-size: 11px; font-weight: 600; color: var(--text-muted); white-space: nowrap;">Format:</label>
+            <select id="lecture-file-format" style="margin: 0; font-size: 11px; padding: 8px 10px; background: var(--card); color: var(--text); border: 1px solid var(--border); border-radius: 12px;">
+              <option value="txt">.txt (Textdatei)</option>
+              <option value="pdf">.pdf (Dokument)</option>
+            </select>
+          </div>
+
+          <button type="button" class="btn" onclick="saveLectureNotesToFile()" style="margin: 0; padding: 9px; font-size: 11px; font-weight: 800;">📥 Als Datei herunterladen</button>
+        </div>
+      </div>
+
+      <!-- 2. Live Streams Tab -->
+      <div id="tab-live" class="tab-content hidden">
+        <div style="padding: 10px 16px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; background: rgba(0,0,0,0.2);">
+          <div class="category-group" id="live-filter-group" style="margin: 0; overflow-x: auto;">
+            <button type="button" class="cat-pill active" onclick="setLiveFilter(this, 'Alle')">Alle</button>
+            <button type="button" class="cat-pill" onclick="setLiveFilter(this, '💬 Plaudern')">💬 Plaudern</button>
+            <button type="button" class="cat-pill" onclick="setLiveFilter(this, '🎮 Gaming')">🎮 Gaming</button>
+            <button type="button" class="cat-pill" onclick="setLiveFilter(this, '🎵 Musik')">🎵 Musik</button>
+            <button type="button" class="cat-pill" onclick="setLiveFilter(this, '📚 Lernen')">📚 Lernen</button>
+          </div>
+          <button type="button" class="btn" id="start-stream-btn" style="width: auto; margin: 0; padding: 6px 12px; font-size: 11px;" onclick="handlePreLiveCheck()">+ Start</button>
+        </div>
+
+        <div class="reel-card-wrapper" id="live-streams-list" style="flex: 1; overflow-y: auto; scroll-snap-type: y mandatory; padding: 10px 0;">
+          <p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;">Lade aktive Live-Streams...</p>
+        </div>
+      </div>
+
+      <!-- 3. Reels / Campus Feed Tab -->
+      <div id="tab-reels" class="tab-content">
+        <div class="feed-filter-bar" id="feed-filter-bar" role="tablist" aria-label="Feed-Ansichten">
+          <div class="feed-specials-row">
+            <button type="button" class="feed-subtab-btn feed-subtab-duell" id="subtab-uni-duell" onclick="switchTab('ranking'); if(window.loadRankingData) loadRankingData();" title="Wiener Uni-Duell & Rangliste öffnen">🏆 Wiener Uni-Duell</button>
+            <button type="button" class="feed-subtab-btn feed-subtab-match" id="subtab-match-mittwoch" onclick="openCrushModal()" title="Match Mittwoch & Crush Radar öffnen">💖 Match Mittwoch</button>
+          </div>
+
+          <div class="feed-tabs-row">
+            <button type="button" class="feed-subtab-btn active" style="font-size: 12px; font-weight: 800; cursor: pointer; color: var(--primary);" id="subtab-foryou" onclick="setReelFilter('foryou')">✨ Für dich</button>
+            <button type="button" class="feed-subtab-btn" style="font-size: 12px; font-weight: 800; cursor: pointer; color: var(--text-muted);" id="subtab-discover" onclick="setReelFilter('discover')">🔥 Entdecken</button>
+            <button type="button" class="feed-subtab-btn" style="font-size: 12px; font-weight: 800; cursor: pointer; color: var(--text-muted);" id="subtab-following" onclick="setReelFilter('following')">👥 Gefolgt</button>
+            <button type="button" class="feed-subtab-btn" style="font-size: 12px; font-weight: 800; cursor: pointer; color: var(--danger);" id="subtab-live" onclick="switchTab('live')">🔴 LIVE</button>
+          </div>
+        </div>
+
+        <div class="reel-card-wrapper" id="reels-list" style="flex: 1; overflow-y: auto; scroll-snap-type: y mandatory; padding: 0 12px 10px 12px;">
+          <p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;">Lade Campus-Feeds...</p>
+        </div>
+      </div>
+
+      <!-- 4. Spontane Treffen Tab -->
+      <div id="tab-feed" class="tab-content hidden">
+        <div class="container-box" style="margin-bottom: 12px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px; gap: 6px; flex-wrap: wrap;">
+            <h3 style="font-size: 16px; font-weight: 800;">Spontane Treffen</h3>
+            <div style="display:flex; gap: 6px; align-items: center;">
+              <button type="button" class="btn btn-secondary" style="width:auto; margin-top:0; padding: 6px 10px; font-size: 11px;" onclick="openCampusCalendar()">📅 Kalender</button>
+              <button type="button" class="btn" style="width:auto; margin-top:0; padding: 6px 12px; font-size: 12px;" onclick="openUploadModal()">+ Erstellen</button>
+            </div>
+          </div>
+
+          <div class="category-group" id="filter-group">
+            <button type="button" class="cat-pill active" onclick="setFilter(this, 'Alle')">Alle</button>
+            <button type="button" class="cat-pill" onclick="setFilter(this, '☕ Kaffee')">☕ Kaffee</button>
+            <button type="button" class="cat-pill" onclick="setFilter(this, '📖 Lernen')">📖 Lernen</button>
+            <button type="button" class="cat-pill" onclick="setFilter(this, '🍺 Bier')">🍺 Bier</button>
+            <button type="button" class="cat-pill" onclick="setFilter(this, '🏀 Sport')">🏀 Sport</button>
+          </div>
+        </div>
+
+        <div id="feed-list" style="overflow-y:auto; flex:1;">
+          <p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;">Lade Treffen...</p>
+        </div>
+      </div>
+
+      <!-- 5. Ranking & Uni-Duell Tab -->
+      <div id="tab-ranking" class="tab-content hidden">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 8px; flex-shrink:0;">
+          <h3 style="font-size: 16px; font-weight: 800;">🏆 Uni-Duell & Top 100</h3>
+          <button type="button" class="btn btn-secondary" onclick="if(window.loadRankingData) loadRankingData();" style="width: auto; margin-top: 0; padding: 4px 10px; font-size: 10px;">🔄 Aktualisieren</button>
+        </div>
+
+        <div style="overflow-y: auto; flex: 1; padding-bottom: 20px;">
+          <div class="container-box" style="margin-bottom: 12px;">
+            <h4 style="font-size: 13px; font-weight: 800; margin-bottom: 8px; color: #818cf8;">🎓 Wiener Uni-Duell (Pro-Kopf)</h4>
+            <div id="uni-duell-list" style="display: flex; flex-direction: column; gap: 8px;">
+              <p style="color: var(--text-muted); font-size: 12px;">Berechne Uni-Wertung...</p>
+            </div>
+          </div>
+
+          <h4 style="font-size: 13px; font-weight: 800; margin-bottom: 6px;">⭐ Wall of Fame (Top Creator)</h4>
+          <div id="top-creators-list" class="container-box" style="display: flex; flex-direction: column; gap: 6px;">
+            <p style="color: var(--text-muted); font-size: 12px;">Lade Top Creator...</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- 6. Globaler Chat Tab -->
+      <div id="tab-global" class="tab-content hidden">
+        <div class="chat-container container-box" style="height: 100%; padding: 0; overflow: hidden;">
+          <div class="messages-list" id="global-chat-list">
+            <p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;">Lade Campus-Chat...</p>
+          </div>
+          <div class="chat-input-area">
+            <input type="text" id="global-chat-input" placeholder="Nachricht an alle..." onkeydown="if(event.key==='Enter') sendGlobalMessage()">
+            <button type="button" class="btn" style="width: auto; margin:0; padding: 0 16px;" onclick="sendGlobalMessage()">Senden</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 7. Postfach / Direktnachrichten Tab -->
+      <div id="tab-inbox" class="tab-content hidden">
+        <div class="chat-container container-box" style="height: 100%; padding: 12px; overflow: hidden; display: flex; flex-direction: column; gap: 8px;">
+          <div id="dm-inbox-shell" style="display: grid; grid-template-columns: minmax(210px, 280px) minmax(0, 1fr); gap: 12px; flex: 1; min-height: 0; overflow: hidden;">
+            <div id="dm-conversations-sidebar" style="display: flex; flex-direction: column; background: rgba(255, 255, 255, 0.02); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; min-height: 0;">
+              <div style="padding: 10px 12px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 6px; flex-shrink: 0;">
+                <span style="font-size: 12px; font-weight: 800; color: #fff;">💬 Konversationen</span>
+                <button type="button" onclick="if(window.loadConversationsList) loadConversationsList()" aria-label="Konversationen aktualisieren" style="background: rgba(255,255,255,0.06); border: 1px solid var(--border); color: var(--text-muted); border-radius: 8px; padding: 3px 8px; font-size: 10px; font-weight: 700; cursor: pointer;">↻</button>
+              </div>
+              <div id="dm-conversations-list" style="flex: 1; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 6px;">
+                <p style="color: var(--text-muted); font-size: 11px; text-align: center; padding: 14px;">Lade Konversationen...</p>
+              </div>
+            </div>
+
+            <div id="dm-thread-pane" style="display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow: hidden;">
+              <label for="dm-recipient" style="font-size: 10px; font-weight: 600; color: var(--text-muted); flex-shrink:0;">Empfänger (E-Mail):</label>
+              <input type="email" id="dm-recipient" placeholder="kommilitone@uni.at" style="margin-bottom: 6px; flex-shrink:0; max-width: 400px;" onchange="loadDirectMessages()">
+              
+              <div class="messages-list" id="dm-chat-list">
+                <p style="color: var(--text-muted); font-size: 12px; text-align:center; padding: 20px;">Wähle links eine Konversation aus oder gib oben eine E-Mail ein.</p>
+              </div>
+              <div class="chat-input-area">
+                <input type="text" id="dm-input" placeholder="Direktnachricht..." onkeydown="if(event.key==='Enter') sendDirectMessage()">
+                <button type="button" class="btn" style="width: auto; margin:0; padding: 0 16px;" onclick="sendDirectMessage()">Senden</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 8. Profil Tab -->
+      <div id="tab-profile" class="tab-content hidden">
+        <div style="overflow-y: auto; flex: 1; padding: 4px; min-height: 0; height: 100%;">
+          <div class="profile-header-card container-box" style="margin-bottom: 12px;">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <img id="my-profile-avatar-preview" class="profile-avatar-lg" src="" onclick="changeAvatarDirectly()" title="Klicken, um das Profilbild zu ändern" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'64\' height=\'64\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%2394a3b8\' stroke-width=\'2\'><path d=\'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2\'></path><circle cx=\'12\' cy=\'7\' r=\'4\'></circle></svg>'" alt="Avatar">
+              <div>
+                <h3 id="my-profile-display-name" style="font-size: 16px; font-weight: 800; margin-bottom: 2px;">Dein Name</h3>
+                <p id="my-profile-handle-preview" style="font-size: 12px; color: #818cf8; font-weight: 700;">@benutzername</p>
+                <div id="verified-student-badge-container" style="margin-top: 4px;"></div>
+                <div id="profile-rank-badge" style="display: inline-block; background: rgba(99,102,241,0.2); color: #818cf8; border: 1px solid rgba(99,102,241,0.4); padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 800; margin-top: 3px;">☕ Frischer Erstie</div>
+                <div style="font-size: 10px; color: var(--text-muted); margin-top: 3px; font-weight: 600;" id="follower-stats">0 Follower • 0 Gefolgt</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="container-box" style="background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(236,72,153,0.15)); margin-bottom: 12px; max-width: 600px; text-align: center;">
+            <h4 style="font-size: 13px; font-weight: 800; margin-bottom: 4px; color: var(--text);">🚀 Zeig dein Campus-Level!</h4>
+            <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 10px;">Teile deinen Status in deiner WhatsApp-Status oder Insta-Story und hol dir Extrapunkte!</p>
+            <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
+              <button type="button" class="btn" onclick="shareProfileCard()" style="margin-top: 0; width: auto; background: var(--gradient-main); font-size: 12px; padding: 8px 14px;">📲 Profil in WhatsApp / Insta teilen</button>
+              <button type="button" class="btn btn-secondary" data-open-group-chats onclick="openLectureGroupChatsModal()" style="margin-top: 0; width: auto; font-size: 12px; padding: 8px 14px;">🎓 Vorlesungs-Gruppenchats</button>
+              <button type="button" class="btn btn-secondary" id="push-permission-btn" onclick="requestPushPermission()" style="margin-top: 0; width: auto; font-size: 12px; padding: 8px 14px;">🔔 Push aktivieren</button>
+            </div>
+          </div>
+
+          <!-- Punkt 27: Lokale Benachrichtigungs-Historie / Activity Feed -->
+          <div id="profile-activity-feed" style="max-width: 600px; margin-bottom: 14px;"></div>
+
+          <div class="container-box" style="max-width: 600px; margin-bottom: 20px;">
+            <label for="profile-username" style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Benutzername (Handle):</label>
+            <input type="text" id="profile-username" placeholder="z. B. johndoe">
+
+            <label for="profile-fullname" style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Anzeigename:</label>
+            <input type="text" id="profile-fullname" placeholder="z. B. John Doe">
+
+            <label for="profile-university" style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Deine Universität:</label>
+            <select id="profile-university">
+              <option value="Universität Wien">Universität Wien</option>
+              <option value="TU Wien">TU Wien</option>
+              <option value="Wirtschaftsuniversität Wien (WU)">WU Wien</option>
+              <option value="MedUni Wien">MedUni Wien</option>
+              <option value="boku">BOKU Wien</option>
+              <option value="FH Wien">FH Wien</option>
+            </select>
+
+            <label for="profile-bio" style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Bio / Über mich:</label>
+            <textarea id="profile-bio" rows="2" placeholder="Dein Studiengang, Vibe, Hobbys..."></textarea>
+
+            <label for="profile-avatar" style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Profilbild URL:</label>
+            <input type="text" id="profile-avatar" placeholder="https://beispiel.de/bild.jpg" oninput="document.getElementById('my-profile-avatar-preview').src = this.value; document.getElementById('header-avatar-preview').src = this.value;">
+
+            <label for="profile-interests" style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Interessen (mit Komma getrennt):</label>
+            <input type="text" id="profile-interests" placeholder="Programmieren, Kaffee, Fitness, Musik">
+
+            <button type="button" class="btn" onclick="saveMyProfile()" style="margin-bottom: 14px;">Profil speichern (+10 P)</button>
+
+            <h4 style="font-size: 14px; font-weight: 800; margin-top: 14px; margin-bottom: 6px;">Deine Beiträge</h4>
+            <div id="my-profile-posts-grid" class="profile-grid"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 9. Admin Dashboard Tab -->
+      <div id="tab-admin" class="tab-content hidden">
+        <div class="container-box" style="max-width: 600px; padding-bottom: 20px;">
+          <h3 style="font-size: 16px; font-weight: 800; margin-bottom: 4px; color: var(--admin);">⚡ Admin-Interface: Campus-Drops & Test-Tools</h3>
+          <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;">Verwalte hier Drops und teste dein Punktekonto im Admin-Modus.</p>
+
+          <div style="background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); border-radius: 12px; padding: 12px; margin-bottom: 14px;">
+            <h4 style="font-size: 13px; font-weight: 800; color: var(--admin); margin-bottom: 4px;">🧪 Admin Test-Modus: Punkte simulieren</h4>
+            <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">Da du als Admin bist, kannst du hier deinen Test-Punktestand direkt anpassen:</p>
+            <div style="display: flex; gap: 8px;">
+              <input type="number" id="admin-test-points-input" placeholder="z. B. 45" style="margin: 0; flex: 1;">
+              <button type="button" class="btn" onclick="adminSetTestPoints()" style="margin: 0; width: auto; background: var(--admin); color: #000; font-weight: 800; padding: 0 14px;">Punkte setzen</button>
+            </div>
+          </div>
+
+          <h4 style="font-size: 14px; font-weight: 800; margin-bottom: 6px; color: var(--admin);">📍 Neuen Campus-Drop erstellen</h4>
+          <label for="admin-drop-title" style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Drop Titel / Info:</label>
+          <input type="text" id="admin-drop-title" placeholder="z. B. 50 Punkte im Lokal X!">
+
+          <label for="admin-drop-reward-type" style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Belohnungs-Typ:</label>
+          <select id="admin-drop-reward-type">
+            <option value="points">Punkte (z. B. 50)</option>
+            <option value="badge">Spezial-Badge</option>
+          </select>
+
+          <label for="admin-drop-reward-value" style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Wert (Punktzahl oder Badge-Name):</label>
+          <input type="text" id="admin-drop-reward-value" placeholder="50">
+
+          <label for="admin-drop-start-time" style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Startzeitpunkt (Datum & Uhrzeit):</label>
+          <input type="datetime-local" id="admin-drop-start-time">
+
+          <label style="font-size: 11px; font-weight: 600; color: var(--text-muted); display: block; margin-top: 6px;">📍 Spot auf Karte auswählen (Klick setzt Marker):</label>
+          <div id="admin-map" style="width: 100%; height: 220px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 8px; z-index: 1;"></div>
+
+          <div style="display: flex; gap: 8px;">
+            <div style="flex: 1;">
+              <label for="admin-drop-lat" style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Latitude (Breitengrad):</label>
+              <input type="number" step="any" id="admin-drop-lat" placeholder="48.2082">
+            </div>
+            <div style="flex: 1;">
+              <label for="admin-drop-lng" style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Longitude (Längengrad):</label>
+              <input type="number" step="any" id="admin-drop-lng" placeholder="16.3738">
+            </div>
+          </div>
+
+          <label for="admin-drop-radius" style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Radius in Metern (z. B. 100m vor Ort):</label>
+          <input type="number" id="admin-drop-radius" placeholder="100" value="100">
+
+          <button type="button" class="btn" onclick="handleCreateCampusDrop()" style="background: var(--admin); color: #000; font-weight: 900;">Drop mit GPS-Bindung freigeben 🚀</button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Untere Navigation & Footer Links -->
+    <div class="bottom-controls-wrapper">
+      <nav class="nav-tabs" id="bottom-nav-bar" aria-label="Hauptnavigation">
+        <button type="button" class="tab-btn active" onclick="switchTab('reels')" id="btn-tab-reels">✨ Feed</button>
+        <button type="button" class="tab-btn" onclick="switchTab('feed')" id="btn-tab-feed">💬 Treffen</button>
+
+        <div class="tab-btn-action-container">
+          <button type="button" class="tab-btn-action" onclick="openUploadModal()" title="Beitrag erstellen" aria-label="Neuen Beitrag erstellen">+</button>
+        </div>
+
+        <button type="button" class="tab-btn" onclick="switchTab('global')" id="btn-tab-global">⚡ Chat</button>
+        <button type="button" class="tab-btn" onclick="switchTab('inbox')" id="btn-tab-inbox">📬 Postfach</button>
+      </nav>
+
+      <div class="footer-links">
+        <button type="button" class="footer-link-btn" onclick="openReportModal()">🚨 Inhalt melden</button>
+        <span aria-hidden="true">•</span>
+        <button type="button" class="footer-link-btn" onclick="openImpressumModal()">Impressum</button>
+        <span aria-hidden="true">•</span>
+        <button type="button" class="footer-link-btn" onclick="openAgbModal()">AGB</button>
+        <span aria-hidden="true">•</span>
+        <button type="button" class="footer-link-btn" onclick="openReportModal()" style="color: #ef4444; font-weight: 700;">⚠️ Fehler melden</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- VOLLSTÄNDIG FLEXIBLES & OPTIMIERTES LIVE FULLSCREEN MODAL -->
+  <div id="live-fullscreen-modal" class="hidden tab-content" style="position: absolute; top:0; left:0; width:100%; height:100%; background: #000; z-index: 200; display: flex; flex-direction: column; overflow: hidden;">
+    
+    <!-- Modal Header -->
+    <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: rgba(9,13,22,0.95); border-bottom: 1px solid var(--border); flex-shrink: 0; z-index: 210;">
+      <div>
+        <h2 id="active-live-title-display" style="font-size: 14px; font-weight: 800; color: #fff; margin: 0;">🔴 Live Stream</h2>
+        <p id="active-live-host-display" style="font-size: 10px; color: var(--text-muted); margin: 0;">Standort wird geladen...</p>
+      </div>
+      <button type="button" class="btn btn-secondary" onclick="closeLiveFullscreen()" style="padding: 4px 10px; font-size: 11px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); width: auto; margin:0;">✕ Schließen</button>
+    </div>
+    
+    <!-- Video Player Container -->
+    <div id="live-stream-player-container" style="flex: 1; position: relative; width: 100%; background: #000; display: flex; align-items: center; justify-content: center; overflow: hidden; min-height: 0;">
+      <!-- Dynamischer Inhalt -->
+    </div>
+
+    <!-- Unterer Bereich für Chat & Geschenke -->
+    <div style="width: 100%; background: rgba(9,13,22,0.98); border-top: 1px solid var(--border); display: flex; flex-direction: column; padding: 8px 12px; box-sizing: border-box; flex-shrink: 0; max-height: 42vh;">
+      
+      <!-- Chat Nachrichten -->
+      <div id="live-chat-messages" style="height: 65px; min-height: 50px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; margin-bottom: 4px; font-size: 11px; padding-right: 4px;">
+        <div style="color: var(--text-muted); text-align: center;">Willkommen im Live-Chat! 💬</div>
+      </div>
+
+      <!-- Eingabe & Steuerungsbereich -->
+      <div id="live-chat-input-container" style="display: flex; flex-direction: column; gap: 4px; width: 100%;">
+        <!-- Wird dynamisch befüllt -->
+      </div>
+    </div>
+  </div>
+
+  <div id="more-points-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.92); z-index: 100;">
+    <div class="container-box" style="width: 100%; max-width: 400px; margin: 10px;">
+      <h3 style="margin-bottom: 4px; font-weight: 900; color: var(--primary);">🎁 Mehr Punkte sammeln</h3>
+      <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 14px; line-height: 1.4;">Wähle eine Methode, um deinen Punktestand und dein Uni-Ranking zu pushen:</p>
+      
+      <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px;">
+        <button type="button" onclick="closeMorePointsModal(); openCampusQuizModal();" style="text-align: left; width: 100%; background: rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.3); padding: 12px; border-radius: 12px; cursor: pointer;">
+          <div style="font-weight: 800; font-size: 13px; color: #818cf8; margin-bottom: 2px;">🧠 Tägliches Campus- & Allgemein-Quiz</div>
+          <div style="font-size: 11px; color: var(--text-muted);">Teste dein Wissen in 15 Sek. pro Frage & hol dir Bonuspunkte!</div>
+        </button>
+
+        <button type="button" onclick="closeMorePointsModal(); openActiveSpotsModal();" style="text-align: left; width: 100%; background: rgba(245,158,11,0.15); border: 1px solid rgba(245,158,11,0.3); padding: 12px; border-radius: 12px; cursor: pointer;">
+          <div style="font-weight: 800; font-size: 13px; color: var(--admin); margin-bottom: 2px;">📍 Vor-Ort Campus-Drops</div>
+          <div style="font-size: 11px; color: var(--text-muted);">Checke aktive Partner-Spots in Wien ab.</div>
+        </button>
+
+        <button type="button" onclick="closeMorePointsModal(); openBlackboardModal();" style="text-align: left; width: 100%; background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); padding: 12px; border-radius: 12px; cursor: pointer;">
+          <div style="font-weight: 800; font-size: 13px; color: #10b981; margin-bottom: 2px;">📌 Schwarzes Brett (Marktplatz)</div>
+          <div style="font-size: 11px; color: var(--text-muted);">Finde WG-Zimmer, Lernpartner und Skripten.</div>
+        </button>
+
+        <button type="button" onclick="closeMorePointsModal(); switchTab('profile');" style="text-align: left; width: 100%; background: rgba(236,72,153,0.15); border: 1px solid rgba(236,72,153,0.3); padding: 12px; border-radius: 12px; cursor: pointer;">
+          <div style="font-weight: 800; font-size: 13px; color: var(--accent); margin-bottom: 2px;">📲 Profil & Social Sharing</div>
+          <div style="font-size: 11px; color: var(--text-muted);">Teile deine Erfolge in WhatsApp / Insta für Hype-Punkte.</div>
+        </button>
+      </div>
+      <button type="button" class="btn btn-secondary" onclick="closeMorePointsModal()">Schließen</button>
+    </div>
+  </div>
+
+  <div id="prof-guide-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.95); z-index: 120;">
+    <div class="container-box" style="width: 100%; max-width: 480px; margin: 10px; max-height: 85vh; display: flex; flex-direction: column;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <h3 style="font-weight: 900; color: #818cf8; font-size: 16px;">📚 Prof-Rating & Survival Guide</h3>
+        <button type="button" class="btn btn-secondary" style="width: auto; padding: 4px 10px; font-size: 11px; margin-top: 0;" onclick="toggleProfForm()">+ Review schreiben</button>
+      </div>
+      <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;">Altklausuren-Tipps, Prof-Erfahrungen und Schwierigkeitsgrade.</p>
+      
+      <div id="prof-review-form-container" class="hidden" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 12px;">
+        <h4 style="font-size: 13px; font-weight: 800; margin-bottom: 6px; color: var(--text);">✍️ Neue Erfahrung teilen</h4>
+        <input type="text" id="prof-name-input" placeholder="Name des Professors (z. B. Prof. Müller)" style="margin-bottom: 6px;">
+        <input type="text" id="prof-subject-input" placeholder="Modul / Vorlesung (z. B. Analysis 1)" style="margin-bottom: 6px;">
+        
+        <div style="display: flex; gap: 8px; margin-bottom: 6px;">
+          <div style="flex: 1;">
+            <label for="prof-rating-select" style="font-size: 10px; color: var(--text-muted);">Bewertung:</label>
+            <select id="prof-rating-select" style="margin: 2px 0 6px 0;">
+              <option value="5">⭐⭐⭐⭐⭐ (Top)</option>
+              <option value="4">⭐⭐⭐⭐ (Gut)</option>
+              <option value="3">⭐⭐⭐ (Okay)</option>
+              <option value="2">⭐⭐ (Schwer)</option>
+              <option value="1">⭐ (Vorsicht!)</option>
+            </select>
+          </div>
+          <div style="flex: 1;">
+            <label for="prof-difficulty-select" style="font-size: 10px; color: var(--text-muted);">Schwierigkeit:</label>
+            <select id="prof-difficulty-select" style="margin: 2px 0 6px 0;">
+              <option value="1">1 - Chillig</option>
+              <option value="2">2 - Machbar</option>
+              <option value="3">3 - Mittel</option>
+              <option value="4">4 - Anspruchsvoll</option>
+              <option value="5">5 - Killer-Klausur</option>
+            </select>
+          </div>
+        </div>
+        <textarea id="prof-comment-input" rows="3" placeholder="Insider-Tipps, Altklausuren..." style="margin-bottom: 8px; resize: none;"></textarea>
+        <div style="display: flex; gap: 6px;">
+          <button type="button" class="btn" onclick="submitProfReview()" style="margin-top: 0; padding: 8px;">Abschicken (+15 P) 🚀</button>
+          <button type="button" class="btn btn-secondary" onclick="toggleProfForm()" style="margin-top: 0; padding: 8px; width: auto;">Abbrechen</button>
+        </div>
+      </div>
+
+      <input type="text" id="prof-search-input" placeholder="🔍 Nach Prof oder Fach suchen..." oninput="filterProfReviews()" style="margin-bottom: 10px;">
+      <div id="prof-reviews-list" style="overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;">
+        <p style="font-size: 12px; color: var(--text-muted); text-align: center; padding: 20px;">Lade Bewertungen...</p>
+      </div>
+      <button type="button" class="btn btn-secondary" onclick="closeProfGuideModal()">Schließen</button>
+    </div>
+  </div>
+
+  <div id="quiz-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.95); z-index: 110;">
+    <div class="container-box" style="width: 100%; max-width: 400px; margin: 10px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+        <h3 style="font-weight: 900; color: #818cf8; font-size: 15px;" id="quiz-title">🧠 Campus & Allgemein Quiz</h3>
+        <span id="quiz-timer-badge" style="background: rgba(236,72,153,0.2); color: var(--accent); border: 1px solid rgba(236,72,153,0.4); padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 800;">⏱️ 15s</span>
+      </div>
+      <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;" id="quiz-subtitle">Frage laden...</p>
+      <div id="quiz-question-container" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 12px; font-size: 13px; font-weight: 700; line-height: 1.4;">Lade Fragen...</div>
+      <div id="quiz-options-container" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px;"></div>
+      <button type="button" class="btn btn-secondary" onclick="closeCampusQuizModal()">Abbrechen</button>
+    </div>
+  </div>
+
+  <div id="active-spots-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.92); z-index: 100;">
+    <div class="container-box" style="width: 100%; max-width: 400px; margin: 10px; max-height: 80vh; display: flex; flex-direction: column;">
+      <h3 style="margin-bottom: 4px; font-weight: 900; color: var(--admin);">📍 Aktuelle Campus- & Partner-Spots</h3>
+      <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px; line-height: 1.4;">Gehe zum Spot vor Ort, um Punkte einzusammeln!</p>
+      <div id="modal-active-spots-list" style="overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;"></div>
+      <button type="button" class="btn btn-secondary" onclick="closeActiveSpotsModal()">Schließen</button>
+    </div>
+  </div>
+
+  <div id="crush-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.92); z-index: 100;">
+    <div class="container-box" style="width: 100%; max-width: 400px; margin: 10px;">
+      <h3 style="margin-bottom: 4px; font-weight: 900; color: var(--accent);">💖 Anonymes Crush Radar</h3>
+      <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px; line-height: 1.4;">Trage deinen Campus-Crush ein. Bei gegenseitigem Match gibt es ein Blind-Date!</p>
+      <label for="crush-target-input" style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Crush (E-Mail oder @handle):</label>
+      <input type="text" id="crush-target-input" placeholder="crush@uni.at oder @username">
+      <label for="crush-hint-input" style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Geheimer Hinweis (optional):</label>
+      <input type="text" id="crush-hint-input" placeholder="z.b. Bib Reihe 4...">
+      <button type="button" class="btn" onclick="submitCrush()">Abschicken & Hoffen 💘</button>
+      <div id="crush-matches-box" style="margin-top: 12px; font-size: 11px;"></div>
+      <button type="button" class="btn btn-secondary" onclick="closeCrushModal()">Schließen</button>
+    </div>
+  </div>
+
+  <div id="media-upload-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.95); z-index: 150; backdrop-filter: blur(8px);">
+    <div class="container-box" style="width: 100%; max-width: 440px; margin: 16px; border: 1px solid rgba(99, 102, 241, 0.4); box-shadow: 0 15px 35px rgba(0, 0, 0, 0.8), 0 0 20px rgba(99, 102, 241, 0.15);">
+      
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <h3 style="font-size: 16px; font-weight: 900; background: var(--gradient-main); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">🎬 Cyberpunk Media Uploader</h3>
+        <button type="button" onclick="closeMediaUploadModal()" aria-label="Upload-Modal schließen" style="background: transparent; border: none; color: var(--text-muted); font-size: 16px; cursor: pointer;">✕</button>
+      </div>
+      
+      <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 14px; line-height: 1.4;">Teile deine Confession oder Clips im Campus-Feed. Videos werden automatisch auf max. 30 Sekunden optimiert.</p>
+      
+      <label for="media-file-input" style="font-size: 11px; font-weight: 700; color: #818cf8; display: block; margin-bottom: 6px;">Mediendatei auswählen (Video / Foto):</label>
+      <div style="border: 2px dashed rgba(99, 102, 241, 0.3); background: rgba(99, 102, 241, 0.03); padding: 16px; border-radius: 12px; text-align: center; margin-bottom: 12px;">
+        <input type="file" id="media-file-input" accept="video/*,image/*" onchange="handleMediaSelection(event)" style="font-size: 11px; color: var(--text-muted); width: 100%; cursor: pointer;">
+      </div>
+
+      <div id="trimmer-container" class="hidden" style="margin-bottom: 12px; background: rgba(0,0,0,0.4); padding: 8px; border-radius: 10px; border: 1px solid var(--border);">
+        <video id="trim-video-preview" controls style="width: 100%; max-height: 160px; border-radius: 8px; background: #000; margin-bottom: 6px;"></video>
+        <div style="font-size: 10px; font-weight: 700; text-align: center;" id="video-duration-info">Dauer: 0s</div>
+      </div>
+
+      <label for="media-caption-input" style="font-size: 11px; font-weight: 700; color: #818cf8; display: block; margin-bottom: 6px;">Bild- / Video-Untertitel:</label>
+      <input type="text" id="media-caption-input" placeholder="Schreibe eine fesselnde Confession..." style="margin-bottom: 16px;">
+
+      <div style="display: flex; gap: 8px;">
+        <button type="button" class="btn" onclick="uploadTrimmedMedia()" style="margin-top: 0; background: var(--gradient-main); font-weight: 900; box-shadow: 0 4px 15px rgba(99,102,241,0.4);">Beitrag veröffentlichen 🚀</button>
+        <button type="button" class="btn btn-secondary" onclick="closeMediaUploadModal()" style="margin-top: 0; width: auto;">Abbrechen</button>
+      </div>
+
+    </div>
+  </div>
+
+  <div id="public-profile-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.95); z-index: 220;">
+    <div class="container-box" style="width: 100%; max-width: 450px; max-height: 90vh; overflow-y: auto; margin: 10px; position: relative;">
+      <button type="button" onclick="closePublicProfileModal()" aria-label="Profilansicht schließen" style="position: absolute; top: 16px; right: 16px; background: rgba(255,255,255,0.1); border: none; color: #fff; width: 32px; height: 32px; border-radius: 50%; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center;">✕</button>
+      
+      <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 20px;">
+        <img id="pub-profile-avatar" src="" style="width: 70px; height: 70px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent); background: #000;" alt="Avatar">
+        <div>
+          <h3 id="pub-profile-fullname" style="font-size: 18px; font-weight: 800; color: #fff; margin: 0 0 4px 0;">Name</h3>
+          <div id="pub-profile-handle" style="font-size: 13px; color: var(--text-muted); margin-bottom: 4px;">@handle</div>
+          <div id="pub-profile-badge-container"></div>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;">
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); padding: 10px; border-radius: 10px; text-align: center;">
+          <div style="font-size: 10px; color: var(--text-muted);">Universität</div>
+          <div id="pub-profile-uni" style="font-size: 12px; font-weight: 700; color: #fff; margin-top: 2px;">-</div>
+        </div>
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); padding: 10px; border-radius: 10px; text-align: center;">
+          <div style="font-size: 10px; color: var(--text-muted);">Logic Score</div>
+          <div id="pub-profile-score" style="font-size: 12px; font-weight: 800; color: #818cf8; margin-top: 2px;">0 P</div>
+        </div>
+      </div>
+
+      <div style="margin-bottom: 20px;">
+        <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px;">Bio</div>
+        <p id="pub-profile-bio" style="font-size: 13px; color: var(--text); background: rgba(255,255,255,0.02); padding: 10px; border-radius: 8px; border: 1px solid var(--border); margin: 0; min-height: 40px;">-</p>
+      </div>
+
+      <div>
+        <div style="font-size: 12px; font-weight: 700; color: #fff; margin-bottom: 10px;">Beiträge von diesem Nutzer</div>
+        <div id="pub-profile-posts-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="impressum-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: #090d16; z-index: 250; padding: 20px;">
+    <div class="container-box" style="width: 100%; max-width: 500px; padding: 24px;">
+      <h2 style="font-size: 20px; font-weight: 900; color: var(--primary); margin-bottom: 12px;">Impressum</h2>
+      <div style="font-size: 13px; color: var(--text); line-height: 1.6; margin-bottom: 18px;">
+        <p><strong>Angaben gemäß § 5 ECG / Offenlegung gem. § 25 Mediengesetz:</strong></p><br>
+        <p><strong>Medieninhaber & Herausgeber:</strong><br>Domenic Zöchling<br>PURE LOGIC<br>3051 St. Christophen, Österreich</p><br>
+        <p><strong>Kontakt:</strong><br>E-Mail: <a href="mailto:office@pure-logic.at" style="color: #818cf8;">office@pure-logic.at</a></p>
+      </div>
+      <button type="button" class="btn" onclick="document.getElementById('impressum-modal').classList.add('hidden')">Zurück zur App ↩️</button>
+    </div>
+  </div>
+
+  <div id="agb-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: #090d16; z-index: 250; padding: 20px;">
+    <div class="container-box" style="width: 100%; max-width: 500px; padding: 24px;">
+      <h2 style="font-size: 20px; font-weight: 900; color: var(--primary); margin-bottom: 12px;">AGB & Nutzungsbedingungen</h2>
+      <div style="font-size: 12px; color: var(--text-muted); line-height: 1.6; margin-bottom: 18px; max-height: 300px; overflow-y: auto;">
+        <p><strong>1. Geltungsbereich:</strong> Diese Bedingungen gelten für alle Nutzer der Plattform.</p><br>
+        <p><strong>2. Verhaltensregeln:</strong> Strikter Ausschluss von Diskriminierung und Spam.</p>
+      </div>
+      <button type="button" class="btn" onclick="document.getElementById('agb-modal').classList.add('hidden')">Gelesen & Zurück ↩️</button>
+    </div>
+  </div>
+
+  <div id="report-modal" class="hidden tab-content" style="align-items: center; justify-content: center; position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(9, 13, 22, 0.95); z-index: 250; padding: 20px;">
+    <div class="container-box" style="width: 100%; max-width: 450px; padding: 20px; border: 1px solid rgba(239, 68, 68, 0.4);">
+      <h3 style="font-size: 18px; font-weight: 900; color: #ef4444; margin-bottom: 6px;">⚠️ Problem / Fehler melden</h3>
+      <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;">Beschreibe uns das Problem. Als Dankeschön erhältst du direkt **5 Gratis-Punkte** auf dein Konto! 🎁</p>
+      
+      <label for="bug-report-email" style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Deine E-Mail-Adresse (für Rückmeldung):</label>
+      <input type="email" id="bug-report-email" placeholder="deine.mail@uni.at" style="margin-bottom: 10px;">
+
+      <label for="bug-report-details" style="font-size: 11px; font-weight: 600; color: var(--text-muted);">Fehlerbeschreibung / Anliegen:</label>
+      <textarea id="bug-report-details" rows="4" placeholder="Was ist passiert? Welcher Fehler tritt auf?" style="margin-bottom: 10px; resize: none;"></textarea>
+      
+      <label for="bug-report-screenshot" style="font-size: 11px; font-weight: 600; color: #818cf8; display: block; margin-bottom: 4px;">Screenshot hochladen (optional):</label>
+      <input type="file" id="bug-report-screenshot" accept="image/*" style="font-size: 11px; color: var(--text-muted); margin-bottom: 14px; width: 100%;">
+
+      <div id="bug-report-msg" class="hidden" style="font-size: 11px; padding: 8px; border-radius: 8px; margin-bottom: 10px; background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3);">
+        Dein Anliegen ist uns sehr wichtig und bei der nächsten Prüfung werden wir es genau unter die Lupe nehmen ! Danke für dein Feedback! (+5 Punkte gutgeschrieben ✨)
+      </div>
+
+      <div style="display: flex; gap: 8px;">
+        <button type="button" class="btn" onclick="submitBugReport()" style="margin-top:0; background: #ef4444; font-weight: 800;">Meldung abschicken 🚀</button>
+        <button type="button" class="btn btn-secondary" onclick="document.getElementById('report-modal').classList.add('hidden')" style="margin-top:0; width:auto;">Schließen</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Modul-Skripte Einbindung -->
+<script type="module" src="js/config.js?v=6"></script>
+<script type="module" src="js/state.js?v=6"></script>
+<script type="module" src="js/i18n.js?v=6"></script>
+<script type="module" src="js/auth.js?v=6"></script>
+<script type="module" src="js/features/notifications.js?v=6"></script>
+<script type="module" src="js/features/lecture.js?v=6"></script>
+<script type="module" src="js/features/quiz.js?v=6"></script>
+<script type="module" src="js/features/profguide.js?v=6"></script>
+<script type="module" src="js/features/live.js?v=6"></script>
+<script type="module" src="js/features/crush.js?v=6"></script>
+<script type="module" src="js/features/feed.js?v=6"></script>
+<script type="module" src="js/features/dm.js?v=6"></script>
+<script type="module" src="js/features/board.js?v=6"></script>
+<script type="module" src="js/features/ranking.js?v=6"></script>
+<script type="module" src="js/features/global-chat.js?v=6"></script>
+<script type="module" src="js/features/calendar.js?v=6"></script>
+<script type="module" src="js/features/group-chats.js?v=6"></script>
+
+<!-- Inline-Logik für Custom-Sprachmenü rechts oben, Flaggen-Dateien, Feed-Special-Leiste & Bug-Reports -->
+<script type="module">
+  import { _supabase } from './js/config.js?v=6';
+  import { state } from './js/state.js?v=6';
+
+  const LANG_META = {
+    de:  { icon: 'icons/flags/de.svg',  code: 'DE' },
+    en:  { icon: 'icons/flags/en.svg',  code: 'EN' },
+    it:  { icon: 'icons/flags/it.svg',  code: 'IT' },
+    bks: { icon: 'icons/flags/bks.svg', code: 'BKS' },
+    tr:  { icon: 'icons/flags/tr.svg',  code: 'TR' },
+    es:  { icon: 'icons/flags/es.svg',  code: 'ES' },
+    fr:  { icon: 'icons/flags/fr.svg',  code: 'FR' },
+    pl:  { icon: 'icons/flags/pl.svg',  code: 'PL' },
+    hu:  { icon: 'icons/flags/hu.svg',  code: 'HU' },
+    uk:  { icon: 'icons/flags/uk.svg',  code: 'UK' }
+  };
+
+  function updateLanguageBadge(lang) {
+    const flagImg = document.getElementById('lang-flag-img');
+    const codeEl = document.getElementById('lang-code-badge');
+    const key = (lang || 'de').toLowerCase();
+    const meta = LANG_META[key] || LANG_META.de;
+
+    if (flagImg) {
+      flagImg.style.display = 'inline-block';
+      flagImg.src = meta.icon;
+      flagImg.alt = meta.code;
+    }
+    if (codeEl) {
+      codeEl.textContent = meta.code;
+    }
+
+    document.querySelectorAll('.lang-option-item').forEach(item => {
+      item.classList.toggle('active', item.getAttribute('data-lang') === key);
+    });
+  }
+
+  window.toggleLanguageMenu = function(event) {
+    if (event) event.stopPropagation();
+    const list = document.getElementById('lang-dropdown-list');
+    const btn = document.getElementById('lang-current-btn');
+    if (!list) return;
+    const isHidden = list.classList.contains('hidden');
+    list.classList.toggle('hidden', !isHidden);
+    if (btn) btn.setAttribute('aria-expanded', String(isHidden));
+  };
+
+  window.selectLanguageOption = function(lang) {
+    const key = (lang || 'de').toLowerCase();
+    try {
+      localStorage.setItem('pure_logic_lang', key);
+      localStorage.setItem('lang', key);
+    } catch (e) {}
+
+    updateLanguageBadge(key);
+
+    const list = document.getElementById('lang-dropdown-list');
+    const btn = document.getElementById('lang-current-btn');
+    if (list) list.classList.add('hidden');
+    if (btn) btn.setAttribute('aria-expanded', 'false');
+
+    if (typeof window.changeLanguage === 'function') {
+      window.changeLanguage(key);
+    } else if (typeof window.handleLanguageChange === 'function') {
+      window.handleLanguageChange(key);
+    }
+  };
+
+  window.handleLanguageChange = function(lang) {
+    window.selectLanguageOption(lang);
+  };
+
+  document.addEventListener('click', (event) => {
+    const wrap = document.getElementById('lang-switcher-wrap');
+    const list = document.getElementById('lang-dropdown-list');
+    const btn = document.getElementById('lang-current-btn');
+    if (wrap && list && !wrap.contains(event.target)) {
+      list.classList.add('hidden');
+      if (btn) btn.setAttribute('aria-expanded', 'false');
+    }
+  });
+
+  function placeLanguageSwitcherRightOfLogout() {
+    const headerRight = document.getElementById('header-right-container');
+    const logoutBtn = document.getElementById('logout-btn');
+    const wrap = document.getElementById('lang-switcher-wrap');
+    if (!headerRight || !wrap) return;
+
+    if (logoutBtn && logoutBtn.parentElement === headerRight) {
+      if (logoutBtn.nextElementSibling !== wrap) {
+        logoutBtn.insertAdjacentElement('afterend', wrap);
+      }
+    } else if (wrap.parentElement !== headerRight) {
+      headerRight.appendChild(wrap);
+    }
+
+    const savedLang = localStorage.getItem('pure_logic_lang') || localStorage.getItem('lang') || 'de';
+    updateLanguageBadge(savedLang);
+  }
+
+  function syncFeedSpecialButtons() {
+    const bar = document.getElementById('feed-filter-bar');
+    if (bar) {
+      let specialsRow = bar.querySelector('.feed-specials-row');
+      let tabsRow = bar.querySelector('.feed-tabs-row');
+
+      if (!specialsRow) {
+        specialsRow = document.createElement('div');
+        specialsRow.className = 'feed-specials-row';
+        bar.prepend(specialsRow);
+      }
+      if (!tabsRow) {
+        tabsRow = document.createElement('div');
+        tabsRow.className = 'feed-tabs-row';
+        bar.appendChild(tabsRow);
+      }
+
+      ['subtab-foryou', 'subtab-discover', 'subtab-following', 'subtab-live'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el && el.parentElement !== tabsRow) tabsRow.appendChild(el);
+      });
+
+      let duellBtn = document.getElementById('subtab-uni-duell');
+      if (!duellBtn) {
+        duellBtn = document.createElement('button');
+        duellBtn.type = 'button';
+        duellBtn.id = 'subtab-uni-duell';
+        duellBtn.className = 'feed-subtab-btn feed-subtab-duell';
+        duellBtn.title = 'Wiener Uni-Duell & Rangliste öffnen';
+        duellBtn.textContent = '🏆 Wiener Uni-Duell';
+        duellBtn.onclick = function () {
+          if (typeof window.switchTab === 'function') window.switchTab('ranking');
+          if (typeof window.loadRankingData === 'function') window.loadRankingData();
+        };
+      }
+      if (duellBtn.parentElement !== specialsRow) specialsRow.prepend(duellBtn);
+
+      let matchBtn = document.getElementById('subtab-match-mittwoch');
+      if (!matchBtn) {
+        matchBtn = document.createElement('button');
+        matchBtn.type = 'button';
+        matchBtn.id = 'subtab-match-mittwoch';
+        matchBtn.className = 'feed-subtab-btn feed-subtab-match';
+        matchBtn.title = 'Match Mittwoch & Crush Radar öffnen';
+        matchBtn.textContent = '💖 Match Mittwoch';
+        matchBtn.onclick = function () {
+          if (typeof window.openCrushModal === 'function') window.openCrushModal();
+        };
+      }
+      if (matchBtn.parentElement !== specialsRow) specialsRow.appendChild(matchBtn);
+    }
+
+    document.querySelectorAll('button, div, a').forEach(el => {
+      if (el.id === 'subtab-uni-duell' || el.id === 'subtab-match-mittwoch') return;
+      const txt = (el.textContent || '').trim();
+      if (
+        txt.includes('Zum Wiener Uni-Duell & Rangliste') ||
+        txt.includes('MATCH-MITTWOCH • FIND YOUR CRUSH!')
+      ) {
+        el.remove();
+      }
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    placeLanguageSwitcherRightOfLogout();
+    syncFeedSpecialButtons();
+  });
+
+  window.addEventListener('load', () => {
+    placeLanguageSwitcherRightOfLogout();
+    syncFeedSpecialButtons();
+    setTimeout(() => {
+      placeLanguageSwitcherRightOfLogout();
+      syncFeedSpecialButtons();
+    }, 300);
+    setTimeout(() => {
+      placeLanguageSwitcherRightOfLogout();
+      syncFeedSpecialButtons();
+    }, 1000);
+  });
+
+  window.openReportModal = function() {
+    document.getElementById('report-modal')?.classList.remove('hidden');
+    const emailInput = document.getElementById('bug-report-email');
+    if (emailInput && state.currentUserEmail) {
+      emailInput.value = state.currentUserEmail;
+    }
+  };
+
+  window.submitBugReport = async function() {
+    const email = document.getElementById('bug-report-email')?.value.trim();
+    const details = document.getElementById('bug-report-details')?.value.trim();
+    const fileInput = document.getElementById('bug-report-screenshot');
+    const msgBox = document.getElementById('bug-report-msg');
+
+    if (!email || !details) {
+      alert('Bitte gib deine E-Mail und eine kurze Beschreibung ein.');
+      return;
+    }
+
+    let screenshotUrl = null;
+
+    if (fileInput && fileInput.files[0]) {
+      const file = fileInput.files[0];
+      const fileExt = file.name.split('.').pop();
+      const fileName = `bug_${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const filePath = `bug-reports/${fileName}`;
+
+      try {
+        const { error: uploadError } = await _supabase.storage
+          .from('media')
+          .upload(filePath, file);
+
+        if (!uploadError) {
+          const { data: publicURLData } = _supabase.storage
+            .from('media')
+            .getPublicUrl(filePath);
+          screenshotUrl = publicURLData.publicUrl;
+        }
+      } catch (err) {
+        console.warn('Screenshot-Upload fehlgeschlagen:', err);
+      }
+    }
+
+    try {
+      await _supabase.from('bug_reports').insert([{
+        email: email,
+        details: details,
+        screenshot_url: screenshotUrl,
+        created_at: new Date().toISOString()
+      }]);
+    } catch (e) {
+      console.log('Bug-Report DB Fallback:', e);
+    }
+
+    if (state.currentUserEmail) {
+      try {
+        const { data: userData } = await _supabase
+          .from('users')
+          .select('logic_score')
+          .eq('email', state.currentUserEmail)
+          .single();
+
+        if (userData) {
+          const newScore = (userData.logic_score || 0) + 5;
+          await _supabase
+            .from('users')
+            .update({ logic_score: newScore })
+            .eq('email', state.currentUserEmail);
+
+          const scoreBadge = document.getElementById('score');
+          if (scoreBadge) scoreBadge.textContent = `${newScore} P`;
+        }
+      } catch (err) {
+        console.warn('Punkte-Gutschrift Fehler:', err);
+      }
+    }
+
+    if (msgBox) {
+      msgBox.classList.remove('hidden');
+    }
+
+    const mailSubject = encodeURIComponent(`Fehlermeldung von ${email}`);
+    const mailBody = encodeURIComponent(`Anliegen:\n${details}\n\nScreenshot: ${screenshotUrl || 'Keiner'}`);
+    
+    setTimeout(() => {
+      window.location.href = `mailto:office@pure-logic.at?subject=${mailSubject}&body=${mailBody}`;
+    }, 1500);
+  };
+</script>
+
+<!-- Zentrales Hauptskript -->
+<script type="module" src="js/main.js?v=6"></script>
+</body>
+</html>
