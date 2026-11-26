@@ -1,19 +1,23 @@
-// js/features/notifications.js - Push- & In-App-Benachrichtigungen für Interaktionen & DMs (PURE LOGIC)
+// js/features/notifications.js - Push-, In-App-Benachrichtigungen & lokale Activity-Historie (PURE LOGIC)
 import { _supabase } from '../config.js';
 import { state } from '../state.js';
 
 const NOTIF_PREF_KEY = 'pure_logic_push_enabled_v1';
+const ACTIVITY_HISTORY_KEY_PREFIX = 'pure_logic_activity_history_v1_';
+const MAX_ACTIVITY_HISTORY_ITEMS = 100;
+
 let realtimeChannel = null;
 let activeChannelEmail = '';
+let currentActivityFilter = 'all';
 const recentEventKeys = new Set();
 
 function escapeHtml(str) {
     return String(str || '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
+        .replace(/&/g, '&')
+        .replace(/</g, '<')
+        .replace(/>/g, '>')
+        .replace(/"/g, '"')
+        .replace(/'/g, ''');
 }
 
 function getDisplayNameFromEmail(email) {
@@ -29,6 +33,171 @@ function isDuplicateEvent(key) {
         recentEventKeys.delete(key);
     }, 4000);
     return false;
+}
+
+function getActiveHistoryUserKey() {
+    const email = (state?.currentUserEmail || 'guest').trim().toLowerCase();
+    return `${ACTIVITY_HISTORY_KEY_PREFIX}${encodeURIComponent(email)}`;
+}
+
+export function getActivityHistory() {
+    try {
+        const raw = localStorage.getItem(getActiveHistoryUserKey());
+        const parsed = raw ? JSON.parse(raw) : [];
+        return Array.isArray(parsed) ? parsed : [];
+    } catch (_e) {
+        return [];
+    }
+}
+
+function saveActivityHistory(items) {
+    try {
+        const trimmed = Array.isArray(items) ? items.slice(0, MAX_ACTIVITY_HISTORY_ITEMS) : [];
+        localStorage.setItem(getActiveHistoryUserKey(), JSON.stringify(trimmed));
+    } catch (_e) {}
+}
+
+export function recordActivityHistoryEntry({
+    type = 'info',
+    title = 'Aktivität',
+    body = '',
+    actorEmail = '',
+    postId = null
+}) {
+    const cleanTitle = String(title || 'Aktivität').trim();
+    const cleanBody = String(body || '').trim();
+    if (!cleanTitle && !cleanBody) return null;
+
+    const existing = getActivityHistory();
+    const entry = {
+        id: (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function')
+            ? crypto.randomUUID()
+            : `act_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        type,
+        title: cleanTitle,
+        body: cleanBody,
+        actorEmail: actorEmail || '',
+        postId: postId || null,
+        read: false,
+        createdAt: new Date().toISOString()
+    };
+
+    const updated = [entry, ...existing];
+    saveActivityHistory(updated);
+    renderActivityHistoryFeed();
+    return entry;
+}
+
+export function markAllActivityAsRead() {
+    const updated = getActivityHistory().map((item) => ({ ...item, read: true }));
+    saveActivityHistory(updated);
+    renderActivityHistoryFeed();
+}
+
+export function clearActivityHistory() {
+    saveActivityHistory([]);
+    renderActivityHistoryFeed();
+}
+
+export function setActivityHistoryFilter(filter = 'all') {
+    currentActivityFilter = filter || 'all';
+    renderActivityHistoryFeed();
+}
+
+function formatActivityTime(isoString) {
+    if (!isoString) return '';
+    const date = new Date(isoString);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toLocaleString('de-AT', {
+        day: '2-digit',
+        month: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+function getActivityBadgeLabel(type) {
+    switch (type) {
+        case 'like': return '❤️ Like';
+        case 'comment': return '💬 Kommentar';
+        case 'follow': return '🚀 Follower';
+        case 'dm': return '✉️ DM';
+        case 'success': return '✅ Erfolg';
+        case 'warning': return '⚠️ Hinweis';
+        default: return '🔔 Info';
+    }
+}
+
+function findProfileActivityContainer() {
+    return (
+        document.getElementById('profile-activity-feed') ||
+        document.getElementById('activity-history-container') ||
+        document.querySelector('[data-activity-feed]') ||
+        null
+    );
+}
+
+export function renderActivityHistoryFeed(targetContainer = null) {
+    const container = targetContainer || findProfileActivityContainer();
+    if (!container) return;
+
+    const allItems = getActivityHistory();
+    const unreadCount = allItems.filter((i) => !i.read).length;
+    const filteredItems = currentActivityFilter === 'all'
+        ? allItems
+        : allItems.filter((i) => i.type === currentActivityFilter);
+
+    const filters = [
+        { key: 'all', label: 'Alle' },
+        { key: 'like', label: 'Likes' },
+        { key: 'comment', label: 'Kommentare' },
+        { key: 'follow', label: 'Follower' },
+        { key: 'dm', label: 'DMs' }
+    ];
+
+    container.innerHTML = `
+        <div style="background: rgba(19, 27, 46, 0.72); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 10px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <h3 style="margin: 0; font-size: 14px; font-weight: 800; color: #f8fafc;">🕒 Aktivitäten-Verlauf</h3>
+                    <span style="font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: rgba(129, 140, 248, 0.18); color: #c7d2fe;">
+                        ${unreadCount} neu
+                    </span>
+                </div>
+                <div style="display: flex; gap: 6px;">
+                    <button type="button" onclick="markAllActivityAsRead()" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.14); color: #e2e8f0; border-radius: 8px; padding: 4px 9px; font-size: 11px; font-weight: 700; cursor: pointer;">
+                        Alle gelesen
+                    </button>
+                    <button type="button" onclick="clearActivityHistory()" style="background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.3); color: #fca5a5; border-radius: 8px; padding: 4px 9px; font-size: 11px; font-weight: 700; cursor: pointer;">
+                        Leeren
+                    </button>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                ${filters.map((f) => {
+                    const active = currentActivityFilter === f.key;
+                    return `<button type="button" onclick="setActivityHistoryFilter('${f.key}')" style="padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; cursor: pointer; border: 1px solid ${active ? '#818cf8' : 'rgba(255,255,255,0.12)'}; background: ${active ? 'rgba(99,102,241,0.28)' : 'rgba(255,255,255,0.04)'}; color: ${active ? '#fff' : '#94a3b8'};">${f.label}</button>`;
+                }).join('')}
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 8px; max-height: 320px; overflow-y: auto;">
+                ${filteredItems.length === 0
+                    ? `<div style="text-align: center; padding: 18px 10px; font-size: 12px; color: #94a3b8;">Noch keine Aktivitäten in dieser Ansicht vorhanden.</div>`
+                    : filteredItems.map((item) => `
+                        <div style="padding: 10px 12px; border-radius: 12px; background: ${item.read ? 'rgba(255,255,255,0.025)' : 'rgba(99,102,241,0.10)'}; border: 1px solid ${item.read ? 'rgba(255,255,255,0.06)' : 'rgba(129,140,248,0.35)'}; display: flex; flex-direction: column; gap: 4px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+                                <span style="font-size: 11px; font-weight: 800; color: #a5b4fc;">${escapeHtml(getActivityBadgeLabel(item.type))}</span>
+                                <span style="font-size: 10px; color: #94a3b8;">${escapeHtml(formatActivityTime(item.createdAt))}</span>
+                            </div>
+                            <div style="font-size: 12px; font-weight: 800; color: #f8fafc;">${escapeHtml(item.title)}</div>
+                            ${item.body ? `<div style="font-size: 11px; color: #cbd5e1; line-height: 1.35; word-break: break-word;">${escapeHtml(item.body)}</div>` : ''}
+                        </div>
+                    `).join('')
+                }
+            </div>
+        </div>
+    `;
 }
 
 export function isPushEnabledByUser() {
@@ -113,6 +282,8 @@ function ensureToastContainer() {
 }
 
 export function showInAppNotification(title, body, type = 'info', onClickAction = null) {
+    recordActivityHistoryEntry({ type, title, body });
+
     if (typeof document === 'undefined' || !document.body) return;
     const container = ensureToastContainer();
 
@@ -256,6 +427,14 @@ export async function sendInteractionPush({
         title = `Neue Nachricht von ${actorName} ✉️`;
         body = previewText ? previewText.slice(0, 100) : 'Dir wurde eine neue Direktnachricht gesendet.';
     }
+
+    recordActivityHistoryEntry({
+        type,
+        title,
+        body,
+        actorEmail,
+        postId
+    });
 
     // Eigene ausgelöste Aktion lokal bestätigen, falls der Empfänger derselbe Browser-Kontext ist
     if (state.currentUserEmail && state.currentUserEmail.toLowerCase() === recipientEmail.toLowerCase()) {
@@ -403,6 +582,7 @@ export function updatePushStatusUi() {
 
 document.addEventListener('DOMContentLoaded', () => {
     updatePushStatusUi();
+    renderActivityHistoryFeed();
     if (state.currentUserEmail) {
         initRealtimePushListeners(state.currentUserEmail);
     }
@@ -413,3 +593,9 @@ window.showInAppNotification = showInAppNotification;
 window.sendInteractionPush = sendInteractionPush;
 window.notifyDirectMessage = notifyDirectMessage;
 window.initRealtimePushListeners = initRealtimePushListeners;
+window.getActivityHistory = getActivityHistory;
+window.recordActivityHistoryEntry = recordActivityHistoryEntry;
+window.markAllActivityAsRead = markAllActivityAsRead;
+window.clearActivityHistory = clearActivityHistory;
+window.setActivityHistoryFilter = setActivityHistoryFilter;
+window.renderActivityHistoryFeed = renderActivityHistoryFeed;
