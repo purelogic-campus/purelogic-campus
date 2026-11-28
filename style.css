@@ -376,7 +376,6 @@ body.theme-light .points-badge.admin-badge {
   background: rgba(99, 102, 241, 0.3);
 }
 
-/* Dropdown - unterhalb der zweiten Header-Leiste ausgerichtet */
 .points-dropdown {
   position: fixed;
   top: 84px;
@@ -450,7 +449,6 @@ body.theme-light .points-badge.admin-badge {
   white-space: nowrap;
 }
 
-/* Sprachumschalter: immer rechts oben neben Logout, kompaktes vertikales Dropdown */
 .lang-switcher-wrap {
   position: relative;
   display: inline-flex;
@@ -624,12 +622,6 @@ body.theme-light .points-badge.admin-badge {
   }
 }
 
-/* ==========================================================================
-   FEED SUB-NAVIGATION:
-   - Smartphone (< 768px): Zeile 1 = Wiener Uni-Duell & Match Mittwoch,
-                           Zeile 2 = Für dich, Entdecken, Gefolgt, LIVE
-   - Desktop (>= 768px):  1 Zeile = Wiener Uni-Duell | Für dich | Entdecken | Gefolgt | LIVE | Match Mittwoch
-   ========================================================================== */
 .feed-filter-bar {
   display: flex;
   flex-direction: column;
@@ -691,35 +683,12 @@ body.theme-light .points-badge.admin-badge {
     display: contents;
   }
 
-  #subtab-uni-duell {
-    order: 1;
-    flex: 0 0 auto;
-  }
-
-  #subtab-foryou {
-    order: 2;
-    flex: 0 0 auto;
-  }
-
-  #subtab-discover {
-    order: 3;
-    flex: 0 0 auto;
-  }
-
-  #subtab-following {
-    order: 4;
-    flex: 0 0 auto;
-  }
-
-  #subtab-live {
-    order: 5;
-    flex: 0 0 auto;
-  }
-
-  #subtab-match-mittwoch {
-    order: 6;
-    flex: 0 0 auto;
-  }
+  #subtab-uni-duell { order: 1; flex: 0 0 auto; }
+  #subtab-foryou { order: 2; flex: 0 0 auto; }
+  #subtab-discover { order: 3; flex: 0 0 auto; }
+  #subtab-following { order: 4; flex: 0 0 auto; }
+  #subtab-live { order: 5; flex: 0 0 auto; }
+  #subtab-match-mittwoch { order: 6; flex: 0 0 auto; }
 }
 
 .feed-subtab-btn {
@@ -763,7 +732,6 @@ body.theme-light .feed-subtab-match {
   border-color: rgba(219, 39, 119, 0.35);
 }
 
-/* AUTH GATE & CONTAINER: Header oben bleibt sichtbar, Sprachwähler rechts oben erreichbar */
 .auth-gate-container {
   display: flex;
   justify-content: center;
@@ -852,7 +820,6 @@ body.theme-light .forgot-password {
   text-decoration: underline;
 }
 
-/* Inputs & Buttons */
 input[type="text"],
 input[type="email"],
 input[type="password"],
@@ -917,7 +884,6 @@ input:focus, select:focus, textarea:focus {
   color: var(--danger);
 }
 
-/* Kategorien / Pills */
 .category-group {
   display: flex;
   gap: 6px;
@@ -950,7 +916,6 @@ input:focus, select:focus, textarea:focus {
   background: var(--card-hover);
 }
 
-/* Feed Container mit erzwungenem Vollbild-Snap */
 #reels-list {
   scroll-snap-type: y mandatory;
   overflow-y: scroll;
@@ -997,7 +962,6 @@ input:focus, select:focus, textarea:focus {
   pointer-events: auto;
 }
 
-/* Chat Container */
 .chat-container {
   display: flex;
   flex-direction: column;
@@ -1030,7 +994,6 @@ input:focus, select:focus, textarea:focus {
   flex: 1;
 }
 
-/* Profile */
 .profile-avatar-lg {
   width: 64px;
   height: 64px;
@@ -1052,7 +1015,6 @@ input:focus, select:focus, textarea:focus {
   margin-top: 8px;
 }
 
-/* Lecture Mode */
 .lecture-mode-view {
   background: #000;
   padding: 16px;
@@ -1075,7 +1037,6 @@ input:focus, select:focus, textarea:focus {
   font-family: monospace;
 }
 
-/* Smartphone-Ansicht (Standard) */
 .main-app-layout {
   flex: 1;
   display: flex;
@@ -1206,7 +1167,6 @@ input:focus, select:focus, textarea:focus {
   display: none !important;
 }
 
-/* PC-Desktop-Ansicht (ab 768px) */
 @media (min-width: 768px) {
   .main-app-layout:not(.hidden) {
     display: grid !important;
@@ -1344,9 +1304,6 @@ input:focus, select:focus, textarea:focus {
   background: var(--primary);
 }
 
-/* ==========================================================================
-   ERWEITERTE CAMPUS-KOMPONENTEN (Karten, Badges, Live, Duell, Crush & Modals)
-   ========================================================================== */
 .section-stack {
   display: flex;
   flex-direction: column;
@@ -1503,9 +1460,6 @@ body.theme-light .live-status-pill {
   box-shadow: var(--shadow-auth);
 }
 
-/* ==========================================================================
-   MATCH MITTWOCH AUTOMATISCHES THEME (Liebes- & Herzchen-Design)
-   ========================================================================== */
 body.match-mittwoch-active {
     --primary: #ec4899 !important;
     --primary-hover: #db2777 !important;
@@ -1558,23 +1512,11 @@ body.match-mittwoch-active {
 }
 
 @keyframes matchHeartRise {
-    0% {
-        transform: translateY(0) scale(0.85) rotate(0deg);
-        opacity: 0.9;
-    }
-    50% {
-        transform: translateY(-50vh) scale(1.1) rotate(12deg);
-        opacity: 0.8;
-    }
-    100% {
-        transform: translateY(-105vh) scale(0.95) rotate(-10deg);
-        opacity: 0;
-    }
+    0% { transform: translateY(0) scale(0.85) rotate(0deg); opacity: 0.9; }
+    50% { transform: translateY(-50vh) scale(1.1) rotate(12deg); opacity: 0.8; }
+    100% { transform: translateY(-105vh) scale(0.95) rotate(-10deg); opacity: 0; }
 }
 
-/* ==========================================================================
-   PUNKT 13: CRUSH RADAR & PROF-RATING RESPONSIVE CONTAINER LAYOUTS (100%)
-   ========================================================================== */
 #crush-modal.crush-modal-responsive,
 #prof-guide-modal.prof-guide-modal-responsive {
   padding: 12px;
@@ -1764,7 +1706,6 @@ body.match-mittwoch-active {
   color: var(--text);
 }
 
-/* Smartphone-Optimierung (< 768px) */
 @media (max-width: 767px) {
   #crush-modal.crush-modal-responsive,
   #prof-guide-modal.prof-guide-modal-responsive {
@@ -1813,9 +1754,6 @@ body.match-mittwoch-active {
   }
 }
 
-/* ==========================================================================
-   PUNKT 26: CAMPUS-EVENT-KALENDER (PARTYS & VORLESUNGEN)
-   ========================================================================== */
 .campus-calendar-shell {
   display: flex;
   flex-direction: column;

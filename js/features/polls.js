@@ -646,16 +646,12 @@ function startPollRealtimeSync() {
             .on(
                 'postgres_changes',
                 { event: '*', schema: 'public', table: 'campus_polls' },
-                () => {
-                    loadCampusPolls();
-                }
+                () => { loadCampusPolls(); }
             )
             .on(
                 'postgres_changes',
                 { event: '*', schema: 'public', table: 'campus_poll_votes' },
-                () => {
-                    loadCampusPolls();
-                }
+                () => { loadCampusPolls(); }
             )
             .subscribe();
     } catch (_e) {}
